@@ -1,0 +1,27 @@
+# Aplicativo compilado e arquivos de distribuicao ficam nas releases.
+/aplicativo/
+*.zip
+
+# Registros locais da separacao e da conferencia dos arquivos.
+/ARQUIVOS_SHA256.json
+/ORIGEM_DA_COPIA.json
+/PROJECT_HANDOFF.md
+
+# Caches, configuracoes locais e credenciais.
+**/.dart_tool/
+**/build/
+**/ephemeral/
+**/.flutter-plugins-dependencies
+**/.idea/
+**/.vscode/
+*.log
+*.tmp
+.env
+.env.*
+.dev.vars*
+*.pfx
+*.p12
+*.pem
+*.key
+*.keystore
+*.jks

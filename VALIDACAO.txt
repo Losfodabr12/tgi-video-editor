@@ -1,0 +1,16 @@
+VALIDACAO DA COPIA INDEPENDENTE - 18/10/2026
+
+flutter pub get: aprovado, dependencias do pubspec.lock preservadas.
+flutter analyze --no-pub: aprovado, nenhum problema encontrado.
+flutter test --no-pub: 96 testes aprovados, 7 testes de integracao ignorados
+pela configuracao padrao. Foram copiados 9 arquivos de teste do editor.
+flutter build windows --release --no-pub: aprovado por caminho curto.
+FFmpeg e ffprobe da pasta aplicativo: inicializacao e versao verificadas.
+85 arquivos originais do editor: SHA-256 conferido, todos preservados.
+
+Executavel: aplicativo\VideoEditor.exe
+Versao desta nova base: 0.1.0+1
+Origem do editor: TGI 1.4.26+33
+
+Esta verificacao inclui analise, testes existentes e compilacao Windows.
+A interface completa e uma exportacao manual nao foram exercitadas.

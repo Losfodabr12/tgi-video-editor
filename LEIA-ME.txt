@@ -1,0 +1,34 @@
+PROJETO EDITOR DE VIDEO
+
+Copia independente do editor de video TGI 1.4.26+33, preparada em 18/10/2026.
+O projeto INICIAR PROJETO TGI APP permanece intacto.
+
+source: codigo Flutter do editor, dependencias compartilhadas, fontes, testes,
+        plataforma Windows, FFmpeg e Whisper Base locais.
+aplicativo: executavel Windows independente e seus arquivos de funcionamento.
+INICIAR EDITOR.cmd: abre o executavel desta copia.
+
+Para desenvolver, abra source no seu editor de codigo. No terminal dessa pasta:
+  flutter pub get
+  powershell -ExecutionPolicy Bypass -File tool\build_editor.ps1 -Run
+
+A entrada do novo aplicativo fica em source/lib/main.dart e lib/app/app.dart.
+Ele abre diretamente no editor e recupera automaticamente seu proprio rascunho.
+Configuracoes, rascunhos e projetos recentes ficam em:
+  %LOCALAPPDATA%\TGI_VIDEO_EDITOR
+
+A copia inclui apenas o editor e suas dependencias. Os estudios completos de
+audio/imagem, site, servidor, login inicial e atualizador do TGI nao fazem parte
+deste aplicativo. A marca visual e as regras de recursos gratuitos/pagos do
+editor foram preservadas para voce adaptar durante o desenvolvimento.
+O dialogo de downloads opcionais ainda contem integracoes com os servicos TGI.
+
+Para gerar novamente o aplicativo e seus runtimes:
+  powershell -ExecutionPolicy Bypass -File source\tool\build_editor.ps1
+
+ORIGEM_DA_COPIA.json registra os arquivos originais e seus hashes.
+VALIDACAO.txt registra os resultados da verificacao desta copia.
+
+O script de desenvolvimento/compilacao utiliza temporariamente uma letra de
+unidade livre para evitar o limite de caminhos dos plugins nativos no Windows.
+A unidade e liberada automaticamente quando o comando termina.

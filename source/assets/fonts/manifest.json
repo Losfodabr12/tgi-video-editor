@@ -1,0 +1,80 @@
+[
+  {
+    "family": "Anton",
+    "file": "Anton-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/anton/Anton-Regular.ttf",
+    "sha256": "a4ba3a92350ebb031da0cb47630ac49eb265082ca1bc0450442f4a83ab947cab"
+  },
+  {
+    "family": "Bebas Neue",
+    "file": "BebasNeue-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/bebasneue/BebasNeue-Regular.ttf",
+    "sha256": "08e4623805102d819f58601e46e345648846075e363b2ceb23313c2d1c83ec73"
+  },
+  {
+    "family": "Poppins",
+    "file": "Poppins-Bold.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/poppins/Poppins-Bold.ttf",
+    "sha256": "983676516167748b74de6f4771fb384c664fd913acb8b471122ecacf5da5ea6c"
+  },
+  {
+    "family": "Lato",
+    "file": "Lato-Bold.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/lato/Lato-Bold.ttf",
+    "sha256": "8a0aace75d33794eece4b28187bfc1df0bbd2888b5d8a56e01788c8d65d16be1"
+  },
+  {
+    "family": "Lobster",
+    "file": "Lobster-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/lobster/Lobster-Regular.ttf",
+    "sha256": "d6568e697fd50cedc0be04d8aae4127fe95add607e7bff954ca88604be80c205"
+  },
+  {
+    "family": "Pacifico",
+    "file": "Pacifico-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/pacifico/Pacifico-Regular.ttf",
+    "sha256": "5b6c0d5334a7bf77dea52b975c5a0c408878c0f7115ed5b6fb151f634b7bf701"
+  },
+  {
+    "family": "Righteous",
+    "file": "Righteous-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/righteous/Righteous-Regular.ttf",
+    "sha256": "2ffb3fe5c27d7e6571210b800448c4e234e651b46c6b4426c1bb567e5341348a"
+  },
+  {
+    "family": "Bangers",
+    "file": "Bangers-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/bangers/Bangers-Regular.ttf",
+    "sha256": "4160a7311de9342674cce9160cde9fcbb30f48190397d86ff1b70b455af65824"
+  },
+  {
+    "family": "Bungee",
+    "file": "Bungee-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/bungee/Bungee-Regular.ttf",
+    "sha256": "c4f5361ce120af3e6b9156d0bf379fa19cda2ea0cd18ac01fd99596c6bf66e3f"
+  },
+  {
+    "family": "Audiowide",
+    "file": "Audiowide-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/audiowide/Audiowide-Regular.ttf",
+    "sha256": "c7c0f2b0f6fad8c623e31772ce79f94a4edb9321ffce9fce978ea892d20ae730"
+  },
+  {
+    "family": "Caveat Brush",
+    "file": "CaveatBrush-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/caveatbrush/CaveatBrush-Regular.ttf",
+    "sha256": "e565bd7bffd895ca64f8d1cb77c816b9b38d9c010246386a07c9648592f6f282"
+  },
+  {
+    "family": "Rajdhani",
+    "file": "Rajdhani-Bold.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/rajdhani/Rajdhani-Bold.ttf",
+    "sha256": "691470dd3286a14e9677940d0bf75796179841ba5215cbda1a2c8910a3226afd"
+  },
+  {
+    "family": "Russo One",
+    "file": "RussoOne-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/5e8a3ba899557829a76cfdac30fa512bda91d7ca/ofl/russoone/RussoOne-Regular.ttf",
+    "sha256": "bc0abcc660bd8b7ad3000ecb2898a27c58a29a50f7ec81652fa12e75148d09df"
+  }
+]
