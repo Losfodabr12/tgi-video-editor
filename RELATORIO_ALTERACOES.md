@@ -11,6 +11,7 @@ executados nesta máquina; logs completos ficam em `.work/`, ignorada pelo Git.
 | 4 — Independente | exit 0, sem problemas | exit 0, 144 aprovados / 13 ignorados | Flag standalone padrão, 4K livre, rede TGI bloqueada e identidade central |
 | 5 — Transições | exit 0, sem problemas | exit 0, 146 aprovados / 13 ignorados | xfade/acrossfade com pixels, duração e espectro de áudio; preview A/B aproximado |
 | 6 — Projetos antigos | exit 0, sem problemas | exit 0, 148 aprovados / 13 ignorados | Sobreposições migradas em memória; formatos 13/14 e round-trip testados |
+| 7 — Build e CI | exit 0, sem problemas | exit 0, 148 aprovados / 13 ignorados | Integração adicional: 161 aprovados; build release exit 0 (116,0 s) |
 
 Os 13 testes históricos opcionais dependem de um dart-define e são ignorados
 pelo comando padrão pedido. Os seis novos testes de pixels rodam por padrão.
@@ -63,3 +64,18 @@ anteriores, sem mudar o número do formato. IDs de clipe, vínculos, tempos e
 propriedades preservados; IDs das pistas adicionais não colidem com existentes.
 O teste antigo de rejeição foi alterado nesta etapa porque o comportamento
 pedido mudou. Detalhes em docs/MIGRACAO.md.
+
+## Etapa 7
+
+Scripts compartilhando o mesmo caminho curto; setup automático com versões e
+SHA-256 fixados; CI Windows/Flutter 3.44.4. Download completo de FFmpeg, Whisper
+e Base executado em `.work/setup-verification`, seguido de segunda execução
+idempotente. FFmpeg/ffprobe `-version` e Whisper `--help` retornaram 0; hash do
+Base conferido. A primeira verificação de ffprobe interrompia seu stdout com
+Select-Object; foi corrigida e o setup repetido com sucesso.
+
+`tool/test_editor.ps1 -Integration -Build` executou pub get, analyze, suíte
+padrão, integração e build release. Houve avisos CMake CMP0175 do plugin
+media_kit, sem falha de build. Prova de limpeza após exceção também executada
+com o helper de caminho curto. Scripts PowerShell passaram pelo parser.
+O resultado remoto do workflow será registrado separadamente ao final.

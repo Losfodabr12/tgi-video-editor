@@ -1801,6 +1801,7 @@ class FfmpegService {
       currentDir,
       _join(currentDir, 'ffmpeg'),
       _join(currentDir, 'ffmpeg', 'bin'),
+      _join(currentDir, 'tools', 'ffmpeg', 'bin'),
       r'C:\ffmpeg\bin',
       r'C:\Program Files\ffmpeg\bin',
       r'C:\Program Files (x86)\ffmpeg\bin',

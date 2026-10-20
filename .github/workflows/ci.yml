@@ -1,0 +1,32 @@
+name: Windows editor
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.4'
+          channel: stable
+          cache: true
+      - uses: actions/cache@v4
+        with:
+          path: |
+            source/tools/ffmpeg/bin
+            source/tools/whisper/bin
+            source/tools/whisper/models
+          key: windows-media-tools-ffmpeg-8.1.2-whisper-b5454-base-v1
+      - name: Install local runtimes
+        run: ./tool/setup_tools.ps1
+      - name: Pub get, analyze, tests and release build
+        run: ./tool/test_editor.ps1 -Integration -Build
