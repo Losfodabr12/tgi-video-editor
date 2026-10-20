@@ -271,7 +271,7 @@ class _KeyboardShortcutRow extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     info.description,
                     style: Theme.of(context).textTheme.bodySmall,

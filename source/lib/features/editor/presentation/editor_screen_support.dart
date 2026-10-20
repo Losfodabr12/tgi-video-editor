@@ -147,7 +147,7 @@ class _TimelineTransitionSettingsDialogState
                             decoration: BoxDecoration(
                               color: Color(option.color),
                               border: Border.all(color: TgiColors.border),
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(TgiRadii.sm),
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -438,13 +438,13 @@ class _RelinkMissingMediaDialogState extends State<_RelinkMissingMediaDialog> {
             const Text(
               'Escolha os novos arquivos para restaurar previews, timeline e exportacao.',
             ),
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 380),
               child: ListView.separated(
                 shrinkWrap: true,
                 itemCount: _entries.length,
-                separatorBuilder: (_, _) => const SizedBox(height: 10),
+                separatorBuilder: (_, _) => const SizedBox(height: 8),
                 itemBuilder: (context, index) => _MissingMediaTile(
                   entry: _entries[index],
                   selectedPath: _selectedPaths[_entries[index].mediaItemId],
@@ -517,7 +517,7 @@ class _MissingMediaTile extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   if (selectedPath != null) ...[
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     Text(
                       'Novo: ${_fileNameFromPath(selectedPath)}',
                       maxLines: 1,

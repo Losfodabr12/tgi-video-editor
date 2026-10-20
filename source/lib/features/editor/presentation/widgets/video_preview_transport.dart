@@ -16,10 +16,10 @@ class _PreviewPerformanceNotice extends StatelessWidget {
         decoration: BoxDecoration(
           color: TgiColors.black.withValues(alpha: 0.68),
           border: Border.all(color: TgiColors.border),
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: BorderRadius.circular(TgiRadii.md),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           child: Text(
             message,
             textAlign: TextAlign.center,
@@ -328,12 +328,12 @@ class _TransportScaffold extends StatelessWidget {
 
     return Padding(
       key: const ValueKey('video_preview_transport_controls'),
-      padding: const EdgeInsets.fromLTRB(TgiSpacing.sm, 2, TgiSpacing.sm, 4),
+      padding: const EdgeInsets.fromLTRB(TgiSpacing.sm, 4, TgiSpacing.sm, 4),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           SizedBox(
-            height: 28,
+            height: 24,
             child: Row(
               children: [
                 _TimecodePill(value: formatDuration(position)),
@@ -374,7 +374,7 @@ class _TransportScaffold extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 2),
+          const SizedBox(height: 4),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
@@ -388,7 +388,7 @@ class _TransportScaffold extends StatelessWidget {
                 DecoratedBox(
                   decoration: TgiDecorations.controlCluster(),
                   child: Padding(
-                    padding: const EdgeInsets.all(2),
+                    padding: const EdgeInsets.all(4),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -444,7 +444,7 @@ class _TimecodePill extends StatelessWidget {
           borderRadius: BorderRadius.circular(TgiRadii.sm),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Text(
             value,
             textAlign: alignRight ? TextAlign.right : TextAlign.left,
@@ -477,7 +477,7 @@ class _TransportButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
     return SizedBox.square(
-      dimension: prominent ? 34 : 30,
+      dimension: prominent ? 32 : 28,
       child: Tooltip(
         message: tooltip,
         child: Opacity(
@@ -577,7 +577,7 @@ class _PreviewMessage extends StatelessWidget {
                         textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 8),
                       Text(
                         message,
                         textAlign: TextAlign.center,

@@ -216,7 +216,7 @@ class _VisualTypeTabs extends StatelessWidget {
         borderRadius: BorderRadius.circular(TgiRadii.lg),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(3),
+        padding: const EdgeInsets.all(4),
         child: Row(
           children: [
             for (final type in types)
@@ -257,7 +257,7 @@ class _VisualTypeTab extends StatelessWidget {
         borderRadius: BorderRadius.circular(TgiRadii.md),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: selected
               ? TgiDecorations.activeControl(radius: TgiRadii.md)
               : const BoxDecoration(),
@@ -284,7 +284,7 @@ class _VisualTypeTab extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               selected
                   ? TgiAccentText(
                       '$count',
@@ -336,7 +336,7 @@ class _HorizontalFilterScroller extends StatelessWidget {
         controller: controller,
         scrollDirection: Axis.horizontal,
         primary: false,
-        padding: const EdgeInsets.only(bottom: 9),
+        padding: const EdgeInsets.only(bottom: 8),
         child: Row(children: children),
       ),
     );
@@ -547,7 +547,7 @@ class _CategoryChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(TgiRadii.pill),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: selected
               ? TgiDecorations.activeControl(radius: TgiRadii.pill)
               : BoxDecoration(
@@ -666,7 +666,7 @@ class _VisualMediaTile extends StatelessWidget {
                 style: TextButton.styleFrom(
                   foregroundColor: TgiColors.accentSoft,
                   disabledForegroundColor: TgiColors.textSecondary,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(TgiRadii.md),
                     side: BorderSide(color: TgiColors.accentMuted),

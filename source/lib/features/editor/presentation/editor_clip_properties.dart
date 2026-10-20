@@ -196,7 +196,7 @@ class _ClipPropertiesPanel extends StatelessWidget {
         : domain.TextClipAnimation.none;
 
     return ListView(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       children: [
         _PropertyCard(
           child: Row(
@@ -260,7 +260,7 @@ class _ClipPropertiesPanel extends StatelessWidget {
               }
             },
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           DropdownButtonFormField<domain.TextClipAnimation>(
             isExpanded: true,
             initialValue: textAnimation,
@@ -278,7 +278,7 @@ class _ClipPropertiesPanel extends StatelessWidget {
               }
             },
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           _DeferredDoubleSlider(
             key: ValueKey('clip_font_size_${selectedClip.id}'),
             label: 'Tamanho',
@@ -289,7 +289,7 @@ class _ClipPropertiesPanel extends StatelessWidget {
             valueLabel: (value) => value.round().toString(),
             onChanged: (value) => onTextFontSizeChanged(selectedClip, value),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           _ColorChoiceGroup(
             label: 'Cor do texto',
             options: _textColors,
@@ -304,7 +304,7 @@ class _ClipPropertiesPanel extends StatelessWidget {
             onSelected: (value) =>
                 onTextBackgroundColorChanged(selectedClip, value),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           _DeferredDoubleSlider(
             key: ValueKey('clip_text_opacity_${selectedClip.id}'),
             label: 'Opacidade',
@@ -722,8 +722,8 @@ class _ClipKeyframeEditorState extends State<_ClipKeyframeEditor> {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 9,
-                        vertical: 5,
+                        horizontal: 8,
+                        vertical: 4,
                       ),
                       child: Text(
                         spec.valueLabel(value),
@@ -930,7 +930,7 @@ class _KeyframePill extends StatelessWidget {
           borderRadius: BorderRadius.circular(TgiRadii.sm),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Text(
             label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -1006,7 +1006,7 @@ class _KeyframeHint extends StatelessWidget {
         child: Row(
           children: [
             Icon(icon, size: 17, color: TgiColors.accentRose),
-            const SizedBox(width: 7),
+            const SizedBox(width: 8),
             Expanded(
               child: Text(
                 text,
@@ -1067,7 +1067,7 @@ class _KeyframeTimeline extends StatelessWidget {
                     height: 6,
                     decoration: BoxDecoration(
                       color: TgiColors.borderStrong,
-                      borderRadius: BorderRadius.circular(99),
+                      borderRadius: BorderRadius.circular(TgiRadii.md),
                     ),
                   ),
                 ),
@@ -1109,15 +1109,7 @@ class _KeyframeTimeline extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: TgiColors.accentRose,
                               border: Border.all(color: Colors.white, width: 2),
-                              borderRadius: BorderRadius.circular(3),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: TgiColors.accentRose.withValues(
-                                    alpha: 0.32,
-                                  ),
-                                  blurRadius: 8,
-                                ),
-                              ],
+                              borderRadius: BorderRadius.circular(TgiRadii.sm),
                             ),
                           ),
                         ),
@@ -1401,7 +1393,7 @@ class _PropertySectionTitle extends StatelessWidget {
   final String label;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 8, bottom: 10),
+    padding: const EdgeInsets.only(top: 8, bottom: 8),
     child: Text(
       label,
       style: const TextStyle(
@@ -1478,7 +1470,7 @@ class _PropertyHeaderText extends StatelessWidget {
             fontWeight: FontWeight.w900,
           ),
         ),
-        const SizedBox(height: 3),
+        const SizedBox(height: 4),
         Text(
           subtitle,
           maxLines: 1,
@@ -1591,7 +1583,7 @@ class _DeferredDoubleSliderState extends State<_DeferredDoubleSlider> {
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               Text(
                 widget.valueLabel(value),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(

@@ -217,9 +217,6 @@ class _ColorPickerControl extends StatelessWidget {
                   color: Color(color),
                   shape: BoxShape.circle,
                   border: Border.all(color: TgiColors.white, width: 1.5),
-                  boxShadow: const [
-                    BoxShadow(color: TgiColors.shadow, blurRadius: 5),
-                  ],
                 ),
               ),
               const SizedBox(width: TgiSpacing.sm),

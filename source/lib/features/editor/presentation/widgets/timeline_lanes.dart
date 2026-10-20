@@ -377,7 +377,7 @@ class _TimelineLane extends StatefulWidget {
                         ),
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(5),
+                        padding: const EdgeInsets.all(4),
                         child: Text(
                           formatDuration(dropPreview),
                           style: const TextStyle(
@@ -719,6 +719,15 @@ class _PositionedClipState extends State<_PositionedClip> {
       fadeIn: fadeResult?.fadeIn ?? widget.clip.fadeIn,
       fadeOut: fadeResult?.fadeOut ?? widget.clip.fadeOut,
     );
+    final snappedEdges = (_dragging || _resizing) && widget.snappingEnabled
+        ? snapCandidates
+              .where(
+                (candidate) =>
+                    candidate == displayedStart ||
+                    candidate == displayedStart + displayedDuration,
+              )
+              .toList()
+        : const <Duration>[];
     final left = _leftFor(displayedStart, widget.duration, widget.width);
     final rawWidth = _widthFor(
       displayedDuration,
@@ -966,6 +975,41 @@ class _PositionedClipState extends State<_PositionedClip> {
                     ),
                   ),
                 ),
+                if (snappedEdges.isNotEmpty)
+                  Positioned(
+                    key: ValueKey('snap-guide-${widget.clip.id}'),
+                    left: snappedEdges.contains(displayedStart) ? 0 : null,
+                    right: snappedEdges.contains(displayedStart) ? null : 0,
+                    top: 0,
+                    bottom: 0,
+                    child: IgnorePointer(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.symmetric(
+                            vertical: BorderSide(
+                              color: TgiColors.accent,
+                              width: 2,
+                            ),
+                          ),
+                        ),
+                        alignment: Alignment.topCenter,
+                        child: const ColoredBox(
+                          color: TgiColors.primary,
+                          child: Padding(
+                            padding: EdgeInsets.all(4),
+                            child: Text(
+                              'SNAP',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                                color: TgiColors.backgroundDeep,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 if (widget.clip.trackType == TrackType.audio)
                   _AudioVolumeLineLayer(
                     clipId: widget.clip.id,

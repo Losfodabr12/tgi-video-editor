@@ -452,13 +452,13 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
                       color: Color(
                         _backgroundColor,
                       ).withValues(alpha: backgroundAlpha.clamp(0.0, 1.0)),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(TgiRadii.md),
                       border: Border.all(color: TgiColors.border),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
-                        vertical: 10,
+                        vertical: 8,
                       ),
                       child: Text(
                         'Legenda gerada automaticamente',
@@ -635,7 +635,7 @@ class _TextClipDialogState extends State<_TextClipDialog> {
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (_) => _submit(),
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _fontFamily,
                 decoration: const InputDecoration(labelText: 'Fonte'),
@@ -652,7 +652,7 @@ class _TextClipDialogState extends State<_TextClipDialog> {
                   }
                 },
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 16),
               Text('Tamanho ${_fontSize.round()}'),
               Slider(
                 value: _fontSize,
@@ -686,7 +686,7 @@ class _TextClipDialogState extends State<_TextClipDialog> {
                 label: '${(_opacity * 100).round()}%',
                 onChanged: (value) => setState(() => _opacity = value),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: 360),
@@ -696,12 +696,12 @@ class _TextClipDialogState extends State<_TextClipDialog> {
                         _backgroundColor,
                       ).withValues(alpha: backgroundAlpha.clamp(0.0, 1.0)),
                       border: Border.all(color: TgiColors.border),
-                      borderRadius: BorderRadius.circular(6),
+                      borderRadius: BorderRadius.circular(TgiRadii.md),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
+                        horizontal: 16,
+                        vertical: 8,
                       ),
                       child: Text(
                         previewText,
@@ -841,7 +841,7 @@ class _ColorSwatchButton extends StatelessWidget {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(3),
+          padding: const EdgeInsets.all(4),
           child: DecoratedBox(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -1028,7 +1028,7 @@ class _ExportSettingsDialogState extends State<_ExportSettingsDialog> {
             if (value != null) setState(() => _encoder = value);
           },
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         const Text(
           'A GPU é verificada antes de exportar. Se não estiver disponível, o aplicativo usa a CPU.',
           style: TextStyle(fontSize: 12),
@@ -1059,7 +1059,7 @@ class _ExportSettingsDialogState extends State<_ExportSettingsDialog> {
       title: Row(
         children: [
           Icon(Icons.ios_share_outlined, color: TgiColors.accent),
-          SizedBox(width: 10),
+          SizedBox(width: 8),
           Text('Pronto para exportar'),
         ],
       ),
@@ -1114,7 +1114,7 @@ class _ExportSettingsDialogState extends State<_ExportSettingsDialog> {
                               style: Theme.of(context).textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.w900),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 4),
                             Text(
                               _audioOnly
                                   ? 'PCM · 48 kHz · estéreo'
@@ -1122,7 +1122,7 @@ class _ExportSettingsDialogState extends State<_ExportSettingsDialog> {
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: TgiColors.textSecondary),
                             ),
-                            const SizedBox(height: 2),
+                            const SizedBox(height: 4),
                             Text(
                               _audioOnly
                                   ? 'WAV · PCM 48 kHz estéreo'
@@ -1212,7 +1212,7 @@ class _ExportSettingsDialogState extends State<_ExportSettingsDialog> {
                   onTap: () => setState(() => _advancedOpen = !_advancedOpen),
                   borderRadius: BorderRadius.circular(TgiRadii.md),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Row(
                       children: [
                         const Icon(Icons.tune, size: 19),
@@ -1426,7 +1426,7 @@ class _ExportQualityChoice extends StatelessWidget {
         borderRadius: BorderRadius.circular(TgiRadii.md),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
-          padding: const EdgeInsets.all(10),
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
             color: selected ? TgiColors.accentMuted : TgiColors.surfaceRaised,
             border: Border.all(
@@ -1457,7 +1457,7 @@ class _ExportQualityChoice extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 9),
+              const SizedBox(height: 8),
               Text(
                 title,
                 maxLines: 1,
@@ -1477,7 +1477,7 @@ class _ExportQualityChoice extends StatelessWidget {
                 ),
               ),
               if (badge != null) ...[
-                const SizedBox(height: 6),
+                const SizedBox(height: 8),
                 Text(
                   badge!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(

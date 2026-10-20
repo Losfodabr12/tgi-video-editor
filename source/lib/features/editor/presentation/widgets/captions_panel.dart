@@ -258,14 +258,14 @@ class _CaptionRowState extends State<_CaptionRow> {
           ? TgiColors.surfacePressed
           : TgiColors.surfaceAlt.withValues(alpha: 0.72),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(TgiRadii.md),
         side: BorderSide(
           color: widget.selected ? TgiColors.accentMuted : TgiColors.border,
         ),
       ),
       child: InkWell(
         onTap: widget.onSelected,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(TgiRadii.md),
         child: Padding(
           padding: const EdgeInsets.all(TgiSpacing.sm),
           child: Column(

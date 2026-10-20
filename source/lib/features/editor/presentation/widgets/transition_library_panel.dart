@@ -212,7 +212,7 @@ class _TransitionPresetTile extends StatelessWidget {
                       fontWeight: FontWeight.w900,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     _presetSubtitle(preset),
                     maxLines: 1,

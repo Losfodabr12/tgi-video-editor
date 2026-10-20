@@ -166,6 +166,7 @@ class EditorScreen extends StatefulWidget {
     this.projectRecoveryService,
     this.recentProjectService,
     this.projectHistoryService,
+    this.workspaceLayoutPath,
   });
 
   const EditorScreen.quickCreator({super.key})
@@ -180,7 +181,8 @@ class EditorScreen extends StatefulWidget {
       projectIOService = null,
       projectRecoveryService = null,
       recentProjectService = null,
-      projectHistoryService = null;
+      projectHistoryService = null,
+      workspaceLayoutPath = null;
 
   final EditorStartPreset startPreset;
   final TgiProject? initialProject;
@@ -194,6 +196,9 @@ class EditorScreen extends StatefulWidget {
   final ProjectRecoveryService? projectRecoveryService;
   final RecentProjectService? recentProjectService;
   final ProjectHistoryService? projectHistoryService;
+
+  /// Optional preference location for isolated workspaces and headless tests.
+  final String? workspaceLayoutPath;
 
   @override
   State<EditorScreen> createState() => _EditorScreenState();
@@ -730,7 +735,12 @@ class _EditorScreenState extends State<EditorScreen> {
     _layoutSaveDebounce?.cancel();
     _projectAutosaveDebounce?.cancel();
     if (_layoutChangedByUser) {
-      unawaited(_EditorWorkspaceLayoutStore.save(_currentWorkspaceLayout()));
+      unawaited(
+        _EditorWorkspaceLayoutStore.save(
+          _currentWorkspaceLayout(),
+          path: widget.workspaceLayoutPath,
+        ),
+      );
     }
     _controller
       ..removeListener(_handleControllerChanged)
@@ -917,7 +927,9 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Future<void> _restoreWorkspaceLayout() async {
-    final layout = await _EditorWorkspaceLayoutStore.load();
+    final layout = await _EditorWorkspaceLayoutStore.load(
+      path: widget.workspaceLayoutPath,
+    );
     if (!mounted || layout == null) {
       return;
     }
@@ -947,7 +959,12 @@ class _EditorScreenState extends State<EditorScreen> {
     final layout = _currentWorkspaceLayout();
     _layoutSaveDebounce?.cancel();
     _layoutSaveDebounce = Timer(_workspaceLayoutSaveDelay, () {
-      unawaited(_EditorWorkspaceLayoutStore.save(layout));
+      unawaited(
+        _EditorWorkspaceLayoutStore.save(
+          layout,
+          path: widget.workspaceLayoutPath,
+        ),
+      );
     });
   }
 

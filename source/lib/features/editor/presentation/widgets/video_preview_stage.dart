@@ -1751,7 +1751,7 @@ class _PreviewEffectBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(TgiRadii.sm),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Text(
           label,
           maxLines: 1,

@@ -26,6 +26,8 @@ audiovisual percebido e diferenças de rasterização descritas em docs/PARIDADE
 
 ## Etapa 3
 
+<!-- Resultados das etapas 10/11 e capturas estão no fim deste relatório. -->
+
 APIs de FfmpegService e EditorController preservadas. Testes anteriores
 permanecem sem edicao. O builder nao escreve arquivos nem inicia processos;
 os textos do drawtext sao retornados no comando e escritos pelo executor.
@@ -158,3 +160,51 @@ atalhos, fluxo de importação SRT/estilo e destinos de exportação. Também fa
 edição prolongada/4K com mídia de câmera, CPU/GPU/RAM em uso real, exportações
 longas por fabricante de GPU, transcrição de voz completa com Whisper e uma
 sessão com o adaptador de rede desligado. Build/testes não substituem esses usos.
+
+
+## Etapa 10 — Visual
+
+Concluída antes de iniciar a etapa 11. Tokens únicos em
+`source/lib/app/theme/design_tokens.dart`: superfícies `#101216`, `#20242B`,
+`#343B46`, destaque `#82D9B0`, espaçamento em múltiplos de 4 e raios 2/4/6.
+Interface com Lato regular/bold incluída no pacote (OFL), Material Icons,
+`VisualDensity.compact`, bordas finas e sem sombras/gradientes decorativos.
+As fontes e efeitos escolhidos para o conteúdo do vídeo foram preservados.
+
+Timeline com cores por tipo, thumbnails, waveform, régua e playhead sem blur.
+O snapping exibe uma borda e a indicação SNAP no ponto correspondente.
+Os divisores existentes foram preservados e ganharam identificação para testes;
+o arraste dos três divisores e a restauração após fechar/reabrir o editor foram
+executados com gravação real em um arquivo de preferências isolado. Nenhuma
+alteração no formato v14: dimensões ficam em `editor_layout.json`.
+
+Foram adicionados cinco goldens headless: editor vazio, propriedades de texto,
+exportação, atalhos e timeline com snapping ativo. O teste da timeline espera
+as imagens decodificarem, fornece samples determinísticos de áudio, arrasta um
+clipe e verifica o encaixe real em 4 s. O bootstrap dos testes carrega os bytes
+da fonte usada no app; os testes anteriores continuam sem edição.
+
+Comandos finais executados pelo drive curto do build:
+
+- `flutter analyze --no-pub`: exit 0, sem problemas, 3,6 s.
+- `flutter test --no-pub`: exit 0, 167 aprovados / 13 opcionais ignorados, 19 s.
+- `flutter test --no-pub test/visual_golden_test.dart --update-goldens`:
+  exit 0; referências geradas. A suíte completa acima comparou essas referências
+  novamente, sem `--update-goldens`, e passou.
+- Logs: `.work/etapa10-analyze.log`, `.work/etapa10-test.log`.
+
+Houve falhas intermediárias de overflow e de altura do transporte; foram
+corrigidas no código e a suíte inteira foi repetida. Não se avançou para a
+etapa seguinte com falhas. As capturas abaixo foram renderizadas pelos widgets
+reais a 1440×900; não são fotos de uma sessão na janela nativa. O texto TGI da
+cena é conteúdo do projeto histórico de teste, igual nas duas capturas.
+
+| Antes | Depois |
+| --- | --- |
+| ![Antes](docs/visual/editor-before.png) | ![Depois](docs/visual/editor-after.png) |
+
+![Timeline após a alteração](source/test/goldens/timeline_snapping.png)
+
+Detalhes e reprodução em [docs/VISUAL.md](docs/VISUAL.md). DPI/monitores,
+interação contínua com mouse e reprodução audiovisual ainda exigem a janela
+nativa.

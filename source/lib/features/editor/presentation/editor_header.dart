@@ -131,7 +131,7 @@ class _EditorHeader extends StatelessWidget {
       onSelected: action,
       itemBuilder: (_) => items,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Text(
           title,
           style: const TextStyle(fontSize: 12, color: TgiColors.textSecondary),
@@ -145,7 +145,7 @@ class _EditorHeader extends StatelessWidget {
           SizedBox(
             height: 48,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Row(
                 children: [
                   if (Navigator.of(context).canPop())
@@ -158,7 +158,7 @@ class _EditorHeader extends StatelessWidget {
                       letterSpacing: 1,
                     ),
                   ),
-                  const SizedBox(width: 7),
+                  const SizedBox(width: 8),
                   if (MediaQuery.sizeOf(context).width >= 880)
                     const Text(
                       AppIdentity.tagline,
@@ -280,7 +280,7 @@ class _EditorHeader extends StatelessWidget {
                     ),
                   if (MediaQuery.sizeOf(context).width >= 900)
                     command('Inspetor', Icons.tune, onToggleInspector),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   if (MediaQuery.sizeOf(context).width >= 900)
                     TextButton.icon(
                       onPressed: busy ? null : onImportVideo,
@@ -297,7 +297,7 @@ class _EditorHeader extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: canExport && !busy ? onExport : null,
                     style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 14),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       minimumSize: const Size(0, 30),
                       textStyle: TgiTextStyles.control,
                     ),

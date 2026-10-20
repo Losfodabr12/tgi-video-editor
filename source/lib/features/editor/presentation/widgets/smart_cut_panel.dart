@@ -258,7 +258,7 @@ class _SummaryRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Expanded(
@@ -291,7 +291,7 @@ class _SegmentTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: TgiSpacing.xs),
       child: ListTile(
         dense: true,
-        contentPadding: const EdgeInsets.only(left: TgiSpacing.sm, right: 2),
+        contentPadding: const EdgeInsets.only(left: TgiSpacing.sm, right: 4),
         leading: CircleAvatar(
           radius: 14,
           child: Text('${index + 1}', style: const TextStyle(fontSize: 11)),

@@ -35,19 +35,19 @@ class TimelineZoomControls extends StatelessWidget {
         borderRadius: BorderRadius.circular(TgiRadii.pill),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             _TimelineTimecodeBadge(current: playheadPosition, total: duration),
-            const SizedBox(width: 5),
+            const SizedBox(width: 4),
             _TimelineZoomButton(
               tooltip: 'Audio Pick / inventario de audio',
               icon: Icons.library_music_outlined,
               label: 'Audio',
               onPressed: onAudioInventoryOpen,
             ),
-            const SizedBox(width: 3),
+            const SizedBox(width: 4),
             _TimelineZoomButton(
               tooltip: 'Adicionar marcador',
               icon: Icons.flag_outlined,
@@ -98,7 +98,7 @@ class _TimelineTimecodeBadge extends StatelessWidget {
       child: Container(
         height: 28,
         constraints: const BoxConstraints(minWidth: 116),
-        padding: const EdgeInsets.symmetric(horizontal: 9),
+        padding: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
           color: TgiColors.surfacePressed.withValues(alpha: 0.86),
           border: Border.all(color: TgiColors.accent.withValues(alpha: 0.62)),

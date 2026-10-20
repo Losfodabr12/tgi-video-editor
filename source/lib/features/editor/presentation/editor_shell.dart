@@ -99,7 +99,7 @@ class _PreviewToolButton extends StatelessWidget {
         child: OutlinedButton.icon(
           onPressed: enabled ? onPressed : null,
           style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 7),
+            padding: const EdgeInsets.symmetric(horizontal: 8),
             backgroundColor: active
                 ? TgiColors.surfacePressed
                 : TgiColors.surfaceAlt,
@@ -110,7 +110,7 @@ class _PreviewToolButton extends StatelessWidget {
               color: active ? TgiColors.accentMuted : TgiColors.border,
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(TgiRadii.md),
             ),
           ),
           icon: Icon(icon, size: 15),
@@ -184,7 +184,7 @@ class _PreviewOptimizeButton extends StatelessWidget {
                   : TgiColors.border,
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(TgiRadii.md),
             ),
           ),
           icon: isOptimizingPreview
@@ -258,7 +258,7 @@ class _PlaybackSpeedMenu extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.tune, size: 18),
-              SizedBox(width: 10),
+              SizedBox(width: 8),
               Text('Personalizada...'),
             ],
           ),
@@ -272,7 +272,7 @@ class _PlaybackSpeedMenu extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
             color: TgiColors.surfaceAlt,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(TgiRadii.md),
             border: Border.all(color: TgiColors.border),
           ),
           child: Row(
@@ -438,6 +438,7 @@ double? _parsePlaybackSpeed(String value) {
 
 class _WorkspaceDivider extends StatelessWidget {
   const _WorkspaceDivider({
+    super.key,
     required this.axis,
     required this.onDragUpdate,
     required this.onReset,
@@ -472,7 +473,7 @@ class _WorkspaceDivider extends StatelessWidget {
                 height: vertical ? 28 : 2,
                 decoration: BoxDecoration(
                   color: TgiColors.borderStrong,
-                  borderRadius: BorderRadius.circular(999),
+                  borderRadius: BorderRadius.circular(TgiRadii.md),
                 ),
               ),
             ),

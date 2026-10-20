@@ -340,7 +340,7 @@ class _SoundTypeTabs extends StatelessWidget {
         borderRadius: BorderRadius.circular(TgiRadii.lg),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(3),
+        padding: const EdgeInsets.all(4),
         child: Row(
           children: [
             for (final type in types)
@@ -381,7 +381,7 @@ class _SoundTypeTab extends StatelessWidget {
         borderRadius: BorderRadius.circular(TgiRadii.md),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 140),
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: selected
               ? TgiDecorations.activeControl(radius: TgiRadii.md)
               : const BoxDecoration(),
@@ -408,7 +408,7 @@ class _SoundTypeTab extends StatelessWidget {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               selected
                   ? TgiAccentText(
                       '$count',
@@ -460,7 +460,7 @@ class _HorizontalFilterScroller extends StatelessWidget {
         controller: controller,
         scrollDirection: Axis.horizontal,
         primary: false,
-        padding: const EdgeInsets.only(bottom: 9),
+        padding: const EdgeInsets.only(bottom: 8),
         child: Row(children: children),
       ),
     );
@@ -681,7 +681,7 @@ class _SoundCollectionButton extends StatelessWidget {
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
           height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 7),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: selected
               ? TgiDecorations.activeControl(radius: TgiRadii.md)
               : BoxDecoration(
@@ -699,7 +699,7 @@ class _SoundCollectionButton extends StatelessWidget {
                     ? TgiColors.accentSoft
                     : TgiColors.textSecondary,
               ),
-              const SizedBox(width: 5),
+              const SizedBox(width: 4),
               Flexible(
                 child: Text(
                   count == null ? label : '$label $count',
@@ -884,7 +884,7 @@ class _CategoryChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(TgiRadii.pill),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 120),
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
           decoration: selected
               ? TgiDecorations.activeControl(radius: TgiRadii.pill)
               : BoxDecoration(
@@ -1044,7 +1044,7 @@ class _SoundEffectTile extends StatelessWidget {
                 style: TextButton.styleFrom(
                   foregroundColor: TgiColors.accentSoft,
                   disabledForegroundColor: TgiColors.textSecondary,
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(TgiRadii.md),
                     side: BorderSide(color: TgiColors.accentMuted),
@@ -1206,7 +1206,7 @@ class _SoundPreviewButton extends StatelessWidget {
                       borderRadius: BorderRadius.circular(TgiRadii.pill),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(1),
+                      padding: const EdgeInsets.all(4),
                       child: Icon(
                         previewing ? Icons.stop : Icons.play_arrow,
                         size: 12,

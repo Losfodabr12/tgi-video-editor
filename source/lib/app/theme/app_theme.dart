@@ -35,21 +35,14 @@ class TgiTheme {
       useMaterial3: true,
       fontFamily: TgiTextStyles.family,
     );
-    final clean = style == AppVisualStyle.clean;
-    final highContrast = style == AppVisualStyle.highContrast;
-    final controlRadius = clean ? 4.0 : (highContrast ? 3.0 : TgiRadii.md);
-    final primary = switch (style) {
-      AppVisualStyle.clean => const Color(0xFF72B7F7),
-      AppVisualStyle.studio => const Color(0xFFF1C84B),
-      AppVisualStyle.highContrast => const Color(0xFF00CFC3),
-    };
-    TgiColors.applyAccent(primary);
+    const controlRadius = TgiRadii.sm;
+    const primary = TgiColors.primary;
 
     return base.copyWith(
       extensions: [TgiVisualStyleTheme(style)],
-      visualDensity: clean ? VisualDensity.compact : VisualDensity.standard,
+      visualDensity: VisualDensity.compact,
       scaffoldBackgroundColor: TgiColors.background,
-      shadowColor: clean ? TgiColors.transparent : TgiColors.shadow,
+      shadowColor: TgiColors.transparent,
       focusColor: primary.withValues(alpha: 0.16),
       hoverColor: primary.withValues(alpha: 0.08),
       highlightColor: primary.withValues(alpha: 0.10),
@@ -83,16 +76,16 @@ class TgiTheme {
       ),
       cardTheme: CardThemeData(
         color: TgiColors.surfacePanel,
-        elevation: clean ? 0 : 4,
+        elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           side: const BorderSide(color: TgiColors.border),
-          borderRadius: BorderRadius.circular(clean ? 5 : TgiRadii.lg),
+          borderRadius: BorderRadius.circular(TgiRadii.sm),
         ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: TgiColors.surfacePanel,
-        elevation: clean ? 0 : 12,
+        elevation: 0,
         surfaceTintColor: TgiColors.transparent,
         titleTextStyle: base.textTheme.titleLarge?.copyWith(
           color: TgiColors.textPrimary,
@@ -104,7 +97,7 @@ class TgiTheme {
         ),
         shape: RoundedRectangleBorder(
           side: const BorderSide(color: TgiColors.borderStrong),
-          borderRadius: BorderRadius.circular(clean ? 6 : TgiRadii.xl),
+          borderRadius: BorderRadius.circular(TgiRadii.md),
         ),
       ),
       appBarTheme: AppBarTheme(
@@ -160,12 +153,9 @@ class TgiTheme {
           ),
       filledButtonTheme: FilledButtonThemeData(
         style: ButtonStyle(
-          minimumSize: WidgetStatePropertyAll(Size(44, clean ? 30 : 42)),
+          minimumSize: WidgetStatePropertyAll(Size(44, 32)),
           padding: WidgetStatePropertyAll(
-            EdgeInsets.symmetric(
-              horizontal: clean ? 12 : 18,
-              vertical: clean ? 7 : 13,
-            ),
+            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
           elevation: const WidgetStatePropertyAll(0),
           foregroundColor: WidgetStateProperty.resolveWith(
@@ -198,22 +188,19 @@ class TgiTheme {
           disabledBackgroundColor: TgiColors.surfacePressed,
           disabledForegroundColor: TgiColors.textDisabled,
           elevation: 0,
-          side: BorderSide(color: clean ? TgiColors.borderStrong : primary),
+          side: BorderSide(color: TgiColors.borderStrong),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(controlRadius),
           ),
-          minimumSize: Size(44, clean ? 30 : 42),
-          padding: EdgeInsets.symmetric(
-            horizontal: clean ? 12 : 18,
-            vertical: clean ? 7 : 14,
-          ),
+          minimumSize: Size(44, 32),
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           textStyle: TgiTextStyles.control,
           animationDuration: const Duration(milliseconds: 140),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: ButtonStyle(
-          minimumSize: WidgetStatePropertyAll(Size(44, clean ? 30 : 42)),
+          minimumSize: WidgetStatePropertyAll(Size(44, 32)),
           foregroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.disabled)
                 ? TgiColors.textDisabled
@@ -243,10 +230,7 @@ class TgiTheme {
             ),
           ),
           padding: WidgetStatePropertyAll(
-            EdgeInsets.symmetric(
-              horizontal: clean ? 12 : 18,
-              vertical: clean ? 7 : 14,
-            ),
+            EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
           textStyle: const WidgetStatePropertyAll(TgiTextStyles.control),
           animationDuration: const Duration(milliseconds: 140),
@@ -254,7 +238,7 @@ class TgiTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: ButtonStyle(
-          minimumSize: WidgetStatePropertyAll(Size(40, clean ? 30 : 40)),
+          minimumSize: WidgetStatePropertyAll(Size(40, 32)),
           foregroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.disabled)
                 ? TgiColors.textDisabled
@@ -271,7 +255,7 @@ class TgiTheme {
       ),
       iconButtonTheme: IconButtonThemeData(
         style: ButtonStyle(
-          minimumSize: WidgetStatePropertyAll(Size.square(clean ? 30 : 40)),
+          minimumSize: WidgetStatePropertyAll(Size.square(32)),
           foregroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.disabled)
                 ? TgiColors.textDisabled
@@ -290,10 +274,10 @@ class TgiTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: TgiColors.surface,
-        isDense: clean,
+        isDense: true,
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 14,
-          vertical: 13,
+          horizontal: 12,
+          vertical: 12,
         ),
         labelStyle: const TextStyle(color: TgiColors.textSecondary),
         hintStyle: const TextStyle(color: TgiColors.textMuted),
@@ -309,10 +293,7 @@ class TgiTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(controlRadius),
-          borderSide: BorderSide(
-            color: clean ? TgiColors.textSecondary : primary,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: primary, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(controlRadius),
@@ -328,9 +309,9 @@ class TgiTheme {
         inactiveTrackColor: TgiColors.borderStrong,
         thumbColor: primary,
         overlayColor: primary.withValues(alpha: 0.12),
-        trackHeight: 5,
+        trackHeight: 4,
         trackShape: const TgiSliderTrackShape(),
-        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 7),
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
         overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
         tickMarkShape: SliderTickMarkShape.noTickMark,
       ),
@@ -354,7 +335,7 @@ class TgiTheme {
             TgiColors.surfaceRaised,
           ),
           surfaceTintColor: const WidgetStatePropertyAll(TgiColors.transparent),
-          elevation: const WidgetStatePropertyAll(8),
+          elevation: const WidgetStatePropertyAll(0),
           side: const WidgetStatePropertyAll(
             BorderSide(color: TgiColors.borderStrong),
           ),
@@ -396,7 +377,7 @@ class TgiTheme {
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: TgiColors.surfacePanel,
         indicatorColor: primary.withValues(alpha: 0.14),
-        selectedIconTheme: IconThemeData(color: primary, size: 21),
+        selectedIconTheme: IconThemeData(color: primary, size: 20),
         unselectedIconTheme: const IconThemeData(
           color: TgiColors.textMuted,
           size: 20,
@@ -510,14 +491,14 @@ class TgiTheme {
             color: states.contains(WidgetState.selected)
                 ? primary
                 : TgiColors.textMuted,
-            size: 21,
+            size: 20,
           ),
         ),
       ),
       scrollbarTheme: ScrollbarThemeData(
         radius: const Radius.circular(TgiRadii.pill),
         thickness: WidgetStateProperty.resolveWith(
-          (states) => states.contains(WidgetState.hovered) ? 8 : 5,
+          (states) => states.contains(WidgetState.hovered) ? 8 : 4,
         ),
         thumbColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.dragged)
@@ -544,7 +525,7 @@ class TgiTheme {
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         backgroundColor: TgiColors.surfaceRaised,
-        elevation: clean ? 0 : 8,
+        elevation: 0,
         contentTextStyle: const TextStyle(
           color: TgiColors.textPrimary,
           fontWeight: FontWeight.w600,

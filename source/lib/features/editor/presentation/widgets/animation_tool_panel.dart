@@ -122,7 +122,7 @@ class AnimationToolPanel extends StatelessWidget {
               context,
             ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           SegmentedButton<AnimationIntensity>(
             key: const ValueKey('animation_intensity_selector'),
             segments: const [
@@ -149,7 +149,7 @@ class AnimationToolPanel extends StatelessWidget {
               context,
             ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           SegmentedButton<AnimationSpeed>(
             key: const ValueKey('animation_speed_selector'),
             segments: const [
@@ -447,7 +447,7 @@ class _PresetButtonState extends State<_PresetButton>
     return OutlinedButton(
       onPressed: widget.onPressed,
       style: OutlinedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

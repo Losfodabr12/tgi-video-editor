@@ -39,7 +39,7 @@ class _ClipResizeHandle extends StatelessWidget {
               margin: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
                 color: TgiColors.white.withValues(alpha: 0.72),
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(TgiRadii.xs),
               ),
             ),
           ),
@@ -103,7 +103,7 @@ class _ClipTrimHandleState extends State<_ClipTrimHandle> {
                 color: TgiColors.accentSoft.withValues(
                   alpha: _hovering || _activePointer != null ? 0.92 : 0.30,
                 ),
-                borderRadius: BorderRadius.circular(1),
+                borderRadius: BorderRadius.circular(TgiRadii.xs),
               ),
             ),
           ),
@@ -211,21 +211,14 @@ class _ClipTrimPreviewBubble extends StatelessWidget {
               color: TgiColors.black.withValues(alpha: 0.78),
               border: Border.all(color: TgiColors.accent),
               borderRadius: BorderRadius.circular(TgiRadii.sm),
-              boxShadow: const [
-                BoxShadow(
-                  color: TgiColors.shadow,
-                  blurRadius: 10,
-                  offset: Offset(0, 4),
-                ),
-              ],
             ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: BorderRadius.circular(TgiRadii.sm),
                     child: SizedBox(
                       width: 34,
                       height: 20,
@@ -243,7 +236,7 @@ class _ClipTrimPreviewBubble extends StatelessWidget {
                             ),
                     ),
                   ),
-                  const SizedBox(width: 6),
+                  const SizedBox(width: 8),
                   Text(
                     formatDuration(sourcePosition),
                     maxLines: 1,
@@ -473,7 +466,7 @@ class _TimelineClip extends StatelessWidget {
         clip.fadeIn > Duration.zero || clip.fadeOut > Duration.zero
         ? ' | Fade'
         : '';
-    final contentPadding = const EdgeInsets.fromLTRB(8, 6, 8, 6);
+    final contentPadding = const EdgeInsets.fromLTRB(8, 8, 8, 8);
     final waveformSamples = isAudio
         ? audioWaveform?.samplesFor(
                 sourceStart: clip.sourceStart,
@@ -489,33 +482,18 @@ class _TimelineClip extends StatelessWidget {
           clipBehavior: Clip.hardEdge,
           padding: EdgeInsets.zero,
           decoration: BoxDecoration(
-            color: emphasized ? TgiColors.surfacePressed : clipFill,
+            color: emphasized
+                ? Color.lerp(clipFill, TgiColors.white, 0.10)
+                : clipFill,
             border: Border.all(
               color: emphasized
                   ? TgiColors.accent
                   : isAudio
                   ? TgiColors.borderStrong
                   : accentColor.withValues(alpha: 0.70),
-              width: selected || active || cutMode ? 1.4 : 1,
+              width: selected || active || cutMode ? 2 : 1,
             ),
             borderRadius: clipRadius,
-            boxShadow: dragging
-                ? const [
-                    BoxShadow(
-                      color: TgiColors.shadowSoft,
-                      blurRadius: 16,
-                      offset: Offset(0, 7),
-                    ),
-                  ]
-                : emphasized
-                ? TgiDecorations.activeGlow
-                : const [
-                    BoxShadow(
-                      color: TgiColors.transparent,
-                      blurRadius: 8,
-                      offset: Offset(0, 3),
-                    ),
-                  ],
           ),
           child: Stack(
             fit: StackFit.expand,
@@ -592,22 +570,22 @@ class _TimelineClip extends StatelessWidget {
                                     ?.copyWith(
                                       color: TgiColors.textPrimary,
                                       fontSize: 11,
+                                      height: 1,
                                       fontWeight: FontWeight.w700,
                                     ),
                               ),
-                              const SizedBox(height: 1),
+                              const SizedBox(height: 4),
                               Text(
                                 '${formatDuration(clip.timelineStart)} - ${formatDuration(clip.timelineEnd)}$speedSuffix$volumeSuffix$transitionSuffix$lookSuffix$reverseSuffix',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: Theme.of(
-                                  context,
-                                ).textTheme.bodySmall?.copyWith(fontSize: 10),
+                                style: Theme.of(context).textTheme.bodySmall
+                                    ?.copyWith(fontSize: 10, height: 1),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         if (isVideo && _clipHasVideoLook(clip)) ...[
                           const _TimelineMiniBadge(label: 'LOOK'),
                           const SizedBox(width: 4),
@@ -667,7 +645,7 @@ class _TimelineThumbnailStrip extends StatelessWidget {
                   for (var index = 0; index < count; index++)
                     Expanded(
                       child: Padding(
-                        padding: EdgeInsets.only(left: index == 0 ? 0 : 1),
+                        padding: EdgeInsets.only(left: index == 0 ? 0 : 4),
                         child: Image.file(
                           File(path),
                           fit: BoxFit.cover,
@@ -700,10 +678,10 @@ class _TimelineMiniBadge extends StatelessWidget {
       decoration: BoxDecoration(
         color: TgiColors.backgroundDeep.withValues(alpha: 0.46),
         border: Border.all(color: TgiColors.accentMuted),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(TgiRadii.sm),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
         child: Text(
           label,
           maxLines: 1,
@@ -949,7 +927,7 @@ class _EmptyTimeline extends StatelessWidget {
           ),
           child: Center(
             child: Padding(
-              padding: EdgeInsets.all(compact ? 8 : 18),
+              padding: EdgeInsets.all(compact ? 8 : 16),
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: TgiColors.surfacePanel.withValues(
@@ -961,12 +939,11 @@ class _EmptyTimeline extends StatelessWidget {
                         : TgiColors.borderStrong,
                   ),
                   borderRadius: BorderRadius.circular(TgiRadii.lg),
-                  boxShadow: accepting ? TgiDecorations.activeGlow : null,
                 ),
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 12 : 22,
-                    vertical: compact ? 8 : 18,
+                    horizontal: compact ? 12 : 24,
+                    vertical: compact ? 8 : 16,
                   ),
                   child: compact
                       ? Text(
@@ -990,7 +967,7 @@ class _EmptyTimeline extends StatelessWidget {
                                     color: TgiColors.textSecondary,
                                     size: 34,
                                   ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 8),
                             Text(
                               accepting
                                   ? 'Soltar na timeline'
@@ -999,7 +976,7 @@ class _EmptyTimeline extends StatelessWidget {
                               style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w800),
                             ),
-                            const SizedBox(height: 6),
+                            const SizedBox(height: 8),
                             Text(
                               accepting
                                   ? 'O clipe sera criado na timeline.'

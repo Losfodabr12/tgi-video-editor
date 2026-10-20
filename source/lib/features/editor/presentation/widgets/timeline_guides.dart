@@ -78,7 +78,7 @@ class _TimelineRuler extends StatelessWidget {
                         ),
                       ),
                       Padding(
-                        padding: const EdgeInsets.only(left: 5, bottom: 4),
+                        padding: const EdgeInsets.only(left: 4, bottom: 4),
                         child: Text(
                           formatDuration(Duration(seconds: seconds)),
                           style: Theme.of(context).textTheme.bodySmall
@@ -164,23 +164,11 @@ class _TimelinePlayheadPainter extends CustomPainter {
     }
     final rawLeft = _leftFor(position, duration, size.width);
     final left = rawLeft.clamp(1.0, math.max(1.0, size.width - 1)).toDouble();
-    final glowPaint = Paint()
-      ..color = TgiColors.playheadGlow
-      ..strokeWidth = 9
-      ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5);
-    final softPaint = Paint()
-      ..color = TgiColors.glowOuter
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
     final paint = Paint()
       ..color = TgiColors.accent
       ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round;
+      ..strokeCap = StrokeCap.square;
 
-    canvas.drawLine(Offset(left, 0), Offset(left, size.height), glowPaint);
-    canvas.drawLine(Offset(left, 0), Offset(left, size.height), softPaint);
     canvas.drawLine(Offset(left, 0), Offset(left, size.height), paint);
   }
 
@@ -238,7 +226,7 @@ class _TimelinePlayheadHandle extends StatelessWidget {
               decoration: BoxDecoration(
                 color: TgiColors.accent,
                 border: Border.all(color: TgiColors.accentSoft),
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(TgiRadii.xs),
               ),
             ),
           ),
@@ -533,14 +521,8 @@ class _TimelineTransitionView extends StatelessWidget {
             child: DecoratedBox(
               key: ValueKey('timeline_transition_indicator_${transition.id}'),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    TgiColors.accent.withValues(alpha: 0.05),
-                    TgiColors.accent.withValues(alpha: 0.34),
-                    TgiColors.accent.withValues(alpha: 0.05),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(5),
+                color: TgiColors.accentMuted,
+                borderRadius: BorderRadius.circular(TgiRadii.md),
                 border: Border.all(
                   color: TgiColors.accentSoft.withValues(alpha: 0.48),
                 ),
@@ -577,21 +559,14 @@ class _TransitionDragFeedback extends StatelessWidget {
         color: TgiColors.surface,
         border: Border.all(color: TgiColors.accent.withValues(alpha: 0.70)),
         borderRadius: BorderRadius.circular(TgiRadii.md),
-        boxShadow: const [
-          BoxShadow(
-            color: TgiColors.shadow,
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
-        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             const TgiAccentIcon(Icons.movie_filter, size: 16),
-            const SizedBox(width: 6),
+            const SizedBox(width: 8),
             ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 180),
               child: Text(

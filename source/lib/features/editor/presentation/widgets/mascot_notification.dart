@@ -73,10 +73,10 @@ class TgiMascotNotification extends StatelessWidget {
             ),
             child: Padding(
               padding: EdgeInsets.fromLTRB(
-                compact ? 18 : 20,
-                compact ? 8 : 10,
-                compact ? 10 : 12,
-                compact ? 8 : 10,
+                compact ? 16 : 20,
+                compact ? 8 : 8,
+                compact ? 8 : 12,
+                compact ? 8 : 8,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,

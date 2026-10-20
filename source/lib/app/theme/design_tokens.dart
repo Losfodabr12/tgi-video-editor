@@ -3,57 +3,51 @@ import 'package:flutter/material.dart';
 class TgiColors {
   const TgiColors._();
 
-  static const Color backgroundDeep = Color(0xFF0B0C0E);
-  static const Color background = Color(0xFF0F1013);
-  static const Color surface = Color(0xFF18191D);
-  static const Color surfacePanel = Color(0xFF15161A);
-  static const Color surfaceAlt = Color(0xFF1D1F24);
-  static const Color surfaceRaised = Color(0xFF23252B);
-  static const Color surfaceRail = Color(0xFF131418);
-  static const Color surfacePressed = Color(0xFF292C33);
+  // Three structural surfaces. All UI aliases resolve to these levels.
+  static const Color backgroundDeep = Color(0xFF101216);
+  static const Color surfacePanel = Color(0xFF20242B);
+  static const Color surfaceRaised = Color(0xFF343B46);
+  static const Color background = backgroundDeep;
+  static const Color surface = backgroundDeep;
+  static const Color surfaceAlt = surfaceRaised;
+  static const Color surfaceRail = surfacePanel;
+  static const Color surfacePressed = surfaceRaised;
+  static const Color primary = Color(0xFF82D9B0);
 
-  // O fallback e neutro. Cores de identidade vêm do estilo escolhido no tema.
-  static Color accent = const Color(0xFFB8B8BE);
-  static Color accentSoft = const Color(0xFFD0D0D4);
-  static Color accentDim = const Color(0xFF3B3B41);
-  static Color accentMuted = const Color(0xFF323238);
-  static Color accentCool = const Color(0xFFB8B8BE);
-  static Color accentBlue = const Color(0xFFB8B8BE);
-  static Color accentGreen = const Color(0xFFB8B8BE);
-  static Color accentRose = const Color(0xFFB8B8BE);
-
-  static void applyAccent(Color primary) {
-    accent = primary;
-    accentSoft = Color.lerp(primary, textPrimary, 0.28)!;
-    accentDim = Color.lerp(surfacePressed, primary, 0.34)!;
-    accentMuted = Color.lerp(surfacePressed, primary, 0.20)!;
-    accentCool = primary;
-    accentBlue = primary;
-    accentGreen = primary;
-    accentRose = primary;
-    waveformHigh = primary;
-    playheadGlow = primary;
-  }
+  static const Color accent = primary;
+  static final Color accentSoft = Color.lerp(primary, textPrimary, 0.28)!;
+  static final Color accentDim = Color.lerp(surfacePressed, primary, 0.34)!;
+  static final Color accentMuted = Color.lerp(surfacePressed, primary, 0.20)!;
+  // Compatibility aliases for existing controls; they share one UI accent.
+  static const Color accentCool = primary;
+  static const Color accentBlue = primary;
+  static const Color accentGreen = primary;
+  static const Color accentRose = primary;
 
   static const Color textPrimary = Color(0xFFF7F7F8);
   static const Color textMuted = Color(0xFF9699A2);
   static const Color textSecondary = Color(0xFFB8BAC1);
   static const Color textDisabled = Color(0xFF666A73);
 
-  static const Color border = Color(0xFF2B2D33);
-  static const Color borderSubtle = Color(0xFF22242A);
-  static const Color borderStrong = Color(0xFF3A3D45);
+  static const Color border = Color(0xFF454D59);
+  static const Color borderSubtle = Color(0xFF343B46);
+  static const Color borderStrong = Color(0xFF606D7D);
 
-  static const Color timelineLane = Color(0xFF121212);
-  static const Color timelineLaneAlt = Color(0xFF101010);
-  static const Color timelineGrid = Color(0xFF2A2A2A);
-  static const Color clipVideo = Color(0xFF29455B);
-  static const Color clipAudio = Color(0xFF29483F);
-  static const Color clipImage = Color(0xFF3D4155);
-  static const Color clipText = Color(0xFF514535);
+  static const Color timelineLane = backgroundDeep;
+  static const Color timelineLaneAlt = surfacePanel;
+  static const Color timelineGrid = border;
+  // Content type colors are semantic, independent of the single UI accent.
+  static const Color clipVideo = Color(0xFF284C73);
+  static const Color clipAudio = Color(0xFF23584C);
+  static const Color clipImage = Color(0xFF574477);
+  static const Color clipText = Color(0xFF70552C);
+  static const Color videoInk = Color(0xFFA0C9F4);
+  static const Color audioInk = Color(0xFF9CDFC9);
+  static const Color imageInk = Color(0xFFD1B7F4);
+  static const Color textInk = Color(0xFFF0CF8D);
   static const Color waveformLow = Color(0xFF606067);
-  static Color waveformHigh = accent;
-  static Color playheadGlow = accent;
+  static const Color waveformHigh = primary;
+  static const Color playheadGlow = primary;
   static const Color glowBorder = border;
   static const Color glowOuter = transparent;
   static const Color glowSoft = transparent;
@@ -78,16 +72,16 @@ class TgiRadii {
   static const double xs = 2;
   static const double sm = 4;
   static const double md = 6;
-  static const double lg = 8;
-  static const double xl = 10;
-  static const double pill = 999;
+  static const double lg = md;
+  static const double xl = md;
+  static const double pill = md;
 }
 
 class TgiSpacing {
   const TgiSpacing._();
 
   static const double xxs = 4;
-  static const double xs = 6;
+  static const double xs = 4;
   static const double sm = 8;
   static const double md = 12;
   static const double lg = 16;
@@ -98,16 +92,16 @@ class TgiSpacing {
 class TgiIconSizes {
   const TgiIconSizes._();
 
-  static const double sm = 14;
-  static const double md = 18;
-  static const double lg = 22;
+  static const double sm = 16;
+  static const double md = 20;
+  static const double lg = 24;
   static const double rail = 24;
 }
 
 class TgiTextStyles {
   const TgiTextStyles._();
 
-  static const family = 'Segoe UI';
+  static const family = 'Editor UI';
   static const control = TextStyle(
     fontFamily: family,
     fontSize: 12,

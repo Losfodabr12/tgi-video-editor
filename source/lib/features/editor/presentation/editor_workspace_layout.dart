@@ -108,9 +108,9 @@ class _EditorWorkspaceLayout {
 class _EditorWorkspaceLayoutStore {
   const _EditorWorkspaceLayoutStore._();
 
-  static Future<_EditorWorkspaceLayout?> load() async {
+  static Future<_EditorWorkspaceLayout?> load({String? path}) async {
     try {
-      final file = File(_statePath);
+      final file = File(path ?? _statePath);
       if (!await file.exists()) {
         return null;
       }
@@ -126,9 +126,12 @@ class _EditorWorkspaceLayoutStore {
     }
   }
 
-  static Future<void> save(_EditorWorkspaceLayout layout) async {
+  static Future<void> save(
+    _EditorWorkspaceLayout layout, {
+    String? path,
+  }) async {
     try {
-      final file = File(_statePath);
+      final file = File(path ?? _statePath);
       await file.parent.create(recursive: true);
       const encoder = JsonEncoder.withIndent('  ');
       await file.writeAsString(encoder.convert(layout.toJson()));

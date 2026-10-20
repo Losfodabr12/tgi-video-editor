@@ -7,7 +7,8 @@ extension _DesktopWorkspace on _EditorScreenState {
     Widget content;
     final mode = switch (_libraryTab) {
       _EditorLibraryTab.media => _LeftPanelMode.mediaPool,
-      _EditorLibraryTab.audio => kStandalone ? _LeftPanelMode.mediaPool : _LeftPanelMode.soundEffects,
+      _EditorLibraryTab.audio =>
+        kStandalone ? _LeftPanelMode.mediaPool : _LeftPanelMode.soundEffects,
       _EditorLibraryTab.transitions => _LeftPanelMode.transitions,
       _EditorLibraryTab.captions => _LeftPanelMode.captions,
       _ => null,
@@ -70,7 +71,7 @@ extension _DesktopWorkspace on _EditorScreenState {
                         template.$2,
                         style: TextStyle(fontFamily: template.$3, fontSize: 19),
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: 4),
                       Text(
                         template.$1,
                         style: const TextStyle(
@@ -154,7 +155,7 @@ extension _DesktopWorkspace on _EditorScreenState {
       child: Column(
         children: [
           SizedBox(
-            height: 49,
+            height: 52,
             child: Row(
               children: [
                 for (final tab in _EditorLibraryTab.values)
@@ -285,7 +286,7 @@ extension _DesktopWorkspace on _EditorScreenState {
                               ? TgiColors.accent
                               : TgiColors.textMuted,
                           textStyle: TgiTextStyles.control,
-                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
                         onPressed: () {
                           if (mode.$1 == _LeftPanelMode.audioTools) {
@@ -353,6 +354,7 @@ extension _DesktopWorkspace on _EditorScreenState {
               if (showLibrary) ...[
                 SizedBox(width: libraryWidth, child: library),
                 _WorkspaceDivider(
+                  key: const ValueKey('resize-library'),
                   axis: Axis.vertical,
                   onDragUpdate: (details) =>
                       _resizeLeftWorkspacePanel(details, width),
@@ -367,6 +369,7 @@ extension _DesktopWorkspace on _EditorScreenState {
               ),
               if (showInspector) ...[
                 _WorkspaceDivider(
+                  key: const ValueKey('resize-properties'),
                   axis: Axis.vertical,
                   onDragUpdate: (details) =>
                       _resizePropertiesWorkspacePanel(details, width),
@@ -378,6 +381,7 @@ extension _DesktopWorkspace on _EditorScreenState {
           ),
         ),
         _WorkspaceDivider(
+          key: const ValueKey('resize-timeline'),
           axis: Axis.horizontal,
           onDragUpdate: (details) =>
               _resizePreviewWorkspacePanel(details, constraints.maxHeight),

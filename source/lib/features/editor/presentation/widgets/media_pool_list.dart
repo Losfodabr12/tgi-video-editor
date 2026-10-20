@@ -217,7 +217,7 @@ class _MediaPoolDropZone extends StatelessWidget {
                   'Importar mídia',
                   style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
-                SizedBox(height: 6),
+                SizedBox(height: 8),
                 Text(
                   'Clique ou arraste vídeos, imagens e áudio para a biblioteca.',
                   textAlign: TextAlign.center,
@@ -344,7 +344,7 @@ class _MediaDragFeedback extends StatelessWidget {
       color: TgiColors.transparent,
       child: Container(
         width: 280,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: TgiColors.surfacePressed,
           border: Border.all(color: TgiColors.accentMuted),
@@ -369,7 +369,7 @@ class _MediaDragFeedback extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     formatDuration(item.duration),
                     style: const TextStyle(color: TgiColors.textSecondary),
@@ -438,7 +438,7 @@ class _MediaTypePill extends StatelessWidget {
         borderRadius: BorderRadius.circular(TgiRadii.pill),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         child: Text(
           _typeLabel(type),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(

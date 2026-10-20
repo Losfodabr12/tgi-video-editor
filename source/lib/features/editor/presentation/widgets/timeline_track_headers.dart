@@ -39,7 +39,7 @@ class _TrackLabels extends StatelessWidget {
           height: _rulerHeight + 1,
           child: Row(
             children: [
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
               const Expanded(
                 child: Text(
                   'CAMADAS',
@@ -120,7 +120,7 @@ class _TrackLabels extends StatelessWidget {
                                     size: 14,
                                     color: TgiColors.textMuted,
                                   ),
-                                  const SizedBox(width: 6),
+                                  const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       track.name,
@@ -366,6 +366,6 @@ class _TrackMenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Row(
     mainAxisSize: MainAxisSize.min,
-    children: [Icon(icon, size: 16), const SizedBox(width: 10), Text(label)],
+    children: [Icon(icon, size: 16), const SizedBox(width: 8), Text(label)],
   );
 }

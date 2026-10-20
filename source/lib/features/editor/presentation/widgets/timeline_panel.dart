@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../app/theme/design_tokens.dart';
-import '../../../../app/theme/decorations.dart';
 import '../../../../domain/models/audio_waveform.dart';
 import '../../../../domain/models/clip.dart' as domain;
 import '../../../../domain/models/media_item.dart';
@@ -64,18 +63,7 @@ const _minimumClipTrimTimelineDuration = Duration(milliseconds: 100);
 const _timelineDropBackground = TgiColors.surfacePressed;
 const _timelineTransitionDropBackground = TgiColors.surfacePressed;
 
-Color _trackAccentFor(TrackType type) {
-  switch (type) {
-    case TrackType.video:
-      return TgiColors.accent;
-    case TrackType.audio:
-      return TgiColors.accentGreen;
-    case TrackType.image:
-      return TgiColors.accent;
-    case TrackType.text:
-      return TgiColors.accentRose;
-  }
-}
+Color _trackAccentFor(TrackType type) => _clipAccentFor(type);
 
 Color _timelineLaneFillFor(int index, Track track) {
   final base = index.isEven
@@ -99,18 +87,12 @@ Color _timelineLaneFillFor(int index, Track track) {
   return Color.lerp(base, accent, index.isEven ? 0.035 : 0.055)!;
 }
 
-Color _clipAccentFor(TrackType type) {
-  switch (type) {
-    case TrackType.video:
-      return TgiColors.accent;
-    case TrackType.audio:
-      return TgiColors.accentGreen;
-    case TrackType.image:
-      return TgiColors.accent;
-    case TrackType.text:
-      return TgiColors.accentRose;
-  }
-}
+Color _clipAccentFor(TrackType type) => switch (type) {
+  TrackType.video => TgiColors.videoInk,
+  TrackType.audio => TgiColors.audioInk,
+  TrackType.image => TgiColors.imageInk,
+  TrackType.text => TgiColors.textInk,
+};
 
 Color _clipFillFor(TrackType type) => switch (type) {
   TrackType.video => TgiColors.clipVideo,

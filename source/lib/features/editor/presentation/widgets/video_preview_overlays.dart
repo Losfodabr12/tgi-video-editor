@@ -109,7 +109,7 @@ class _TextOverlayState extends State<_TextOverlay> {
                           border: entry.isActive
                               ? Border.all(color: TgiColors.white, width: 1.2)
                               : null,
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(TgiRadii.md),
                         ),
                         child: Padding(
                           padding: EdgeInsets.all(boxPadding),
