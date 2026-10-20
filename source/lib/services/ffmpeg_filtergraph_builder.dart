@@ -1,3 +1,4 @@
+import 'ffmpeg_audio_export.dart';
 import '../domain/models/cross_dissolve.dart';
 import 'cross_dissolve_graph.dart';
 import 'dart:math' as math;
@@ -31,7 +32,7 @@ class FfmpegFiltergraphBuilder {
           .where((t) => !cuts.any((c) => c.transition.id == t.id))
           .toList(),
     );
-    return _applyEditorExportOptions(
+    final command = _applyEditorExportOptions(
       CrossDissolveGraph.apply(
         _buildFullExportCommand(
           withoutDissolves,
@@ -44,6 +45,7 @@ class FfmpegFiltergraphBuilder {
       ),
       settings,
     );
+    return settings.audioOnly ? FfmpegAudioExport.apply(command) : command;
   }
 
   FfmpegExportCommand _buildFullExportCommand(

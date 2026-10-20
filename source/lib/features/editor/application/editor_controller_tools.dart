@@ -1,6 +1,41 @@
 part of 'editor_controller.dart';
 
 extension EditorControllerTools on EditorController {
+  void importSrt(String source) {
+    try {
+      final cues = SubtitleService.parseSrt(source);
+      _addCaptionCuesToTimeline(
+        cues,
+        fontFamily: 'Lato',
+        fontSize: 36,
+        textColor: 0xFFFFFFFF,
+        backgroundColor: 0x99000000,
+        opacity: 1,
+        textAnimation: domain.TextClipAnimation.none,
+      );
+      _errorMessage = null;
+      _statusMessage = '${cues.length} legendas importadas.';
+    } catch (error) {
+      _errorMessage = _cleanError(error);
+    }
+    notifyListeners();
+  }
+
+  void applyCaptionStyle(CaptionStyle style) {
+    final captions = generatedCaptionClips;
+    if (captions.any((clip) => _clipIsOnLockedTrack(clip.id))) {
+      _errorMessage =
+          'Destrave as pistas de legenda antes de alterar o estilo.';
+    } else if (captions.isNotEmpty) {
+      _replaceToolClips({
+        for (final clip in captions) clip.id: style.apply(clip),
+      });
+      _errorMessage = null;
+      _statusMessage = 'Estilo aplicado a ${captions.length} legendas.';
+    }
+    notifyListeners();
+  }
+
   void registerSelectedTextClipsAsCaptions() {
     final groups = _effectiveSelectedTimelineGroupIds();
     final selected = project.tracks

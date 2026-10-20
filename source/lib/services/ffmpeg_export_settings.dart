@@ -169,6 +169,7 @@ class FfmpegExportSettings {
     this.rangeStart,
     this.rangeEnd,
     this.encoder = FfmpegVideoEncoder.software,
+    this.audioOnly = false,
   });
 
   static const frameRateOptions = [24, 30, 60];
@@ -205,6 +206,9 @@ class FfmpegExportSettings {
   final Duration? rangeStart;
   final Duration? rangeEnd;
   final FfmpegVideoEncoder encoder;
+
+  /// Execution option. Intentionally not serialized: project format v14 is unchanged.
+  final bool audioOnly;
   bool get hasRange => rangeStart != null || rangeEnd != null;
 
   FfmpegExportSettings copyWith({
@@ -212,10 +216,12 @@ class FfmpegExportSettings {
     Duration? rangeStart,
     Duration? rangeEnd,
     bool clearRange = false,
+    bool? audioOnly,
   }) => FfmpegExportSettings(
     resolution: resolution,
     framesPerSecond: framesPerSecond,
     quality: quality,
+    audioOnly: audioOnly ?? this.audioOnly,
     encoder: encoder ?? this.encoder,
     rangeStart: clearRange ? null : rangeStart ?? this.rangeStart,
     rangeEnd: clearRange ? null : rangeEnd ?? this.rangeEnd,
@@ -287,6 +293,7 @@ class FfmpegExportSettings {
         other.framesPerSecond == framesPerSecond &&
         other.quality == quality &&
         other.encoder == encoder &&
+        other.audioOnly == audioOnly &&
         other.rangeStart == rangeStart &&
         other.rangeEnd == rangeEnd;
   }
@@ -297,9 +304,68 @@ class FfmpegExportSettings {
     framesPerSecond,
     quality,
     encoder,
+    audioOnly,
     rangeStart,
     rangeEnd,
   );
+}
+
+class FfmpegExportPreset {
+  const FfmpegExportPreset(this.id, this.label, this.settings);
+  final String id, label;
+  final FfmpegExportSettings settings;
+  static const all = [
+    FfmpegExportPreset(
+      'youtube',
+      'YouTube · 1080p',
+      FfmpegExportSettings(
+        resolution: FfmpegExportResolution.p1080,
+        framesPerSecond: 30,
+        quality: FfmpegExportQuality.high,
+        encoder: FfmpegVideoEncoder.automatic,
+      ),
+    ),
+    FfmpegExportPreset(
+      '4k',
+      '4K · 2160p',
+      FfmpegExportSettings(
+        resolution: FfmpegExportResolution.p4k,
+        framesPerSecond: 30,
+        quality: FfmpegExportQuality.high,
+        encoder: FfmpegVideoEncoder.automatic,
+      ),
+    ),
+    FfmpegExportPreset(
+      'vertical',
+      'Vertical · 9:16',
+      FfmpegExportSettings(
+        resolution: FfmpegExportResolution.shorts1080,
+        framesPerSecond: 30,
+        quality: FfmpegExportQuality.high,
+        encoder: FfmpegVideoEncoder.automatic,
+      ),
+    ),
+    FfmpegExportPreset(
+      'square',
+      'Quadrado · 1:1',
+      FfmpegExportSettings(
+        resolution: FfmpegExportResolution.square1080,
+        framesPerSecond: 30,
+        quality: FfmpegExportQuality.high,
+        encoder: FfmpegVideoEncoder.automatic,
+      ),
+    ),
+    FfmpegExportPreset(
+      'audio',
+      'Somente áudio · WAV',
+      FfmpegExportSettings(
+        resolution: FfmpegExportResolution.p720,
+        framesPerSecond: 30,
+        quality: FfmpegExportQuality.standard,
+        audioOnly: true,
+      ),
+    ),
+  ];
 }
 
 T? _firstWhereOrNull<T>(Iterable<T> values, bool Function(T value) matches) {

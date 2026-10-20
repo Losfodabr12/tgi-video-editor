@@ -882,6 +882,7 @@ class _ExportSettingsDialogState extends State<_ExportSettingsDialog> {
   late int _fps = widget.initial.framesPerSecond;
   late FfmpegExportQuality _quality = widget.initial.quality;
   bool _advancedOpen = false;
+  late bool _audioOnly = widget.initial.audioOnly;
   late FfmpegVideoEncoder _encoder = widget.initial.encoder;
   late bool _rangeEnabled = widget.initial.hasRange;
   late final _rangeStartText = TextEditingController(
@@ -928,6 +929,26 @@ class _ExportSettingsDialogState extends State<_ExportSettingsDialog> {
 
   Widget _rangeControls() => Column(
     children: [
+      DropdownButtonFormField<FfmpegExportPreset>(
+        key: const ValueKey('export_preset'),
+        isExpanded: true,
+        decoration: const InputDecoration(labelText: 'Preset de exportação'),
+        items: [
+          for (final preset in FfmpegExportPreset.all)
+            DropdownMenuItem(value: preset, child: Text(preset.label)),
+        ],
+        onChanged: (preset) {
+          if (preset == null) return;
+          setState(() {
+            _resolution = preset.settings.resolution;
+            _fps = preset.settings.framesPerSecond;
+            _quality = preset.settings.quality;
+            _encoder = preset.settings.encoder;
+            _audioOnly = preset.settings.audioOnly;
+          });
+        },
+      ),
+      const SizedBox(height: 12),
       SwitchListTile(
         contentPadding: EdgeInsets.zero,
         key: const ValueKey('export_range_enabled'),
@@ -992,7 +1013,7 @@ class _ExportSettingsDialogState extends State<_ExportSettingsDialog> {
             style: TextStyle(color: Colors.redAccent),
           ),
       ],
-      if (Platform.isWindows) ...[
+      if (Platform.isWindows && !_audioOnly) ...[
         const SizedBox(height: 12),
         DropdownButtonFormField<FfmpegVideoEncoder>(
           key: const ValueKey('export_encoder'),
@@ -1051,7 +1072,7 @@ class _ExportSettingsDialogState extends State<_ExportSettingsDialog> {
             children: [
               Text(
                 'Escolha a qualidade. Na proxima tela voce escolhe a pasta '
-                'onde o arquivo MP4 sera salvo.',
+                'onde o arquivo será salvo.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: TgiColors.textSecondary,
                 ),
@@ -1087,19 +1108,25 @@ class _ExportSettingsDialogState extends State<_ExportSettingsDialog> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '${_resolution.label}  •  ${_resolution.dimensionsLabel}',
+                              _audioOnly
+                                  ? 'Áudio WAV'
+                                  : '${_resolution.label}  •  ${_resolution.dimensionsLabel}',
                               style: Theme.of(context).textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.w900),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '$_fps fps  •  ${_quality.label}',
+                              _audioOnly
+                                  ? 'PCM · 48 kHz · estéreo'
+                                  : '$_fps fps  •  ${_quality.label}',
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(color: TgiColors.textSecondary),
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '${_estimatedFileSizeLabel()}  •  MP4',
+                              _audioOnly
+                                  ? 'WAV · PCM 48 kHz estéreo'
+                                  : '${_estimatedFileSizeLabel()}  •  MP4',
                               key: const ValueKey('export_size_estimate'),
                               style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
@@ -1117,89 +1144,94 @@ class _ExportSettingsDialogState extends State<_ExportSettingsDialog> {
               const SizedBox(height: TgiSpacing.lg),
               _rangeControls(),
               const SizedBox(height: TgiSpacing.md),
-              Text(
-                'Qualidade do arquivo',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'A recomendada funciona bem para YouTube e redes sociais.',
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: TgiColors.textSecondary),
-              ),
-              const SizedBox(height: TgiSpacing.sm),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _ExportQualityChoice(
-                    key: const ValueKey('export_quality_light'),
-                    title: 'Arquivo menor',
-                    subtitle: 'Mais rapido',
-                    icon: Icons.bolt_outlined,
-                    selected: _quality == FfmpegExportQuality.light,
-                    onPressed: () =>
-                        setState(() => _quality = FfmpegExportQuality.light),
-                  ),
-                  _ExportQualityChoice(
-                    key: const ValueKey('export_quality_recommended'),
-                    title: 'Recomendada',
-                    subtitle: 'Melhor equilibrio',
-                    icon: Icons.thumb_up_alt_outlined,
-                    badge: 'INDICADO',
-                    selected: _quality == FfmpegExportQuality.standard,
-                    onPressed: () =>
-                        setState(() => _quality = FfmpegExportQuality.standard),
-                  ),
-                  _ExportQualityChoice(
-                    key: const ValueKey('export_quality_high'),
-                    title: 'Alta',
-                    subtitle: 'Mais detalhes',
-                    icon: Icons.high_quality_outlined,
-                    selected: _quality == FfmpegExportQuality.high,
-                    onPressed: () =>
-                        setState(() => _quality = FfmpegExportQuality.high),
-                  ),
-                  _ExportQualityChoice(
-                    key: const ValueKey('export_quality_maximum'),
-                    title: 'Maxima',
-                    subtitle: 'Arquivo maior',
-                    icon: Icons.diamond_outlined,
-                    selected: _quality == FfmpegExportQuality.maximum,
-                    onPressed: () =>
-                        setState(() => _quality = FfmpegExportQuality.maximum),
-                  ),
-                ],
-              ),
-              const SizedBox(height: TgiSpacing.md),
-              InkWell(
-                key: const ValueKey('export_advanced_toggle'),
-                onTap: () => setState(() => _advancedOpen = !_advancedOpen),
-                borderRadius: BorderRadius.circular(TgiRadii.md),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 9),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.tune, size: 19),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'Mais opcoes',
-                          style: TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                      ),
-                      Icon(
-                        _advancedOpen
-                            ? Icons.keyboard_arrow_up
-                            : Icons.keyboard_arrow_down,
-                      ),
-                    ],
+              if (!_audioOnly) ...[
+                Text(
+                  'Qualidade do arquivo',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'A recomendada funciona bem para YouTube e redes sociais.',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: TgiColors.textSecondary,
                   ),
                 ),
-              ),
+                const SizedBox(height: TgiSpacing.sm),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _ExportQualityChoice(
+                      key: const ValueKey('export_quality_light'),
+                      title: 'Arquivo menor',
+                      subtitle: 'Mais rapido',
+                      icon: Icons.bolt_outlined,
+                      selected: _quality == FfmpegExportQuality.light,
+                      onPressed: () =>
+                          setState(() => _quality = FfmpegExportQuality.light),
+                    ),
+                    _ExportQualityChoice(
+                      key: const ValueKey('export_quality_recommended'),
+                      title: 'Recomendada',
+                      subtitle: 'Melhor equilibrio',
+                      icon: Icons.thumb_up_alt_outlined,
+                      badge: 'INDICADO',
+                      selected: _quality == FfmpegExportQuality.standard,
+                      onPressed: () => setState(
+                        () => _quality = FfmpegExportQuality.standard,
+                      ),
+                    ),
+                    _ExportQualityChoice(
+                      key: const ValueKey('export_quality_high'),
+                      title: 'Alta',
+                      subtitle: 'Mais detalhes',
+                      icon: Icons.high_quality_outlined,
+                      selected: _quality == FfmpegExportQuality.high,
+                      onPressed: () =>
+                          setState(() => _quality = FfmpegExportQuality.high),
+                    ),
+                    _ExportQualityChoice(
+                      key: const ValueKey('export_quality_maximum'),
+                      title: 'Maxima',
+                      subtitle: 'Arquivo maior',
+                      icon: Icons.diamond_outlined,
+                      selected: _quality == FfmpegExportQuality.maximum,
+                      onPressed: () => setState(
+                        () => _quality = FfmpegExportQuality.maximum,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              const SizedBox(height: TgiSpacing.md),
+              if (!_audioOnly)
+                InkWell(
+                  key: const ValueKey('export_advanced_toggle'),
+                  onTap: () => setState(() => _advancedOpen = !_advancedOpen),
+                  borderRadius: BorderRadius.circular(TgiRadii.md),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.tune, size: 19),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Mais opcoes',
+                            style: TextStyle(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        Icon(
+                          _advancedOpen
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               if (_advancedOpen)
                 Padding(
                   padding: const EdgeInsets.only(top: TgiSpacing.sm),
@@ -1299,6 +1331,7 @@ class _ExportSettingsDialogState extends State<_ExportSettingsDialog> {
                       framesPerSecond: _fps,
                       quality: _quality,
                       encoder: _encoder,
+                      audioOnly: _audioOnly,
                       rangeStart: _rangeEnabled
                           ? Duration(
                               milliseconds:

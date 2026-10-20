@@ -13,6 +13,7 @@ executados nesta máquina; logs completos ficam em `.work/`, ignorada pelo Git.
 | 6 — Projetos antigos | exit 0, sem problemas | exit 0, 148 aprovados / 13 ignorados | Sobreposições migradas em memória; formatos 13/14 e round-trip testados |
 | 7 — Build e CI | exit 0, sem problemas | exit 0, 148 aprovados / 13 ignorados | Integração adicional: 161 aprovados; build release exit 0 (116,0 s) |
 | 8 — Desempenho | exit 0, sem problemas | exit 0, 151 aprovados / 13 ignorados | Caches persistentes e benchmark FFmpeg executado; dados em docs/DESEMPENHO.md |
+| 9 — Extras e entrega | exit 0, sem problemas | exit 0, 160 aprovados / 13 ignorados | Integração: 173 aprovados, zero ignorados; build release exit 0 (110,4 s) |
 
 Os 13 testes históricos opcionais dependem de um dart-define e são ignorados
 pelo comando padrão pedido. Os seis novos testes de pixels rodam por padrão.
@@ -89,3 +90,71 @@ e waveform agora usam cache em disco, com testes de reabertura, invalidação e
 corrupção. Benchmark real de geração/decodificação/exportação de fonte sintética
 1080p/5 s executado: uma medição por operação, números brutos publicados.
 Não se mediram FPS nativo, consumo de GPU/RAM ou desempenho prolongado em 4K.
+
+## Etapa 9
+
+Presets YouTube/4K/9:16/1:1/WAV na interface; seleção de CPU/NVENC/QSV/AMF
+mantida com probe e retry CPU. Testes renderizaram as quatro dimensões reais,
+inclusive 3840×2160, e conferiram WAV PCM estéreo sem vídeo. Falhas simuladas
+de cada encoder e falha após probe produziram arquivos CPU válidos.
+
+Importação SRT com BOM, CRLF e texto multilinha; estilo em lote com fonte,
+tamanho, cor, fundo e posição; undo/redo e pistas bloqueadas. Exportação SRT/VTT
+existente reaproveitada. A tela de atalhos foi preservada, ampliada com referência
+às combinações adicionais e testada com remapeamento por eventos reais.
+
+A configuração da marca também gera SVG/PNG/ICO e cabeçalho Windows, corrigindo
+o ícone e metadados nativos que ainda exibiam TGI. A última execução de
+`tool/test_editor.ps1 -Integration -Build`, depois dessa correção, concluiu:
+
+- `flutter pub get`: exit 0.
+- `flutter analyze --no-pub`: exit 0, sem problemas (6,0 s).
+- `flutter test --no-pub`: exit 0, 160 aprovados e 13 opcionais ignorados.
+- Testes com `TGI_RUN_FFMPEG_INTEGRATION_TESTS=true`: exit 0, 173 aprovados,
+  sem falhas/ignorados. O render real registrou CPU e NVIDIA NVENC nesta máquina.
+- `flutter build windows --release --no-pub`: exit 0, 110,4 s; avisos CMake do
+  plugin media_kit continuam presentes.
+- 64 arquivos do build copiados para `aplicativo/` e comparados por SHA-256,
+  sem divergências. ProductName/FileDescription/CompanyName do executável lidos
+  e confirmados como Frame Studio. Versão de pacote mantida em 0.2.0+2.
+- Todos os scripts PowerShell passaram pelo parser, inclusive o gerador da marca.
+
+Logs finais: `.work/etapa9-final-branded-checks-build.log`. A opção somente áudio
+é transitória e não adiciona campos ao projeto; testes confirmam leitura e
+round-trip do v14. Detalhes de uso e limites: docs/EXTRAS.md.
+
+## CI remoto executado
+
+O [workflow da etapa 7](https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39405929902)
+terminou com **success** em windows-latest, Flutter 3.44.4: setup das ferramentas,
+pub get, analyze, testes padrão, integração e build. Esse run corresponde ao
+commit `4ab5d0b`, anterior às etapas 8/9; não é apresentado como validação remota
+dessas alterações posteriores. O status do commit mais recente fica em
+[Actions](https://github.com/Losfodabr12/tgi-video-editor/actions/workflows/ci.yml).
+
+## Limites e trabalho não realizado
+
+- A revisão de paridade documenta aproximações; não há garantia de pixels
+  idênticos entre Flutter/media_kit e todos os filtros FFmpeg.
+- Dissolves respeitam o modelo global v14. Não foram criados transições por
+  par/pista com novo schema nem handles externos ao trim; bordas são repetidas.
+- Controlador e tela foram divididos por responsabilidades, mas ainda concentram
+  fluxos de orquestração. Não houve reescrita total da arquitetura ou mudança
+  de framework de estado.
+- Não há quota automática para todos os caches; o benchmark usa uma fonte
+  sintética de 5 s e uma medição por operação. Não é benchmark de FPS da UI.
+- Só áudio usa WAV PCM. SRT transporta texto/tempo, não o estilo visual do projeto.
+- Não se validou hardware Intel QSV ou AMD AMF real. Seus caminhos de falha e
+  fallback foram simulados; o render CPU de fallback foi executado de verdade.
+- Não foi publicada nova release binária no GitHub. O código está na branch
+  de trabalho e o executável local foi atualizado; a release v0.1.0 é histórica.
+
+## Sessão manual ainda necessária na janela nativa
+
+Não foi executada uma sessão audiovisual manual nesta tarefa. Ainda é preciso
+conferir reprodução/seek e sincronismo percebido, dissolve com efeitos/camadas,
+qualidade das bordas de chroma/máscaras, diálogos e escalas de tela, captura de
+atalhos, fluxo de importação SRT/estilo e destinos de exportação. Também faltam
+edição prolongada/4K com mídia de câmera, CPU/GPU/RAM em uso real, exportações
+longas por fabricante de GPU, transcrição de voz completa com Whisper e uma
+sessão com o adaptador de rede desligado. Build/testes não substituem esses usos.

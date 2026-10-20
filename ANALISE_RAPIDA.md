@@ -1,5 +1,8 @@
 # Análise rápida para revisão externa — 20/10/2026
 
+Registro histórico anterior à execução das etapas solicitadas. Para o estado
+atual, consulte [RELATORIO_ALTERACOES.md](RELATORIO_ALTERACOES.md).
+
 Estado revisado: TGI Video Editor **0.2.0+2**, projeto Windows em Flutter,
 derivado do TGI 1.4.26+33. Esta publicação inclui a reformulação que estava
 somente na cópia local. A release executável `v0.1.0` continua sendo a base

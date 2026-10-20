@@ -5,6 +5,8 @@ const kStandalone = bool.fromEnvironment(
 );
 
 abstract final class AppIdentity {
+  static const iconBackgroundArgb = 0xFF121826;
+  static const iconAccentArgb = 0xFF4C8DFF;
   static const name = String.fromEnvironment(
     'EDITOR_NAME',
     defaultValue: 'Frame Studio',

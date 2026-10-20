@@ -1,10 +1,13 @@
-# TGI Video Editor
+# Frame Studio
 
-Editor desktop para Windows em Flutter, derivado do editor TGI 1.4.26+33.
-A versão **0.2.0+2**, na branch `main`, reformula a timeline, a composição de
-camadas e o workspace. Para revisão externa, comece pela
-[análise rápida de 20/10/2026](ANALISE_RAPIDA.md). Veja também
-[a implementação, testes e limites](REFORMULACAO.md).
+Editor de vídeo offline para Windows em Flutter, derivado do editor TGI.
+Pacote **0.2.0+2**, projetos **v14**, código atual na branch `main`.
+Para revisar esta implementação, comece pelo
+[relatório das etapas e resultados reais](RELATORIO_ALTERACOES.md).
+
+[Paridade](docs/PARIDADE.md) · [Build e CI](docs/BUILD.md) ·
+[Migração](docs/MIGRACAO.md) · [Desempenho medido](docs/DESEMPENHO.md) ·
+[Presets, legendas e atalhos](docs/EXTRAS.md).
 
 ## Executar
 
@@ -25,6 +28,10 @@ O pacote inicial inclui FFmpeg, ffprobe, Whisper Base, fontes e bibliotecas nati
 - Composição de múltiplas camadas no preview e no FFmpeg, com ordem explícita.
 - Projetos formato 14, migração dos formatos anteriores e recuperação de rascunhos.
 - Ferramentas existentes de cor, chroma, máscaras, animação, áudio e legendas locais.
+- Dissolve A/B com xfade/acrossfade, preservando a duração da timeline.
+- Presets YouTube/4K/9:16/1:1/WAV, GPU automática e fallback CPU.
+- Importação/exportação SRT e edição do estilo das legendas.
+- Caches persistentes de proxies, miniaturas e waveform.
 
 ## Desenvolver no Windows
 
@@ -38,8 +45,8 @@ source/tools/whisper/bin/whisper-cli.exe
 source/tools/whisper/models/ggml-base.bin
 ```
 
-Para obter os runtimes de uma instalação do pacote inicial, copie suas pastas
-`ffmpeg` e `whisper` para `source/tools`, preservando os arquivos já presentes.
+Na raiz, `tool/setup_tools.ps1` prepara os runtimes e o modelo Base, com
+SHA-256 conferido. Também é possível copiar uma instalação existente.
 
 ```powershell
 cd source
@@ -58,11 +65,10 @@ flutter analyze --no-pub
 flutter test --no-pub --dart-define=TGI_RUN_FFMPEG_INTEGRATION_TESTS=true
 ```
 
-Revalidação em 20/10/2026: **145 testes aprovados, nenhum ignorado** e análise sem
-problemas. Release Windows 0.2.0+2 compilada em 18/10/2026. A verificação adicional de
-widgets/índice passou em 12 testes. A captura gráfica nativa ficou em branco no
-ambiente, inclusive na versão anterior; a aprovação visual nativa permanece
-pendente. Os widgets reais foram renderizados e inspecionados nos testes.
+Verificação final das etapas: análise sem problemas, **160 testes padrão
+aprovados / 13 opcionais ignorados** e **173 aprovados com integração habilitada**.
+Logs, builds e resultado do CI estão no [relatório](RELATORIO_ALTERACOES.md).
+Não foi declarada aprovação visual da janela nativa, GPU ou sincronismo percebido.
 
 ## Estrutura e dados
 
@@ -73,5 +79,6 @@ pendente. Os widgets reais foram renderizados e inspecionados nos testes.
 `%LOCALAPPDATA%\TGI_VIDEO_EDITOR`, separados do projeto TGI original.
 
 Os estúdios completos de áudio/imagem, site e servidor do TGI não fazem parte
-desta cópia. Regras de recursos e integrações opcionais TGI preexistentes foram
-preservadas. Componentes de terceiros mantêm suas licenças e avisos.
+desta cópia. Integrações TGI estão isoladas sob `EDITOR_STANDALONE=false`;
+o padrão independente dispensa conta, plano e rede durante a edição.
+Componentes de terceiros mantêm suas licenças e avisos.

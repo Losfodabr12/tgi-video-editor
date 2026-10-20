@@ -1,3 +1,5 @@
+import '../../../services/subtitle_service.dart';
+import 'caption_style_dialog.dart';
 import '../../../domain/models/cross_dissolve.dart';
 import '../../../app/app_identity.dart';
 import 'dart:async';
@@ -55,6 +57,7 @@ import 'widgets/transform_crop_panel.dart';
 import 'widgets/video_preview_panel.dart';
 import 'widgets/visual_media_library_panel.dart';
 
+part 'editor_caption_actions.dart';
 part 'editor_workspace_layout.dart';
 part 'editor_desktop_workspace.dart';
 part 'editor_header.dart';
@@ -1067,18 +1070,22 @@ class _EditorScreenState extends State<EditorScreen> {
     _setExportSettings(settings);
 
     final selectedPath = await ExportDestinationService.pickPath(
-      dialogTitle: 'Exportar video',
+      dialogTitle: settings.audioOnly ? 'Exportar áudio' : 'Exportar vídeo',
       initialDirectory: _preferredOutputDirectory,
       fileName:
-          'tgi_export_${settings.resolution.id}_${settings.framesPerSecond}fps.mp4',
-      allowedExtensions: const ['mp4'],
+          'export_${settings.resolution.id}.${settings.audioOnly ? 'wav' : 'mp4'}',
+      allowedExtensions: settings.audioOnly ? const ['wav'] : const ['mp4'],
       lockParentWindow: true,
     );
     if (selectedPath == null) {
       return;
     }
 
-    final outputPath = _ensureMp4Extension(selectedPath);
+    final outputPath = settings.audioOnly
+        ? (selectedPath.toLowerCase().endsWith('.wav')
+              ? selectedPath
+              : '$selectedPath.wav')
+        : _ensureMp4Extension(selectedPath);
     await _controller.exportTimeline(outputPath, settings: settings);
     if (_controller.exportProgress >= 1 && _controller.errorMessage == null) {
       await _revealExportedFile(outputPath);
@@ -2886,6 +2893,9 @@ class _EditorScreenState extends State<EditorScreen> {
                                 glow: true,
                                 accentColor: TgiColors.accentRose,
                                 child: CaptionsPanel(
+                                  onImportSrt: () => unawaited(_importSrt()),
+                                  onEditStyle: () =>
+                                      unawaited(_editCaptionStyle()),
                                   captions: _controller.generatedCaptionClips,
                                   selectedTimelineGroupId:
                                       _controller.selectedTimelineGroupId,

@@ -17,9 +17,12 @@ class CaptionsPanel extends StatelessWidget {
     required this.onExportVtt,
     required this.onCaptionSelected,
     required this.onCaptionChanged,
+    this.onImportSrt,
+    this.onEditStyle,
     super.key,
   });
 
+  final VoidCallback? onImportSrt, onEditStyle;
   final List<Clip> captions;
   final String? selectedTimelineGroupId;
   final bool canGenerate;
@@ -41,6 +44,20 @@ class CaptionsPanel extends StatelessWidget {
           spacing: TgiSpacing.sm,
           runSpacing: TgiSpacing.sm,
           children: [
+            if (onImportSrt != null)
+              OutlinedButton.icon(
+                key: const ValueKey('captions_import_srt'),
+                onPressed: onImportSrt,
+                icon: const Icon(Icons.file_open_outlined, size: 18),
+                label: const Text('Importar SRT'),
+              ),
+            if (onEditStyle != null)
+              OutlinedButton.icon(
+                key: const ValueKey('captions_edit_style'),
+                onPressed: captions.isEmpty ? null : onEditStyle,
+                icon: const Icon(Icons.format_paint_outlined, size: 18),
+                label: const Text('Estilo'),
+              ),
             ElevatedButton.icon(
               key: const ValueKey('captions_generate_button'),
               onPressed: canGenerate && !isGenerating ? onGenerate : null,

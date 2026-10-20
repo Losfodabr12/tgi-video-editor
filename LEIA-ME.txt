@@ -1,4 +1,8 @@
-TGI VIDEO EDITOR - VERSAO LOCAL 0.2.0+2
+FRAME STUDIO - VERSAO LOCAL 0.2.0+2
+
+Mudancas atuais e resultados reais: RELATORIO_ALTERACOES.md e docs/.
+Preparacao automatica: tool\setup_tools.ps1 (na raiz).
+Testes e build: tool\test_editor.ps1 -Integration -Build.
 
 Abra INICIAR EDITOR.cmd ou aplicativo\VideoEditor.exe.
 Mantenha os arquivos da pasta aplicativo junto com o executavel.

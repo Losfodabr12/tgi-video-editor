@@ -34,3 +34,8 @@ scripts da raiz. Nenhum instalador ou arquivo pessoal é apagado por esses scrip
 O workflow `.github/workflows/ci.yml` usa `windows-latest`, Flutter **3.44.4**,
 instala os runtimes, roda pub get/analyze/test, a integração e o build release.
 O relatório principal distingue execuções locais do resultado remoto do CI.
+
+Nome, marca e cores ficam em `source/lib/app/app_identity.dart`. O gerador
+`tool/generate_branding.ps1` produz os ícones e `windows/runner/app_branding.h`;
+os scripts de build/teste o executam automaticamente. Os arquivos gerados
+também são versionados para permitir compilação direta pelo Flutter.

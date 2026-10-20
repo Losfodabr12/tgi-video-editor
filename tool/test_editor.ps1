@@ -2,6 +2,7 @@ param([switch]$Integration, [switch]$Build)
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'editor_paths.ps1')
 $projectRoot = Split-Path $PSScriptRoot -Parent
+& (Join-Path $PSScriptRoot 'generate_branding.ps1')
 Invoke-EditorShortPath -ProjectRoot $projectRoot -Action {
     # Regenerate absolute native-hook paths under the same short drive as build.
     Invoke-EditorFlutter -Arguments @('clean')

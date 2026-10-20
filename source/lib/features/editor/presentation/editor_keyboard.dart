@@ -120,43 +120,46 @@ class KeyboardShortcutsDialogState extends State<KeyboardShortcutsDialog> {
       title: const Text('Configurações de teclas'),
       content: SizedBox(
         width: 560,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Clique em Alterar e pressione a nova combinação de teclas.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: TgiSpacing.md),
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 280),
-              child: ListView.separated(
-                shrinkWrap: true,
-                itemCount: editorShortcutInfos.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(height: TgiSpacing.sm),
-                itemBuilder: (context, index) {
-                  final info = editorShortcutInfos[index];
-                  return _KeyboardShortcutRow(
-                    info: info,
-                    activator: _bindings[info.action]!,
-                    onChange: () => _captureShortcut(info),
-                    onReset: () => _resetShortcut(info.action),
-                  );
-                },
-              ),
-            ),
-            if (_errorText != null) ...[
-              const SizedBox(height: TgiSpacing.md),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
               Text(
-                _errorText!,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(color: TgiColors.danger),
+                'Clique em Alterar e pressione a nova combinação de teclas.\n'
+                'Padrões adicionais: Ctrl+S salvar · Ctrl+O abrir · Ctrl+Shift+Z refazer · setas navegar por frame · I/O marcar trecho.',
+                style: Theme.of(context).textTheme.bodySmall,
               ),
+              const SizedBox(height: TgiSpacing.md),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 280),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: editorShortcutInfos.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: TgiSpacing.sm),
+                  itemBuilder: (context, index) {
+                    final info = editorShortcutInfos[index];
+                    return _KeyboardShortcutRow(
+                      info: info,
+                      activator: _bindings[info.action]!,
+                      onChange: () => _captureShortcut(info),
+                      onReset: () => _resetShortcut(info.action),
+                    );
+                  },
+                ),
+              ),
+              if (_errorText != null) ...[
+                const SizedBox(height: TgiSpacing.md),
+                Text(
+                  _errorText!,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: TgiColors.danger),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
       actions: [

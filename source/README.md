@@ -1,4 +1,4 @@
-# TGI Video Editor — Flutter
+# Frame Studio — Flutter
 
 Versão local 0.2.0+2. Entrada: `lib/main.dart`. Interface e estado:
 `lib/features/editor/`. Regras da timeline: `lib/domain/models/project_timeline.dart`.

@@ -1647,7 +1647,10 @@ class FfmpegService {
       exportDirectory = await outputFile.parent.createTemp(
         '.tgi_editor_export_',
       );
-      final renderPath = _join(exportDirectory.path, 'render.mp4');
+      final renderPath = _join(
+        exportDirectory.path,
+        settings.audioOnly ? 'render.wav' : 'render.mp4',
+      );
       await EditorFontService.prepare(
         project.tracks
             .where((track) => !track.isHidden)
@@ -1660,7 +1663,9 @@ class FfmpegService {
         exportDirectory,
       );
       _checkExportCancellation();
-      final selectedEncoder = await _resolveExportEncoder(settings.encoder);
+      final selectedEncoder = settings.audioOnly
+          ? FfmpegVideoEncoder.software
+          : await _resolveExportEncoder(settings.encoder);
       _checkExportCancellation();
       lastExportEncoder = selectedEncoder;
       final command = buildExportCommand(
