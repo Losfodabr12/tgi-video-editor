@@ -10,6 +10,7 @@ executados nesta máquina; logs completos ficam em `.work/`, ignorada pelo Git.
 | 3 - Refatoracao | exit 0, sem problemas | exit 0, 141 aprovados / 13 ignorados | Builder puro, executor/parser, historico, legendas, preview e atalhos |
 | 4 — Independente | exit 0, sem problemas | exit 0, 144 aprovados / 13 ignorados | Flag standalone padrão, 4K livre, rede TGI bloqueada e identidade central |
 | 5 — Transições | exit 0, sem problemas | exit 0, 146 aprovados / 13 ignorados | xfade/acrossfade com pixels, duração e espectro de áudio; preview A/B aproximado |
+| 6 — Projetos antigos | exit 0, sem problemas | exit 0, 148 aprovados / 13 ignorados | Sobreposições migradas em memória; formatos 13/14 e round-trip testados |
 
 Os 13 testes históricos opcionais dependem de um dart-define e são ignorados
 pelo comando padrão pedido. Os seis novos testes de pixels rodam por padrão.
@@ -54,3 +55,11 @@ codificação; duração da timeline preservada. O modelo v14 de transição glo
 foi mantido. O preview usa dois vídeos com mistura alfa. Handles repetem bordas;
 os limites e diferenças estão em docs/PARIDADE.md. Não foi implementado um
 modelo novo de transições por par/pista nem edição de handles fora do trim.
+
+## Etapa 6
+
+A migração agora separa vídeos sobrepostos automaticamente, incluindo v14
+anteriores, sem mudar o número do formato. IDs de clipe, vínculos, tempos e
+propriedades preservados; IDs das pistas adicionais não colidem com existentes.
+O teste antigo de rejeição foi alterado nesta etapa porque o comportamento
+pedido mudou. Detalhes em docs/MIGRACAO.md.

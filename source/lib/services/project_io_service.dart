@@ -215,8 +215,10 @@ class ProjectIOService {
       createdAt: createdAt ?? now,
       updatedAt: updatedAt ?? createdAt ?? now,
       mediaPool: mediaItems,
-      tracks: _separateLegacyCaptionGroups(
-        version < 14 ? _migrateLegacyTrackOrder(tracks) : tracks,
+      tracks: _splitOverlappingVideos(
+        _separateLegacyCaptionGroups(
+          version < 14 ? _migrateLegacyTrackOrder(tracks) : tracks,
+        ),
       ),
       markers: markers,
       transitions: transitions,
@@ -231,6 +233,67 @@ class ProjectIOService {
         normalized[_exportSettingsKey],
       ),
     );
+  }
+
+  /// Normalize legacy overlaps, including v14 files saved before this fix.
+  /// This migration is idempotent and never changes source files on load.
+  List<Track> _splitOverlappingVideos(List<Track> tracks) {
+    final result = <Track>[];
+    final usedIds = tracks.map((t) => t.id).toSet();
+    for (final track in tracks) {
+      final video = track.clips
+          .where(
+            (c) => c.trackType == TrackType.video && c.duration > Duration.zero,
+          )
+          .toList();
+      final order = {
+        for (var i = 0; i < track.clips.length; i++) track.clips[i].id: i,
+      };
+      video.sort((a, b) {
+        final time = a.timelineStart.compareTo(b.timelineStart);
+        return time != 0 ? time : order[a.id]!.compareTo(order[b.id]!);
+      });
+      final lanes = <List<Clip>>[[]];
+      for (final clip in video) {
+        var lane = lanes.indexWhere(
+          (items) => items.every(
+            (other) =>
+                other.timelineEnd <= clip.timelineStart ||
+                clip.timelineEnd <= other.timelineStart,
+          ),
+        );
+        if (lane < 0) {
+          lane = lanes.length;
+          lanes.add([]);
+        }
+        lanes[lane].add(clip);
+      }
+      if (lanes.length == 1) {
+        result.add(track);
+        continue;
+      }
+      final original = track.copyWith(
+        clips: [...track.clips.where((c) => !video.contains(c)), ...lanes.first]
+          ..sort((a, b) => a.timelineStart.compareTo(b.timelineStart)),
+      );
+      final extra = <Track>[];
+      for (var index = 1; index < lanes.length; index++) {
+        var suffix = index + 1;
+        var id = '${track.id}_layer_$suffix';
+        while (!usedIds.add(id)) {
+          id = '${track.id}_layer_${++suffix}';
+        }
+        extra.add(
+          track.copyWith(
+            id: id,
+            name: '${track.name} · camada ${index + 1}',
+            clips: lanes[index],
+          ),
+        );
+      }
+      result.addAll([...extra.reversed, original]);
+    }
+    return result;
   }
 
   // Formats 1–13 rendered video lanes forward, then image/text lanes reversed.

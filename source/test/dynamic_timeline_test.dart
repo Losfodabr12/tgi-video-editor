@@ -119,7 +119,7 @@ void main() {
     expect(duplicated.tracks.last.clips, project.tracks.single.clips);
   });
   test(
-    'legacy video overlaps are preserved but never silently concatenated on export',
+    'legacy video overlaps migrate into separate exportable layers',
     () {
       final video = media('overlap', MediaType.video);
       final original = projectWith(
@@ -143,16 +143,11 @@ void main() {
       final loaded = ProjectIOService()
           .deserializeProject(ProjectIOService().serializeProject(overlap))
           .project;
-      expect(loaded.tracks.single.clips.length, 2);
+      expect(loaded.tracks.length, 2);
+      expect(loaded.tracks.expand((t) => t.clips).length, 2);
       expect(
         () => FfmpegService().buildExportCommand(loaded, 'not-written.mp4'),
-        throwsA(
-          isA<FfmpegProcessException>().having(
-            (error) => error.message,
-            'message',
-            contains('outra camada'),
-          ),
-        ),
+        returnsNormally,
       );
     },
   );
