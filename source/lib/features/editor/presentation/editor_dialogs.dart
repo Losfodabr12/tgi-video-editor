@@ -329,7 +329,7 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
                                   ? Icons.download_for_offline_outlined
                                   : Icons.lock_outline,
                               size: 17,
-                              color: TgiColors.accent,
+                              color: TgiColors.textSecondary,
                             ),
                         ],
                       ),
@@ -837,7 +837,7 @@ class _ColorSwatchButton extends StatelessWidget {
           shape: BoxShape.circle,
           border: Border.all(
             color: selected ? TgiColors.accent : TgiColors.border,
-            width: selected ? 3 : 1,
+            width: selected ? 2 : 1,
           ),
         ),
         child: Padding(
@@ -1453,7 +1453,9 @@ class _ExportQualityChoice extends StatelessWidget {
                         ? Icons.radio_button_checked
                         : Icons.radio_button_off,
                     size: 17,
-                    color: selected ? TgiColors.accent : TgiColors.textMuted,
+                    color: selected
+                        ? TgiColors.textPrimary
+                        : TgiColors.textSecondary,
                   ),
                 ],
               ),

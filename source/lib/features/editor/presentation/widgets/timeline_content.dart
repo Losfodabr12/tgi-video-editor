@@ -113,6 +113,8 @@ class _TimelineContent extends StatelessWidget {
                     child: _TimelineRulerInteraction(
                       duration: duration,
                       width: contentWidth,
+                      scrollController: horizontalScrollController,
+                      viewportWidth: viewportWidth,
                       enabled: !cutMode,
                       onPlayheadChanged: onPlayheadChanged,
                       onRulerPan: onRulerPan,
@@ -121,7 +123,24 @@ class _TimelineContent extends StatelessWidget {
                   const Divider(height: 1),
                   Expanded(
                     child: project.tracks.isEmpty
-                        ? _EmptyTimeline(accepting: accepting)
+                        ? AnimatedBuilder(
+                            animation: horizontalScrollController,
+                            builder: (context, _) => Align(
+                              alignment: Alignment.centerLeft,
+                              child: Transform.translate(
+                                offset: Offset(
+                                  horizontalScrollController.hasClients
+                                      ? horizontalScrollController.offset
+                                      : 0,
+                                  0,
+                                ),
+                                child: SizedBox(
+                                  width: viewportWidth,
+                                  child: _EmptyTimeline(accepting: accepting),
+                                ),
+                              ),
+                            ),
+                          )
                         : _TimelineLanes(
                             project: project,
                             horizontalScrollController:
@@ -567,18 +586,12 @@ class _TimelineBoxSelectionPainter extends CustomPainter {
     final fillPaint = Paint()
       ..color = TgiColors.accentSoft.withValues(alpha: 0.13)
       ..style = PaintingStyle.fill;
-    final glowPaint = Paint()
-      ..color = TgiColors.accent.withValues(alpha: 0.30)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 5
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
     final borderPaint = Paint()
       ..color = TgiColors.accent
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.6;
+      ..strokeWidth = 2;
 
     canvas.drawRect(normalized, fillPaint);
-    canvas.drawRect(normalized, glowPaint);
     canvas.drawRect(normalized, borderPaint);
   }
 

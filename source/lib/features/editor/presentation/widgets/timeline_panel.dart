@@ -16,6 +16,7 @@ import '../../../../domain/models/project.dart';
 import '../../../../domain/models/track.dart';
 import '../../../../services/editor_debug_log.dart';
 import '../duration_formatter.dart';
+import '../timeline_ruler_scale.dart';
 import 'timeline_zoom_controls.dart';
 
 part 'timeline_content.dart';
@@ -47,9 +48,8 @@ int _trackAtY(List<Track> tracks, double y) {
 const _minimumTimelineDuration = Duration(seconds: 30);
 const _minimumClipResizeDuration = Duration(seconds: 1);
 const _pixelsPerSecond = 76.0;
-const _minimumTimelineContentWidth = 1280.0;
-const _minimumTimelineZoom = 0.005;
-const _maximumTimelineZoom = 32.0;
+const _minimumTimelineZoom = TimelineZoomControls.minZoom;
+const _maximumTimelineZoom = TimelineZoomControls.maxZoom;
 const _timelineSnapThresholdPx = 12.0;
 const _timelineAutoScrollEdgeThreshold = 50.0;
 const _timelineAutoScrollMaxStep = 18.0;
@@ -69,7 +69,7 @@ Color _timelineLaneFillFor(int index, Track track) {
   final base = index.isEven
       ? TgiColors.timelineLane
       : TgiColors.timelineLaneAlt;
-  final accent = _trackAccentFor(track.type);
+  const accent = TgiColors.surfaceRaised;
   if (track.isHidden) {
     return Color.lerp(
       base,
@@ -394,15 +394,10 @@ class _TimelinePanelState extends State<TimelinePanel> {
                 child: _TimelineHeader(
                   zoom: _timelineZoom,
                   playheadPosition: widget.playheadPosition,
-                  duration: duration,
+                  duration: widget.project.timelineDuration,
                   onAudioInventoryOpen: widget.onAudioInventoryOpen,
                   onMarkerAdd: widget.onMarkerAdd,
-                  onZoomOut: _timelineZoom > _minimumTimelineZoom
-                      ? () => _setTimelineZoom(_timelineZoom / 1.25)
-                      : null,
-                  onZoomIn: _timelineZoom < _maximumTimelineZoom
-                      ? () => _setTimelineZoom(_timelineZoom * 1.25)
-                      : null,
+                  onZoomChanged: _setTimelineZoom,
                   editMode: _editMode,
                   snappingEnabled: _snappingEnabled,
                   selectedCount: widget.selectedTimelineGroupIds.isNotEmpty
@@ -418,39 +413,17 @@ class _TimelinePanelState extends State<TimelinePanel> {
                       setState(() => _snappingEnabled = !_snappingEnabled),
                   onFocusSelection: _focusSelectedClips,
                   onRippleDelete: widget.onRippleDelete,
+                  onMarkRangeStart: widget.onMarkRangeStart,
+                  onMarkRangeEnd: widget.onMarkRangeEnd,
+                  onClearRange: widget.onClearRange,
+                  rangeLabel:
+                      widget.rangeStart == null && widget.rangeEnd == null
+                      ? 'Exportação: timeline inteira'
+                      : 'Trecho: ${formatDuration(widget.rangeStart ?? Duration.zero)} — ${formatDuration(widget.rangeEnd ?? widget.project.timelineDuration)}',
+                  hasRange:
+                      widget.rangeStart != null || widget.rangeEnd != null,
                 ),
               ),
-              if (widget.onMarkRangeStart != null)
-                SizedBox(
-                  height: 32,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        TextButton(
-                          onPressed: widget.onMarkRangeStart,
-                          child: const Text('I · Marcar início'),
-                        ),
-                        TextButton(
-                          onPressed: widget.onMarkRangeEnd,
-                          child: const Text('O · Marcar fim'),
-                        ),
-                        Text(
-                          widget.rangeStart == null && widget.rangeEnd == null
-                              ? 'Exportação: timeline inteira'
-                              : 'Trecho: ${formatDuration(widget.rangeStart ?? Duration.zero)} — ${formatDuration(widget.rangeEnd ?? widget.project.timelineDuration)}',
-                        ),
-                        if (widget.rangeStart != null ||
-                            widget.rangeEnd != null)
-                          IconButton(
-                            tooltip: 'Limpar trecho',
-                            onPressed: widget.onClearRange,
-                            icon: const Icon(Icons.close, size: 16),
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
               Expanded(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,

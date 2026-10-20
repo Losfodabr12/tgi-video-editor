@@ -379,7 +379,7 @@ class _ToolSlider extends StatelessWidget {
             Text(
               valueText,
               style: TextStyle(
-                color: TgiColors.accent,
+                color: TgiColors.textPrimary,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -430,7 +430,7 @@ class _MediaCard extends StatelessWidget {
       padding: const EdgeInsets.all(TgiSpacing.sm),
       child: Row(
         children: [
-          Icon(Icons.crop_rotate_outlined, color: TgiColors.accent),
+          Icon(Icons.crop_rotate_outlined, color: TgiColors.textSecondary),
           const SizedBox(width: TgiSpacing.sm),
           Expanded(
             child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis),

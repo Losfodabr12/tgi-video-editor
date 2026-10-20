@@ -4,49 +4,51 @@ class TgiColors {
   const TgiColors._();
 
   // Three structural surfaces. All UI aliases resolve to these levels.
-  static const Color backgroundDeep = Color(0xFF101216);
-  static const Color surfacePanel = Color(0xFF20242B);
-  static const Color surfaceRaised = Color(0xFF343B46);
+  static const Color backgroundDeep = Color(0xFF0E0F11);
+  static const Color surfacePanel = Color(0xFF15171A);
+  static const Color surfaceRaised = Color(0xFF1C1F23);
   static const Color background = backgroundDeep;
   static const Color surface = backgroundDeep;
   static const Color surfaceAlt = surfaceRaised;
   static const Color surfaceRail = surfacePanel;
   static const Color surfacePressed = surfaceRaised;
-  static const Color primary = Color(0xFF82D9B0);
+  static const Color surfaceHover = Color(0xFF262A30);
+  static const Color primary = Color(0xFF34C38F);
 
   static const Color accent = primary;
-  static final Color accentSoft = Color.lerp(primary, textPrimary, 0.28)!;
-  static final Color accentDim = Color.lerp(surfacePressed, primary, 0.34)!;
-  static final Color accentMuted = Color.lerp(surfacePressed, primary, 0.20)!;
+  static const Color accentSoft = textPrimary;
+  static const Color accentDim = surfaceHover;
+  static const Color accentMuted = surfaceRaised;
   // Compatibility aliases for existing controls; they share one UI accent.
-  static const Color accentCool = primary;
-  static const Color accentBlue = primary;
-  static const Color accentGreen = primary;
-  static const Color accentRose = primary;
+  static const Color accentCool = textSecondary;
+  static const Color accentBlue = textSecondary;
+  static const Color accentGreen = textSecondary;
+  static const Color accentRose = textSecondary;
 
-  static const Color textPrimary = Color(0xFFF7F7F8);
-  static const Color textMuted = Color(0xFF9699A2);
-  static const Color textSecondary = Color(0xFFB8BAC1);
+  static const Color textPrimary = Color(0xFFE6E8EB);
+  static const Color textMuted = Color(0xFFA0A7B1);
+  static const Color textSecondary = Color(0xFFA0A7B1);
   static const Color textDisabled = Color(0xFF666A73);
 
-  static const Color border = Color(0xFF454D59);
-  static const Color borderSubtle = Color(0xFF343B46);
-  static const Color borderStrong = Color(0xFF606D7D);
+  static const Color border = Color(0xFF2A2E34);
+  static const Color borderSubtle = border;
+  static const Color borderStrong = Color(0xFF2A2E34);
 
   static const Color timelineLane = backgroundDeep;
   static const Color timelineLaneAlt = surfacePanel;
   static const Color timelineGrid = border;
   // Content type colors are semantic, independent of the single UI accent.
-  static const Color clipVideo = Color(0xFF284C73);
-  static const Color clipAudio = Color(0xFF23584C);
-  static const Color clipImage = Color(0xFF574477);
-  static const Color clipText = Color(0xFF70552C);
-  static const Color videoInk = Color(0xFFA0C9F4);
-  static const Color audioInk = Color(0xFF9CDFC9);
-  static const Color imageInk = Color(0xFFD1B7F4);
-  static const Color textInk = Color(0xFFF0CF8D);
-  static const Color waveformLow = Color(0xFF606067);
-  static const Color waveformHigh = primary;
+  static const Color clipVideo = Color(0xFF3B5B8C);
+  static const Color clipAudio = Color(0xFF2F7D6B);
+  static const Color clipImage = clipVideo;
+  static const Color clipEffect = Color(0xFFA0653B);
+  static const Color clipText = Color(0xFF6B5BA8);
+  static const Color videoInk = textPrimary;
+  static const Color audioInk = textPrimary;
+  static const Color imageInk = textPrimary;
+  static const Color textInk = textPrimary;
+  static const Color waveformLow = textSecondary;
+  static const Color waveformHigh = textPrimary;
   static const Color playheadGlow = primary;
   static const Color glowBorder = border;
   static const Color glowOuter = transparent;
@@ -145,7 +147,7 @@ class TgiAccentText extends StatelessWidget {
       text,
       maxLines: maxLines,
       overflow: overflow,
-      style: style.copyWith(color: Theme.of(context).colorScheme.primary),
+      style: style.copyWith(color: TgiColors.textPrimary),
     );
   }
 }
@@ -158,7 +160,7 @@ class TgiAccentIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Icon(icon, size: size, color: Theme.of(context).colorScheme.primary);
+    return Icon(icon, size: size, color: TgiColors.textSecondary);
   }
 }
 
@@ -176,7 +178,7 @@ class TgiWorkspaceTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final primary = Theme.of(context).colorScheme.primary;
+    const primary = TgiColors.textSecondary;
     final largeText = MediaQuery.textScalerOf(context).scale(16) >= 24;
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -358,7 +360,8 @@ class TgiSliderTrackShape extends RoundedRectSliderTrackShape {
     if (activeRect.width <= 0) {
       return;
     }
-    final activePaint = Paint()..color = TgiColors.accent;
+    final activePaint = Paint()
+      ..color = sliderTheme.activeTrackColor ?? TgiColors.textSecondary;
     context.canvas.drawRRect(
       RRect.fromRectAndRadius(activeRect, radius),
       activePaint,

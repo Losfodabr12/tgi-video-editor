@@ -90,7 +90,7 @@ enum _KenBurnsPickTarget { start, end }
 const _workspaceDividerExtent = 8.0;
 const _defaultLeftPanelFraction = 0.24;
 const _defaultPropertiesPanelFraction = 0.19;
-const _defaultPreviewPanelFraction = 0.58;
+const _defaultPreviewPanelFraction = 0.55;
 const _minLeftPanelFraction = 0.17;
 const _maxLeftPanelFraction = 0.36;
 const _minPropertiesPanelFraction = 0.14;
@@ -2507,7 +2507,7 @@ class _EditorScreenState extends State<EditorScreen> {
                                 title: 'Correção de cor',
                                 icon: Icons.gradient_outlined,
                                 glow: true,
-                                accentColor: TgiColors.accent,
+                                accentColor: TgiColors.textSecondary,
                                 child: ProfessionalColorPanel(
                                   clip: _controller.selectedTimelineVideoClip,
                                   mediaName: _controller
@@ -2599,7 +2599,7 @@ class _EditorScreenState extends State<EditorScreen> {
                                 title: 'Transformar e recortar',
                                 icon: Icons.crop_rotate_outlined,
                                 glow: true,
-                                accentColor: TgiColors.accent,
+                                accentColor: TgiColors.textSecondary,
                                 child: TransformCropPanel(
                                   clip: switch (_controller
                                       .selectedTimelineClip) {
@@ -2709,7 +2709,7 @@ class _EditorScreenState extends State<EditorScreen> {
                                 title: 'Corte Inteligente',
                                 icon: Icons.auto_fix_high_rounded,
                                 glow: true,
-                                accentColor: TgiColors.accent,
+                                accentColor: TgiColors.textSecondary,
                                 child: SmartCutPanel(
                                   clip: smartCutClip,
                                   mediaName: smartCutClip == null
@@ -2963,7 +2963,7 @@ class _EditorScreenState extends State<EditorScreen> {
                                 title: 'Biblioteca visual',
                                 icon: Icons.collections_outlined,
                                 glow: true,
-                                accentColor: TgiColors.accent,
+                                accentColor: TgiColors.textSecondary,
                                 child: VisualMediaLibraryPanel(
                                   items: PublicVisualMediaService.catalog,
                                   addingItemId: _addingVisualMediaId,
@@ -2984,7 +2984,7 @@ class _EditorScreenState extends State<EditorScreen> {
                                 title: 'Media Pool',
                                 icon: Icons.video_library_outlined,
                                 glow: true,
-                                accentColor: TgiColors.accent,
+                                accentColor: TgiColors.textSecondary,
                                 child: MediaPoolList(
                                   items: _controller.project.mediaPool,
                                   selectedItemId:
@@ -3065,7 +3065,7 @@ class _EditorScreenState extends State<EditorScreen> {
                               title: 'Preview',
                               icon: Icons.smart_display_outlined,
                               glow: true,
-                              accentColor: TgiColors.accent,
+                              accentColor: TgiColors.textSecondary,
                               trailing: PopupMenuButton<String>(
                                 tooltip: 'Qualidade da pr?via',
                                 onSelected: (value) {
@@ -3405,10 +3405,6 @@ class _EditorScreenState extends State<EditorScreen> {
                                 audioVolume: _controller.activeAudioVolume,
                                 playbackSpeed: _controller.previewPlaybackSpeed,
                                 transportLeadingControl: _PreviewEditingActions(
-                                  speed: _controller.activeVideoPlaybackSpeed,
-                                  speedEnabled:
-                                      !_controller.isExporting &&
-                                      _controller.canChangeVideoPlaybackSpeed,
                                   cutActive: _controller.isCutMode,
                                   enabled: !_controller.isExporting,
                                   deleteEnabled:
@@ -3416,8 +3412,6 @@ class _EditorScreenState extends State<EditorScreen> {
                                       _controller
                                           .selectedTimelineGroupIds
                                           .isNotEmpty,
-                                  onSpeedChanged: _controller
-                                      .updateSelectedVideoPlaybackSpeed,
                                   onCutPressed: () {
                                     if (_kenBurnsToolActive) {
                                       setState(
@@ -3431,7 +3425,20 @@ class _EditorScreenState extends State<EditorScreen> {
                                   onTextPressed: () =>
                                       unawaited(_addQuickText()),
                                 ),
-                                transportTrailingControl:
+                                transportTrailingControl: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    _PlaybackSpeedMenu(
+                                      speed:
+                                          _controller.activeVideoPlaybackSpeed,
+                                      enabled:
+                                          !_controller.isExporting &&
+                                          _controller
+                                              .canChangeVideoPlaybackSpeed,
+                                      onChanged: _controller
+                                          .updateSelectedVideoPlaybackSpeed,
+                                    ),
+                                    const SizedBox(width: 4),
                                     _PreviewOptimizeButton(
                                       isImporting: _controller.isImporting,
                                       isExporting: _controller.isExporting,
@@ -3450,13 +3457,15 @@ class _EditorScreenState extends State<EditorScreen> {
                                       onCancel:
                                           _controller.cancelPreviewOptimization,
                                     ),
+                                  ],
+                                ),
                               ),
                             );
                             final timeline = _Panel(
                               title: 'Timeline',
                               icon: Icons.view_timeline_outlined,
                               glow: true,
-                              accentColor: TgiColors.accent,
+                              accentColor: TgiColors.textSecondary,
                               showHeader: false,
                               child: TimelinePanel(
                                 rangeStart: _exportSettings.rangeStart,

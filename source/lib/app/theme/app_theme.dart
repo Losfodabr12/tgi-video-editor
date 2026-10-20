@@ -43,9 +43,9 @@ class TgiTheme {
       visualDensity: VisualDensity.compact,
       scaffoldBackgroundColor: TgiColors.background,
       shadowColor: TgiColors.transparent,
-      focusColor: primary.withValues(alpha: 0.16),
-      hoverColor: primary.withValues(alpha: 0.08),
-      highlightColor: primary.withValues(alpha: 0.10),
+      focusColor: TgiColors.surfaceHover,
+      hoverColor: TgiColors.surfaceHover,
+      highlightColor: TgiColors.surfaceHover,
       disabledColor: TgiColors.textDisabled,
       splashFactory: InkRipple.splashFactory,
       textSelectionTheme: TextSelectionThemeData(
@@ -64,7 +64,7 @@ class TgiTheme {
       ),
       colorScheme: ColorScheme.dark(
         primary: primary,
-        secondary: primary,
+        secondary: TgiColors.textSecondary,
         surface: TgiColors.surface,
         surfaceContainer: TgiColors.surfacePanel,
         surfaceContainerHigh: TgiColors.surfaceRaised,
@@ -183,7 +183,7 @@ class TgiTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: TgiColors.surface,
+          backgroundColor: TgiColors.surfaceRaised,
           foregroundColor: TgiColors.textPrimary,
           disabledBackgroundColor: TgiColors.surfacePressed,
           disabledForegroundColor: TgiColors.textDisabled,
@@ -210,17 +210,17 @@ class TgiTheme {
           ),
           backgroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.pressed)
-                ? primary.withValues(alpha: 0.10)
+                ? TgiColors.surfaceHover
                 : states.contains(WidgetState.hovered)
-                ? TgiColors.surfaceAlt
-                : TgiColors.transparent,
+                ? TgiColors.surfaceHover
+                : TgiColors.surfaceRaised,
           ),
           side: WidgetStateProperty.resolveWith(
             (states) => BorderSide(
               color:
                   states.contains(WidgetState.hovered) ||
                       states.contains(WidgetState.focused)
-                  ? primary.withValues(alpha: 0.58)
+                  ? TgiColors.border
                   : TgiColors.border,
             ),
           ),
@@ -244,7 +244,7 @@ class TgiTheme {
                 ? TgiColors.textDisabled
                 : TgiColors.textSecondary,
           ),
-          overlayColor: WidgetStatePropertyAll(primary.withValues(alpha: 0.08)),
+          overlayColor: WidgetStatePropertyAll(TgiColors.surfaceHover),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(controlRadius),
@@ -263,7 +263,7 @@ class TgiTheme {
                 ? TgiColors.textPrimary
                 : TgiColors.textSecondary,
           ),
-          overlayColor: WidgetStatePropertyAll(primary.withValues(alpha: 0.10)),
+          overlayColor: WidgetStatePropertyAll(TgiColors.surfaceHover),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(controlRadius),
@@ -273,7 +273,7 @@ class TgiTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: TgiColors.surface,
+        fillColor: TgiColors.surfaceRaised,
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,
@@ -293,7 +293,7 @@ class TgiTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(controlRadius),
-          borderSide: BorderSide(color: primary, width: 1.5),
+          borderSide: BorderSide(color: primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(controlRadius),
@@ -305,10 +305,10 @@ class TgiTheme {
         ),
       ),
       sliderTheme: SliderThemeData(
-        activeTrackColor: primary,
+        activeTrackColor: TgiColors.textSecondary,
         inactiveTrackColor: TgiColors.borderStrong,
-        thumbColor: primary,
-        overlayColor: primary.withValues(alpha: 0.12),
+        thumbColor: TgiColors.textPrimary,
+        overlayColor: TgiColors.surfaceHover,
         trackHeight: 4,
         trackShape: const TgiSliderTrackShape(),
         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
@@ -366,24 +366,27 @@ class TgiTheme {
         ),
       ),
       tabBarTheme: TabBarThemeData(
-        labelColor: primary,
+        labelColor: TgiColors.textPrimary,
         unselectedLabelColor: TgiColors.textMuted,
-        indicatorColor: primary,
+        indicatorColor: TgiColors.borderStrong,
         dividerColor: TgiColors.border,
-        overlayColor: WidgetStatePropertyAll(primary.withValues(alpha: 0.08)),
+        overlayColor: WidgetStatePropertyAll(TgiColors.surfaceHover),
         labelStyle: const TextStyle(fontWeight: FontWeight.w700),
         unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
       ),
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: TgiColors.surfacePanel,
-        indicatorColor: primary.withValues(alpha: 0.14),
-        selectedIconTheme: IconThemeData(color: primary, size: 20),
+        indicatorColor: TgiColors.surfaceHover,
+        selectedIconTheme: IconThemeData(
+          color: TgiColors.textPrimary,
+          size: 20,
+        ),
         unselectedIconTheme: const IconThemeData(
           color: TgiColors.textMuted,
           size: 20,
         ),
         selectedLabelTextStyle: TextStyle(
-          color: primary,
+          color: TgiColors.textPrimary,
           fontWeight: FontWeight.w800,
         ),
         unselectedLabelTextStyle: const TextStyle(
@@ -394,15 +397,15 @@ class TgiTheme {
       listTileTheme: ListTileThemeData(
         iconColor: TgiColors.textMuted,
         textColor: TgiColors.textPrimary,
-        selectedColor: primary,
-        selectedTileColor: primary.withValues(alpha: 0.10),
+        selectedColor: TgiColors.textPrimary,
+        selectedTileColor: TgiColors.surfaceHover,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(controlRadius),
         ),
       ),
       chipTheme: base.chipTheme.copyWith(
-        backgroundColor: TgiColors.surface,
-        selectedColor: primary.withValues(alpha: 0.16),
+        backgroundColor: TgiColors.surfaceRaised,
+        selectedColor: TgiColors.surfaceHover,
         disabledColor: TgiColors.surfacePressed,
         side: const BorderSide(color: TgiColors.borderStrong),
         shape: RoundedRectangleBorder(
@@ -416,10 +419,10 @@ class TgiTheme {
       checkboxTheme: CheckboxThemeData(
         fillColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? primary
-              : TgiColors.surface,
+              ? TgiColors.surfaceHover
+              : TgiColors.surfaceRaised,
         ),
-        checkColor: const WidgetStatePropertyAll(TgiColors.background),
+        checkColor: const WidgetStatePropertyAll(TgiColors.textPrimary),
         side: const BorderSide(color: TgiColors.borderStrong, width: 1.5),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(TgiRadii.xs),
@@ -428,12 +431,12 @@ class TgiTheme {
       switchTheme: SwitchThemeData(
         thumbColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? primary
+              ? TgiColors.textPrimary
               : TgiColors.textMuted,
         ),
         trackColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? primary.withValues(alpha: 0.34)
+              ? TgiColors.surfaceHover
               : TgiColors.surfacePressed,
         ),
         trackOutlineColor: const WidgetStatePropertyAll(TgiColors.borderStrong),
@@ -441,7 +444,7 @@ class TgiTheme {
       radioTheme: RadioThemeData(
         fillColor: WidgetStateProperty.resolveWith(
           (states) => states.contains(WidgetState.selected)
-              ? primary
+              ? TgiColors.textPrimary
               : TgiColors.textMuted,
         ),
       ),
@@ -454,15 +457,11 @@ class TgiTheme {
           ),
           backgroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.selected)
-                ? primary.withValues(alpha: 0.14)
+                ? TgiColors.surfaceHover
                 : TgiColors.surface,
           ),
-          side: WidgetStateProperty.resolveWith(
-            (states) => BorderSide(
-              color: states.contains(WidgetState.selected)
-                  ? primary.withValues(alpha: 0.52)
-                  : TgiColors.border,
-            ),
+          side: const WidgetStatePropertyAll(
+            BorderSide(color: TgiColors.border),
           ),
           shape: WidgetStatePropertyAll(
             RoundedRectangleBorder(
@@ -473,7 +472,7 @@ class TgiTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: TgiColors.surfacePanel,
-        indicatorColor: primary.withValues(alpha: 0.14),
+        indicatorColor: TgiColors.surfaceHover,
         elevation: 0,
         labelTextStyle: WidgetStateProperty.resolveWith(
           (states) => TextStyle(
@@ -489,7 +488,7 @@ class TgiTheme {
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
             color: states.contains(WidgetState.selected)
-                ? primary
+                ? TgiColors.textPrimary
                 : TgiColors.textMuted,
             size: 20,
           ),
@@ -545,7 +544,7 @@ class TgiTheme {
       ),
       iconTheme: const IconThemeData(color: TgiColors.textPrimary),
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: primary,
+        color: TgiColors.textPrimary,
         linearTrackColor: TgiColors.border,
         circularTrackColor: TgiColors.border,
       ),

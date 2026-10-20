@@ -1036,7 +1036,7 @@ class _SoundEffectTile extends StatelessWidget {
                         height: 14,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: TgiColors.accent,
+                          color: TgiColors.textSecondary,
                         ),
                       )
                     : const TgiAccentIcon(Icons.add, size: TgiIconSizes.sm),
@@ -1193,7 +1193,7 @@ class _SoundPreviewButton extends StatelessWidget {
                   height: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    color: TgiColors.accent,
+                    color: TgiColors.textSecondary,
                   ),
                 )
               else if (!previewing)

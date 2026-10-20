@@ -1,5 +1,9 @@
 # Relatório de alterações
 
+A revisão visual mais recente está em [Ajuste visual adicional](#ajuste-visual-adicional--20-de-outubro-de-2026),
+com os comandos executados e as capturas antes/depois. Os resultados das etapas
+anteriores permanecem como histórico, vinculados aos respectivos commits.
+
 O texto completo, incluindo os resultados remotos da release 0.3.0, está
 disponível neste arquivo do repositório público. Não é necessário baixar
 um asset de release para lê-lo. Os registros abaixo identificam o SHA que
@@ -355,3 +359,116 @@ playback/seek e sincronismo percebido, DPI/monitores, interação contínua com
 mouse, exportação longa por fabricante de GPU, transcrição completa de voz e
 uso com adaptador de rede desligado. O ZIP conter runtimes locais e CRT não
 substitui teste em uma instalação Windows limpa. Goldens são headless.
+
+## Ajuste visual adicional — 20 de outubro de 2026
+
+Alteração preparada como um único commit sobre `54252ac`. O formato v14,
+os modelos, os tempos dos clipes e o export permanecem preservados; nenhum
+arquivo de domínio ou serviço de persistência foi alterado neste ajuste.
+
+### O que mudou
+
+1. Tokens centralizados com fundo `#0E0F11`, painéis `#15171A`, controles
+   `#1C1F23`, hover `#262A30`, bordas `#2A2E34`, texto `#E6E8EB`, secundário
+   `#A0A7B1` e destaque `#34C38F`. Clipes foscos de vídeo `#3B5B8C`, áudio
+   `#2F7D6B`, texto `#6B5BA8` e efeitos/transições `#A0653B`. Imagens usam
+   o azul dos visuais. Saíram o dourado do texto e as bordas bege. A seleção
+   mantém a cor do tipo e recebe contorno verde de 2 px, também no preview.
+   Toggles ligados usam superfície elevada neutra; ícones auxiliares,
+   sliders, waveform e indicadores de ferramentas deixaram de usar verde.
+   A seleção por retângulo perdeu o blur e usa contorno de 2 px.
+2. Abas da biblioteca passaram de 9 para 12 px. Rótulos secundários,
+   controles pequenos, tempos do preview e indicadores de mídia ganharam
+   tamanho/contraste. A aba Transições recebeu mais largura. Corte,
+   Excluir e Texto usam o mesmo estilo, com rótulos de 13 px.
+3. Layout padrão com aproximadamente 45% da altura de trabalho para a
+   timeline. O mínimo considera cabeçalho/régua e três trilhas completas;
+   testes conferem a principal entre elas em 1440×900 e 1280×720. Em janelas
+   muito baixas ou trilhas muito altas ainda é necessário scroll. O resize
+   e a persistência das proporções continuam funcionando. Sem seleção, o
+   inspetor mostra nome, resolução de saída, fps, duração e número de trilhas.
+4. Régua e grade escolhem intervalos pelo zoom, com pelo menos 96 px entre
+   rótulos principais, milissegundos em detalhe e horas em projetos longos.
+   Geram somente a faixa visível com margem, em vez de todos os rótulos do
+   projeto. Teste cobre seis horas em cinco escalas diferentes.
+5. Voltar/play/avançar ficam centralizados no preview. Ferramentas ocupam
+   um grupo separado à esquerda; velocidade e proxy ficam à direita.
+6. Slider logarítmico de zoom entre 0,5% e 3200%, preservando o ponto de
+   referência e Ctrl + roda. A linha de instruções I/O saiu da timeline;
+   ações e estado do trecho ficam nos tooltips dos ícones de marcar início/fim.
+7. A diferença **04:53 / 04:58 era um bug no contador**: a timeline exibia
+   `_timelineExtent`, que acrescenta cinco segundos de espaço de edição,
+   enquanto o preview exibia `project.timelineDuration`. O contador agora
+   recebe a duração real; somente o canvas mantém a folga. Um teste abre
+   um projeto de 293 segundos e confere **04:53** no preview, timeline e
+   propriedades. Os tempos do projeto e do arquivo exportado não mudaram.
+
+Detalhes: [docs/VISUAL.md](docs/VISUAL.md). Preferências de layout continuam
+separadas do projeto, em `editor_layout.json`, versão de layout 3.
+
+### Antes e depois
+
+Mesma cena, 1440×900, escala 1. Capturas reais de widgets headless com a
+fonte e os ícones carregados do repositório/SDK. O título TGI é conteúdo
+do projeto histórico de teste, mantido para permitir comparação.
+
+| Antes deste ajuste | Depois deste ajuste |
+| --- | --- |
+| ![Antes](docs/visual/editor-after.png) | ![Depois](docs/visual/editor-refined.png) |
+
+![Régua ampliada, inspetor de projeto e duração 04:53](source/test/goldens/editor_zoomed.png)
+
+### Validação executada neste ajuste
+
+Windows, Flutter **3.44.4** / Dart **3.12.2**, pelo mesmo drive curto usado
+no build. Todos os comandos abaixo terminaram com exit 0:
+
+| Comando | Resultado real |
+| --- | --- |
+| `flutter test --no-pub test/visual_golden_test.dart test/visual_refinement_test.dart --update-goldens` | **13 aprovados**, 8 s; seis imagens golden atualizadas, incluindo a nova régua ampliada |
+| `flutter analyze --no-pub` | **Sem problemas**, 12,6 s |
+| `flutter test --no-pub` | **178 aprovados / 13 opcionais ignorados**, 27 s; comparação dos goldens executada sem `--update-goldens` |
+| `flutter build windows --release --no-pub` | **Build Windows aprovado**, 53,1 s |
+
+Os cinco testes novos de regressão conferem duração real, layout com três
+trilhas, centralização, seleção de 2 px no preview/timeline, mudança da
+régua pelo slider e temas neutros. O sexto teste novo é o golden do zoom.
+Os testes anteriores não foram editados, exceto as referências visuais e
+a fixture de goldens que agora inclui uma transição para exibir sua cor.
+Os 13 opcionais de integração não foram habilitados nesta execução local;
+os testes padrão de pixels FFmpeg foram executados pela suíte completa.
+
+Logs locais: `.work/visual-polish-goldens-final.log`,
+`.work/ajuste-visual-analyze.log`, `.work/ajuste-visual-test.log`.
+Build em `.work/ajuste-visual-build.log`. O conteúdo de
+`source/build/windows/x64/runner/Release` foi copiado para `aplicativo/`:
+**66 arquivos conferidos por SHA-256, zero divergências**. O launcher
+`INICIAR EDITOR.cmd` usa esse aplicativo atualizado, versão **0.3.0+3**.
+SHA-256 do código compilado `data/app.so`:
+`49e5041df1e100c14c3c761a6ef7d4c57497df0fea4f62e86b481d5106faf2b3`.
+Este é um build local preparado antes do commit; a tag e o ZIP histórico
+da release v0.3.0 não foram substituídos. O aplicativo não foi aberto para
+teste manual.
+
+Os resultados remotos da release registrados acima pertencem ao commit
+`e407885`; não validam automaticamente esta revisão visual. O CI desta
+revisão será disparado pelo push e pode ser consultado em
+[GitHub Actions](https://github.com/Losfodabr12/tgi-video-editor/actions/workflows/ci.yml).
+
+Contagem atual, comando `wc -l` executado novamente:
+
+```text
+  2267 source/lib/services/ffmpeg_service.dart
+  6072 source/lib/features/editor/application/editor_controller.dart
+  3698 source/lib/features/editor/presentation/editor_screen.dart
+ 12037 total
+```
+
+### Teste manual pendente deste ajuste
+
+Não foi executada sessão audiovisual na janela nativa. Conferir em uso real
+o contraste em outros monitores/DPI, arraste contínuo do slider e divisores,
+playback/seek, tooltips I/O e a abertura com proporções de layout já salvas.
+O padrão 45% não sobrescreve proporções personalizadas existentes; duplo
+clique no divisor restaura o layout padrão. Goldens não validam drivers,
+GPU nem sincronismo audiovisual percebido.

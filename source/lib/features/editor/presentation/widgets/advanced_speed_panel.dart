@@ -139,7 +139,7 @@ class _AdvancedSpeedPanelState extends State<AdvancedSpeedPanel> {
           title: 'Acelerar suave',
           subtitle: 'Começa lento e termina rápido',
           speeds: const [0.65, 0.8, 1.0, 1.5, 3.0],
-          color: TgiColors.accent,
+          color: TgiColors.textSecondary,
           onTap: () => widget.onRampSelected(const [
             0.65,
             0.8,

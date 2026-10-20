@@ -272,7 +272,12 @@ class _TrackLabels extends StatelessWidget {
       icon: Icon(
         icon,
         size: 12,
-        color: active ? TgiColors.accent : TgiColors.textMuted,
+        color: active ? TgiColors.textPrimary : TgiColors.textSecondary,
+      ),
+      style: IconButton.styleFrom(
+        backgroundColor: active
+            ? TgiColors.surfaceHover
+            : TgiColors.transparent,
       ),
       onPressed: action,
     ),

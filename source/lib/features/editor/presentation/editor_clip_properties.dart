@@ -1597,7 +1597,7 @@ class _DeferredDoubleSliderState extends State<_DeferredDoubleSlider> {
             data: SliderTheme.of(context).copyWith(
               activeTrackColor: TgiColors.accentSoft,
               inactiveTrackColor: TgiColors.borderStrong,
-              thumbColor: TgiColors.accent,
+              thumbColor: TgiColors.textPrimary,
               overlayColor: TgiColors.glowSoft,
               trackHeight: 5,
               trackShape: const TgiSliderTrackShape(),

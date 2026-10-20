@@ -658,7 +658,7 @@ class _VisualMediaTile extends StatelessWidget {
                         height: 14,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: TgiColors.accent,
+                          color: TgiColors.textSecondary,
                         ),
                       )
                     : const TgiAccentIcon(Icons.add, size: TgiIconSizes.sm),
@@ -713,7 +713,7 @@ class _VisualMediaThumbnail extends StatelessWidget {
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: TgiColors.accent,
+                          color: TgiColors.textSecondary,
                         ),
                       ),
                     );

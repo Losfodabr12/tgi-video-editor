@@ -27,9 +27,9 @@ class TgiMascotNotification extends StatelessWidget {
   Widget build(BuildContext context) {
     final isError = tone == TgiNotificationTone.error;
     final title = isError ? 'Atenção' : AppIdentity.name;
-    final accentColor = isError ? TgiColors.accent : TgiColors.accent;
-    final softAccent = isError ? TgiColors.accent : TgiColors.accentSoft;
-    final borderColor = isError ? TgiColors.accent : TgiColors.accentDim;
+    const accentColor = TgiColors.textSecondary;
+    const softAccent = TgiColors.textPrimary;
+    const borderColor = TgiColors.border;
     final backgroundColor = isError
         ? TgiColors.surfacePanel
         : TgiColors.surfacePanel.withValues(alpha: 0.98);

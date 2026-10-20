@@ -166,8 +166,8 @@ class _IntroCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: TgiColors.accent.withValues(alpha: 0.08),
-        border: Border.all(color: TgiColors.accent.withValues(alpha: 0.35)),
+        color: TgiColors.surfaceRaised,
+        border: Border.all(color: TgiColors.border),
         borderRadius: BorderRadius.circular(TgiRadii.md),
       ),
       child: Padding(
@@ -177,7 +177,10 @@ class _IntroCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(Icons.auto_fix_high_rounded, color: TgiColors.accent),
+                Icon(
+                  Icons.auto_fix_high_rounded,
+                  color: TgiColors.textSecondary,
+                ),
                 SizedBox(width: TgiSpacing.sm),
                 Expanded(
                   child: Text(

@@ -478,11 +478,16 @@ class _TrackMixerStrip extends StatelessWidget {
                 child: IconButton(
                   visualDensity: VisualDensity.compact,
                   onPressed: () => onMutedChanged(!track.isMuted),
+                  style: IconButton.styleFrom(
+                    backgroundColor: track.isMuted
+                        ? TgiColors.surfaceHover
+                        : TgiColors.transparent,
+                  ),
                   icon: Icon(
                     track.isMuted
                         ? Icons.volume_off_outlined
                         : Icons.volume_up_outlined,
-                    color: track.isMuted ? TgiColors.accent : null,
+                    color: TgiColors.textPrimary,
                   ),
                 ),
               ),
@@ -559,7 +564,7 @@ class _AudioSlider extends StatelessWidget {
           Text(
             valueText,
             style: TextStyle(
-              color: TgiColors.accent,
+              color: TgiColors.textPrimary,
               fontWeight: FontWeight.w700,
             ),
           ),

@@ -341,7 +341,7 @@ class _TransportScaffold extends StatelessWidget {
                 Expanded(
                   child: SliderTheme(
                     data: SliderTheme.of(context).copyWith(
-                      activeTrackColor: TgiColors.accentSoft,
+                      activeTrackColor: TgiColors.textSecondary,
                       inactiveTrackColor: TgiColors.borderStrong,
                       thumbColor: TgiColors.accent,
                       overlayColor: TgiColors.glowSoft,
@@ -375,51 +375,57 @@ class _TransportScaffold extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (leadingControl != null) ...[
-                  leadingControl!,
-                  const SizedBox(width: TgiSpacing.sm),
-                ],
-                DecoratedBox(
-                  decoration: TgiDecorations.controlCluster(),
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _TransportButton(
-                          tooltip: 'Retroceder 5 segundos',
-                          icon: Icons.replay_5,
-                          onPressed: onBackward,
-                        ),
-                        const SizedBox(width: 4),
-                        _TransportButton(
-                          tooltip: playing ? 'Pausar' : 'Reproduzir',
-                          icon: playing ? Icons.pause : Icons.play_arrow,
-                          onPressed: onPlayPause,
-                          prominent: true,
-                        ),
-                        const SizedBox(width: 4),
-                        _TransportButton(
-                          tooltip: 'Avançar 5 segundos',
-                          icon: Icons.forward_5,
-                          onPressed: onForward,
-                        ),
-                      ],
-                    ),
+          Row(
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: leadingControl ?? const SizedBox.shrink(),
                   ),
                 ),
-                if (trailingControl != null) ...[
-                  const SizedBox(width: TgiSpacing.sm),
-                  trailingControl!,
-                ],
-              ],
-            ),
+              ),
+              DecoratedBox(
+                key: const ValueKey('preview-playback-controls'),
+                decoration: TgiDecorations.controlCluster(),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _TransportButton(
+                        tooltip: 'Retroceder 5 segundos',
+                        icon: Icons.replay_5,
+                        onPressed: onBackward,
+                      ),
+                      const SizedBox(width: 4),
+                      _TransportButton(
+                        tooltip: playing ? 'Pausar' : 'Reproduzir',
+                        icon: playing ? Icons.pause : Icons.play_arrow,
+                        onPressed: onPlayPause,
+                        prominent: true,
+                      ),
+                      const SizedBox(width: 4),
+                      _TransportButton(
+                        tooltip: 'Avançar 5 segundos',
+                        icon: Icons.forward_5,
+                        onPressed: onForward,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: trailingControl ?? const SizedBox.shrink(),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -450,7 +456,7 @@ class _TimecodePill extends StatelessWidget {
             textAlign: alignRight ? TextAlign.right : TextAlign.left,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: TgiColors.textMuted,
-              fontSize: 10,
+              fontSize: 12,
               fontWeight: FontWeight.w800,
             ),
           ),

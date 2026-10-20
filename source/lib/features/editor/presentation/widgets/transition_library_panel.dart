@@ -369,7 +369,7 @@ class _TransitionPresetPainter extends CustomPainter {
       case TimelineTransitionPreset.dissolve:
         canvas.drawRect(
           Rect.fromLTWH(0, 0, size.width * 0.62, size.height),
-          Paint()..color = TgiColors.accent.withValues(alpha: 0.48),
+          Paint()..color = TgiColors.clipEffect.withValues(alpha: 0.48),
         );
         canvas.drawRect(
           Rect.fromLTWH(size.width * 0.38, 0, size.width * 0.62, size.height),
@@ -412,7 +412,7 @@ class _TransitionPresetPainter extends CustomPainter {
             width: size.width * 0.72,
             height: size.height * 0.72,
           ),
-          Paint()..color = TgiColors.accent.withValues(alpha: 0.62),
+          Paint()..color = TgiColors.clipEffect.withValues(alpha: 0.62),
         );
         canvas.restore();
         break;
@@ -423,7 +423,7 @@ class _TransitionPresetPainter extends CustomPainter {
             if (((x / block).floor() + (y / block).floor()).isEven) {
               canvas.drawRect(
                 Rect.fromLTWH(x, y, block - 1, block - 1),
-                Paint()..color = TgiColors.accent.withValues(alpha: 0.58),
+                Paint()..color = TgiColors.clipEffect.withValues(alpha: 0.58),
               );
             }
           }

@@ -494,7 +494,7 @@ class _MissingMediaTile extends StatelessWidget {
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            Icon(_missingMediaIcon(entry.type), color: TgiColors.accent),
+            Icon(_missingMediaIcon(entry.type), color: TgiColors.textSecondary),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

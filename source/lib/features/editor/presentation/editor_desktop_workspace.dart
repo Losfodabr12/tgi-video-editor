@@ -23,7 +23,7 @@ extension _DesktopWorkspace on _EditorScreenState {
           const Text(
             'TÍTULOS',
             style: TextStyle(
-              fontSize: 10,
+              fontSize: 12,
               color: TgiColors.textMuted,
               letterSpacing: 1,
             ),
@@ -75,7 +75,7 @@ extension _DesktopWorkspace on _EditorScreenState {
                       Text(
                         template.$1,
                         style: const TextStyle(
-                          fontSize: 10,
+                          fontSize: 12,
                           color: TgiColors.textMuted,
                         ),
                       ),
@@ -104,7 +104,7 @@ extension _DesktopWorkspace on _EditorScreenState {
             child: Text(
               'FERRAMENTAS DE EDIÇÃO',
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 12,
                 letterSpacing: 1,
                 color: TgiColors.textMuted,
               ),
@@ -144,7 +144,7 @@ extension _DesktopWorkspace on _EditorScreenState {
               padding: EdgeInsets.all(12),
               child: Text(
                 'Selecione um vídeo ou uma imagem para editar seus efeitos.',
-                style: TextStyle(fontSize: 11, color: TgiColors.textMuted),
+                style: TextStyle(fontSize: 12, color: TgiColors.textMuted),
               ),
             ),
         ],
@@ -155,11 +155,12 @@ extension _DesktopWorkspace on _EditorScreenState {
       child: Column(
         children: [
           SizedBox(
-            height: 52,
+            height: 56,
             child: Row(
               children: [
                 for (final tab in _EditorLibraryTab.values)
                   Expanded(
+                    flex: tab == _EditorLibraryTab.transitions ? 13 : 10,
                     child: _LibraryTabButton(
                       tab: tab,
                       selected: _libraryTab == tab,
@@ -213,7 +214,12 @@ extension _DesktopWorkspace on _EditorScreenState {
         modes.any((mode) => mode.$1 == _leftPanelMode) &&
         _leftPanelMode != _LeftPanelMode.mediaPool;
     final showVisualLibrary = _leftPanelMode == _LeftPanelMode.visualMedia;
-    final built = toolActive || showVisualLibrary
+    final built = clip == null
+        ? _ProjectProperties(
+            project: _controller.project,
+            settings: _exportSettings,
+          )
+        : toolActive || showVisualLibrary
         ? panel(_leftPanelMode)
         : basics;
     final child = built is _Panel ? built.child : built;
@@ -234,7 +240,7 @@ extension _DesktopWorkspace on _EditorScreenState {
                         TrackType.audio => 'Áudio',
                         TrackType.image => 'Imagem',
                         TrackType.text => 'Texto',
-                        null => 'Inspetor',
+                        null => 'Projeto',
                       },
                       style: const TextStyle(
                         fontSize: 12,
@@ -283,8 +289,8 @@ extension _DesktopWorkspace on _EditorScreenState {
                       TextButton(
                         style: TextButton.styleFrom(
                           foregroundColor: _leftPanelMode == mode.$1
-                              ? TgiColors.accent
-                              : TgiColors.textMuted,
+                              ? TgiColors.textPrimary
+                              : TgiColors.textSecondary,
                           textStyle: TgiTextStyles.control,
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                         ),
@@ -340,8 +346,17 @@ extension _DesktopWorkspace on _EditorScreenState {
       0.0,
       constraints.maxHeight - _workspaceDividerExtent,
     );
-    final minPreview = math.min(180.0, height * .52);
-    final minTimeline = math.min(200.0, height * .43);
+    const minPreview = 124.0;
+    final visibleTracks = _controller.project.tracks.take(3).toList();
+    final threeTrackHeight =
+        visibleTracks.fold<double>(0, (sum, t) => sum + t.height) +
+        math.max(0, 3 - visibleTracks.length) * 64;
+    // Header + ruler + new-lane target + scrollbar, then three complete rows.
+    final requiredTimeline = 44 + 34 + 24 + 12 + threeTrackHeight;
+    final minTimeline = math.min(
+      requiredTimeline,
+      math.max(0, height - minPreview),
+    );
     final upper = (height * (_timelineFocusMode ? .42 : _previewPanelFraction))
         .clamp(minPreview, math.max(minPreview, height - minTimeline))
         .toDouble();
@@ -423,10 +438,11 @@ class _LibraryTabButton extends StatelessWidget {
         onTap: onTap,
         child: DecoratedBox(
           decoration: BoxDecoration(
+            color: selected ? TgiColors.surfaceHover : TgiColors.surfacePanel,
             border: Border(
               bottom: BorderSide(
                 width: 2,
-                color: selected ? TgiColors.accent : Colors.transparent,
+                color: selected ? TgiColors.borderStrong : Colors.transparent,
               ),
             ),
           ),
@@ -436,7 +452,9 @@ class _LibraryTabButton extends StatelessWidget {
               Icon(
                 icon,
                 size: 16,
-                color: selected ? TgiColors.accent : TgiColors.textMuted,
+                color: selected
+                    ? TgiColors.textPrimary
+                    : TgiColors.textSecondary,
               ),
               const SizedBox(height: 4),
               Text(
@@ -444,7 +462,7 @@ class _LibraryTabButton extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
-                  fontSize: 9,
+                  fontSize: 12,
                   color: selected ? TgiColors.textPrimary : TgiColors.textMuted,
                 ),
               ),
@@ -454,4 +472,55 @@ class _LibraryTabButton extends StatelessWidget {
       ),
     );
   }
+}
+
+class _ProjectProperties extends StatelessWidget {
+  const _ProjectProperties({required this.project, required this.settings});
+  final TgiProject project;
+  final FfmpegExportSettings settings;
+
+  @override
+  Widget build(BuildContext context) => ListView(
+    key: const ValueKey('project-properties'),
+    padding: const EdgeInsets.all(16),
+    children: [
+      Text(
+        project.name,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+      ),
+      const SizedBox(height: 24),
+      for (final entry in [
+        (
+          'Resolução de saída',
+          '${settings.resolution.width} × ${settings.resolution.height}',
+        ),
+        ('Taxa de quadros', '${settings.framesPerSecond} fps'),
+        ('Duração', formatDuration(project.timelineDuration)),
+        ('Trilhas', '${project.tracks.length}'),
+      ])
+        Padding(
+          padding: const EdgeInsets.only(bottom: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                entry.$1,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: TgiColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                entry.$2,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: TgiColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+    ],
+  );
 }

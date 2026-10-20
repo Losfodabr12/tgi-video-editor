@@ -6,19 +6,25 @@ antigos dos tokens são aliases para preservar os componentes existentes.
 
 | Papel | Valor |
 | --- | --- |
-| Fundo / canvas | `#101216` |
-| Painéis / barras | `#20242B` |
-| Controles / superfície elevada | `#343B46` |
-| Destaque da interface | `#82D9B0` |
+| Fundo / canvas | `#0E0F11` |
+| Painéis / barras | `#15171A` |
+| Controles / superfície elevada | `#1C1F23` |
+| Hover | `#262A30` |
+| Borda | `#2A2E34` |
+| Texto / secundário | `#E6E8EB` / `#A0A7B1` |
+| Destaque da interface | `#34C38F` |
 | Espaçamento | 4, 8, 12, 16, 20, 24 px |
 | Raios | 2, 4, 6 px |
 | Fonte da interface | Lato, regular e bold, família `Editor UI` |
 | Ícones | Material Icons, distribuídos pelo SDK Flutter |
 | Densidade | `VisualDensity.compact` em todos os estilos salvos |
 
-Os clipes usam cores semânticas: vídeo azul, áudio verde, imagem violeta,
-texto ocre. Essas cores identificam conteúdo; o destaque de seleção e ações
-continua único. Thumbnails vêm do arquivo/cache de mídia, e a waveform dos
+Os clipes usam fundos foscos: vídeo `#3B5B8C`, áudio `#2F7D6B`, texto
+`#6B5BA8` e efeitos/transições `#A0653B`. Imagens compartilham o azul dos
+visuais. A seleção mantém o fundo do tipo e acrescenta somente contorno
+verde de 2 px. O verde de destaque fica para a ação principal, playhead e
+seleção; toggles ligados, abas, botões auxiliares e slider de zoom usam
+superfícies neutras elevadas, sem tingimento verde. Thumbnails vêm do arquivo/cache de mídia, e a waveform dos
 samples calculados pelo serviço de áudio. O teste visual fornece samples
 determinísticos; ele não mede a qualidade da extração de áudio.
 
@@ -37,7 +43,10 @@ Preferências antigas de aparência são lidas, mas usam a mesma paleta compacta
 ## Regressão visual
 
 `source/test/visual_golden_test.dart` cobre editor vazio, propriedades de texto,
-exportação, atalhos e timeline com thumbnails, waveform e snapping ativo.
+exportação, atalhos, timeline com thumbnails/waveform/snapping e régua ampliada.
+`visual_refinement_test.dart` cobre duração 04:53, três trilhas completas em
+1440×900 e 1280×720, centralização do transporte, contorno de seleção e
+legibilidade/densidade da régua em projetos de seis horas.
 Carrega os bytes da fonte do repositório e os ícones do SDK, sem depender da
 pasta `aplicativo/` ou de fontes instaladas no Windows. Os goldens de referência
 foram gerados em Windows com Flutter 3.44.4, viewport 1440×900, escala 1.
@@ -61,11 +70,50 @@ sob SIL OFL 1.1 (`source/assets/fonts/lato-OFL.txt`). SHA-256 do arquivo incluí
 
 Mesma cena e viewport. O título "TGI VIDEO EDITOR" é texto do projeto de teste
 histórico, mantido nas duas imagens para comparação; a marca da interface é FRAME.
-O antes foi renderizado antes da alteração dos tokens. O depois é o golden do
+O antes mostra a versão anterior deste ajuste de paleta. O depois é o golden do
 editor com propriedades. São capturas de widgets reais em ambiente headless.
 
 | Antes | Depois |
 | --- | --- |
-| ![Editor antes](visual/editor-before.png) | ![Editor depois](visual/editor-after.png) |
+| ![Editor antes](visual/editor-after.png) | ![Editor depois](visual/editor-refined.png) |
 
 ![Timeline com snapping, cores por tipo, thumbnails e waveform](../source/test/goldens/timeline_snapping.png)
+
+
+## Layout, transporte e régua
+
+O padrão reserva aproximadamente 45% da área de trabalho para a timeline.
+A altura mínima considera cabeçalho, régua, alvo de nova camada, scrollbar e
+as três primeiras trilhas com suas alturas reais. O preview conserva pelo
+menos 124 px. Em janelas muito baixas, ou trilhas individualmente muito altas,
+o espaço físico exige scroll; os testes de cinco resoluções anteriores
+continuam verificando ausência de overflow. Proporções ajustadas pelo usuário
+continuam salvas no arquivo de layout, sem alterar o projeto v14.
+
+Sem seleção, o inspetor mostra o nome, resolução de saída, fps, duração e
+quantidade de trilhas. Resolução/fps vêm da configuração atual de saída,
+pois o projeto pode combinar mídias de formatos diferentes.
+
+Play/voltar/avançar ficam exatamente no centro do preview, independentemente
+da largura das ferramentas de cada lado. Corte/Excluir/Texto compartilham
+o mesmo estilo e um grupo à esquerda; velocidade e proxy ficam à direita.
+Ações de marcar início/fim permanecem na toolbar em ícones com tooltips
+`I`/`O`; a linha extra de instruções foi removida.
+
+O slider de zoom é logarítmico (0,5% a 3200%) e usa o mesmo caminho de zoom
+que preserva o ponto de referência e suporta Ctrl + roda. A régua escolhe
+intervalos conforme pixels por segundo, com no mínimo 96 px entre rótulos
+principais. Em ampliação detalhada mostra milissegundos; em projetos longos,
+horas. A grade usa as mesmas marcações. Só a região visível, com uma margem,
+é gerada, evitando criar milhares de rótulos ao ampliar um projeto longo.
+
+## Correção da diferença 04:53 / 04:58
+
+A folga de cinco segundos adicionada por `_timelineExtent` serve para editar
+e arrastar além do fim do conteúdo. O contador da timeline recebia essa
+extensão do canvas, enquanto o preview recebia `project.timelineDuration`.
+O contador agora usa a duração real, mantendo a folga somente no canvas.
+O teste abre um projeto de 293 segundos e confere preview, contador e
+propriedades em 04:53. Não houve modificação dos tempos dos clipes ou do export.
+
+![Régua ampliada e duração real](../source/test/goldens/editor_zoomed.png)

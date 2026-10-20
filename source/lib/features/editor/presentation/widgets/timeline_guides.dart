@@ -7,92 +7,76 @@ class _TimelineRulerInteraction extends StatelessWidget {
     required this.enabled,
     required this.onPlayheadChanged,
     required this.onRulerPan,
+    required this.scrollController,
+    required this.viewportWidth,
   });
-
   final Duration duration;
-  final double width;
+  final double width, viewportWidth;
   final bool enabled;
+  final ScrollController scrollController;
   final ValueChanged<Duration> onPlayheadChanged;
   final ValueChanged<double> onRulerPan;
 
   @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapUp: enabled
-          ? (details) {
-              onPlayheadChanged(
-                _positionFromDx(details.localPosition.dx, duration, width),
-              );
-            }
-          : null,
-      onHorizontalDragUpdate: enabled
-          ? (details) {
-              onRulerPan(-details.delta.dx);
-            }
-          : null,
-      child: _TimelineRuler(duration: duration),
-    );
-  }
-}
-
-class _TimelineRuler extends StatelessWidget {
-  const _TimelineRuler({required this.duration});
-
-  final Duration duration;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
+  Widget build(BuildContext context) => GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTapUp: enabled
+        ? (details) => onPlayheadChanged(
+            _positionFromDx(details.localPosition.dx, duration, width),
+          )
+        : null,
+    onHorizontalDragUpdate: enabled
+        ? (details) => onRulerPan(-details.delta.dx)
+        : null,
+    child: DecoratedBox(
+      decoration: const BoxDecoration(
         color: TgiColors.surfacePanel,
-        border: const Border(bottom: BorderSide(color: TgiColors.borderStrong)),
+        border: Border(bottom: BorderSide(color: TgiColors.border)),
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final ticks = _tickSeconds(duration);
+      child: AnimatedBuilder(
+        animation: scrollController,
+        builder: (context, _) {
+          final scale = TimelineRulerScale(
+            duration: duration,
+            contentWidth: width,
+          );
+          final ticks = scale.visibleTicks(
+            scrollOffset: scrollController.hasClients
+                ? scrollController.offset
+                : 0,
+            viewportWidth: viewportWidth,
+          );
           return Stack(
+            key: const ValueKey('timeline-ruler'),
             children: [
-              for (final seconds in ticks)
+              for (final tick in ticks)
                 Positioned(
-                  left: _leftFor(
-                    Duration(seconds: seconds),
-                    duration,
-                    constraints.maxWidth,
-                  ),
+                  left: _leftFor(tick.position, duration, width),
                   top: 0,
                   bottom: 0,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: Container(
-                          width: seconds % 5 == 0 ? 1.2 : 1,
-                          color:
-                              (seconds % 5 == 0
-                                      ? TgiColors.accentMuted
-                                      : TgiColors.timelineGrid)
-                                  .withValues(
-                                    alpha: seconds % 5 == 0 ? 0.80 : 0.46,
-                                  ),
+                      SizedBox(
+                        height: tick.major ? 10 : 6,
+                        child: const VerticalDivider(
+                          width: 1,
+                          color: TgiColors.border,
                         ),
                       ),
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4, bottom: 4),
-                        child: Text(
-                          formatDuration(Duration(seconds: seconds)),
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: seconds % 5 == 0
-                                    ? TgiColors.accentSoft
-                                    : TgiColors.textSecondary,
-                                fontSize: 11,
-                                fontWeight: seconds % 5 == 0
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                              ),
+                      if (tick.major)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 4),
+                          child: Text(
+                            scale.label(tick.position),
+                            style: const TextStyle(
+                              color: TgiColors.textSecondary,
+                              fontSize: 12,
+                              height: 1,
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -100,8 +84,8 @@ class _TimelineRuler extends StatelessWidget {
           );
         },
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _TimelinePlayhead extends StatelessWidget {
@@ -507,7 +491,7 @@ class _TimelineTransitionView extends StatelessWidget {
           child: IgnorePointer(
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: TgiColors.accentSoft.withValues(alpha: 0.24),
+                color: TgiColors.clipEffect.withValues(alpha: 0.5),
               ),
             ),
           ),
@@ -521,11 +505,9 @@ class _TimelineTransitionView extends StatelessWidget {
             child: DecoratedBox(
               key: ValueKey('timeline_transition_indicator_${transition.id}'),
               decoration: BoxDecoration(
-                color: TgiColors.accentMuted,
+                color: TgiColors.clipEffect,
                 borderRadius: BorderRadius.circular(TgiRadii.md),
-                border: Border.all(
-                  color: TgiColors.accentSoft.withValues(alpha: 0.48),
-                ),
+                border: Border.all(color: TgiColors.border),
               ),
               child: Icon(
                 transitionIcon,
@@ -557,7 +539,7 @@ class _TransitionDragFeedback extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: TgiColors.surface,
-        border: Border.all(color: TgiColors.accent.withValues(alpha: 0.70)),
+        border: Border.all(color: TgiColors.accent, width: 2),
         borderRadius: BorderRadius.circular(TgiRadii.md),
       ),
       child: Padding(

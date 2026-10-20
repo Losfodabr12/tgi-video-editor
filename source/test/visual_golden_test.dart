@@ -12,6 +12,7 @@ import 'package:tgi_video_editor/domain/models/clip.dart';
 import 'package:tgi_video_editor/domain/models/media_item.dart';
 import 'package:tgi_video_editor/domain/models/project.dart';
 import 'package:tgi_video_editor/domain/models/track.dart';
+import 'package:tgi_video_editor/domain/models/timeline_transition.dart';
 import 'package:tgi_video_editor/features/editor/presentation/editor_screen.dart';
 import 'package:tgi_video_editor/features/editor/presentation/editor_keyboard.dart';
 import 'package:tgi_video_editor/features/editor/presentation/widgets/timeline_panel.dart';
@@ -201,6 +202,15 @@ void main() {
     final project = TgiProject(
       id: 'visual',
       name: 'Linha do tempo',
+      transitions: const [
+        TimelineTransition(
+          id: 'fx',
+          name: 'Dissolve',
+          timelinePosition: Duration(seconds: 10),
+          duration: Duration(milliseconds: 900),
+          preset: TimelineTransitionPreset.dissolve,
+        ),
+      ],
       createdAt: DateTime(2026),
       updatedAt: DateTime(2026),
       mediaPool: [
@@ -304,6 +314,28 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle();
     expect(moved, const Duration(seconds: 4));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('zoomed ruler and real 04:53 duration golden', (tester) async {
+    await workspace(
+      tester,
+      project: TgiProject.empty(name: '04:53 · Revisão visual')
+          .addTextClipToTimeline(
+            text: 'Uma história em camadas',
+            timelineStart: Duration.zero,
+            duration: const Duration(seconds: 293),
+          ),
+    );
+    final slider = find.byKey(const ValueKey('timeline-zoom-slider'));
+    await tester.tapAt(
+      tester.getRect(slider).centerRight - const Offset(16, 0),
+    );
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byKey(const ValueKey('golden')),
+      matchesGoldenFile('goldens/editor_zoomed.png'),
+    );
     expect(tester.takeException(), isNull);
   });
 

@@ -209,7 +209,7 @@ class _ClipTrimPreviewBubble extends StatelessWidget {
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: TgiColors.black.withValues(alpha: 0.78),
-              border: Border.all(color: TgiColors.accent),
+              border: Border.all(color: TgiColors.accent, width: 2),
               borderRadius: BorderRadius.circular(TgiRadii.sm),
             ),
             child: Padding(
@@ -442,7 +442,7 @@ class _TimelineClip extends StatelessWidget {
         : Icons.movie_outlined;
     final accentColor = _clipAccentFor(clip.trackType);
     final clipFill = _clipFillFor(clip.trackType);
-    final emphasized = dragging || active || selected || cutMode;
+    final emphasized = dragging || selected;
     final linkedPair = connectedAbove || connectedBelow;
     final clipRadius = BorderRadius.only(
       topLeft: Radius.circular(connectedAbove ? 0 : TgiRadii.xs),
@@ -482,16 +482,10 @@ class _TimelineClip extends StatelessWidget {
           clipBehavior: Clip.hardEdge,
           padding: EdgeInsets.zero,
           decoration: BoxDecoration(
-            color: emphasized
-                ? Color.lerp(clipFill, TgiColors.white, 0.10)
-                : clipFill,
+            color: clipFill,
             border: Border.all(
-              color: emphasized
-                  ? TgiColors.accent
-                  : isAudio
-                  ? TgiColors.borderStrong
-                  : accentColor.withValues(alpha: 0.70),
-              width: selected || active || cutMode ? 2 : 1,
+              color: emphasized ? TgiColors.accent : TgiColors.border,
+              width: emphasized ? 2 : 1,
             ),
             borderRadius: clipRadius,
           ),
@@ -504,7 +498,7 @@ class _TimelineClip extends StatelessWidget {
                 left: 0,
                 top: 0,
                 bottom: 0,
-                child: Container(width: 3, color: accentColor),
+                child: Container(width: 3, color: clipFill),
               ),
               if (isAudio)
                 CustomPaint(
@@ -545,9 +539,7 @@ class _TimelineClip extends StatelessWidget {
                             color: TgiColors.backgroundDeep.withValues(
                               alpha: 0.38,
                             ),
-                            border: Border.all(
-                              color: accentColor.withValues(alpha: 0.58),
-                            ),
+                            border: Border.all(color: TgiColors.border),
                             borderRadius: BorderRadius.circular(TgiRadii.sm),
                           ),
                           child: Icon(
@@ -569,7 +561,13 @@ class _TimelineClip extends StatelessWidget {
                                 style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
                                       color: TgiColors.textPrimary,
-                                      fontSize: 11,
+                                      backgroundColor:
+                                          isAudio || hasTimelineThumbnail
+                                          ? TgiColors.background.withValues(
+                                              alpha: .75,
+                                            )
+                                          : null,
+                                      fontSize: 12,
                                       height: 1,
                                       fontWeight: FontWeight.w700,
                                     ),
@@ -580,7 +578,17 @@ class _TimelineClip extends StatelessWidget {
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: Theme.of(context).textTheme.bodySmall
-                                    ?.copyWith(fontSize: 10, height: 1),
+                                    ?.copyWith(
+                                      fontSize: 11,
+                                      height: 1,
+                                      color: TgiColors.textPrimary,
+                                      backgroundColor:
+                                          isAudio || hasTimelineThumbnail
+                                          ? TgiColors.background.withValues(
+                                              alpha: .75,
+                                            )
+                                          : null,
+                                    ),
                               ),
                             ],
                           ),
@@ -604,7 +612,7 @@ class _TimelineClip extends StatelessWidget {
                           color: linkedPair
                               ? accentColor
                               : isAudio
-                              ? TgiColors.accent
+                              ? TgiColors.textSecondary
                               : TgiColors.textSecondary,
                         ),
                       ],
@@ -830,11 +838,11 @@ class _AudioVolumeLinePainter extends CustomPainter {
       ..strokeWidth = 5
       ..strokeCap = StrokeCap.round;
     final linePaint = Paint()
-      ..color = enabled ? TgiColors.accent : TgiColors.textSecondary
+      ..color = enabled ? TgiColors.textPrimary : TgiColors.textSecondary
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round;
     final handlePaint = Paint()
-      ..color = enabled ? TgiColors.accent : TgiColors.textSecondary
+      ..color = enabled ? TgiColors.textPrimary : TgiColors.textSecondary
       ..style = PaintingStyle.fill;
 
     canvas.drawLine(
@@ -937,6 +945,7 @@ class _EmptyTimeline extends StatelessWidget {
                     color: accepting
                         ? TgiColors.accent
                         : TgiColors.borderStrong,
+                    width: accepting ? 2 : 1,
                   ),
                   borderRadius: BorderRadius.circular(TgiRadii.lg),
                 ),
@@ -1011,27 +1020,7 @@ double _timelineContentWidth(
 }) {
   final durationWidth =
       math.max(1, duration.inSeconds) * _pixelsPerSecond * zoom;
-  return math.max(
-    math.max(viewportWidth, _minimumTimelineContentWidth),
-    durationWidth,
-  );
-}
-
-List<int> _tickSeconds(Duration duration) {
-  final totalSeconds = math.max(1, duration.inSeconds);
-  final step = totalSeconds <= 30
-      ? 5
-      : totalSeconds <= 120
-      ? 10
-      : 30;
-  final ticks = <int>[];
-  for (var seconds = 0; seconds <= totalSeconds; seconds += step) {
-    ticks.add(seconds);
-  }
-  if (ticks.last != totalSeconds) {
-    ticks.add(totalSeconds);
-  }
-  return ticks;
+  return math.max(viewportWidth, durationWidth);
 }
 
 Duration _positionFromDx(double dx, Duration duration, double width) {

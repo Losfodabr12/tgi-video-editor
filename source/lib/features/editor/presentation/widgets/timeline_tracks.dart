@@ -7,8 +7,12 @@ class _TimelineHeader extends StatelessWidget {
     required this.duration,
     required this.onAudioInventoryOpen,
     required this.onMarkerAdd,
-    required this.onZoomOut,
-    required this.onZoomIn,
+    required this.onZoomChanged,
+    required this.onMarkRangeStart,
+    required this.onMarkRangeEnd,
+    required this.onClearRange,
+    required this.rangeLabel,
+    required this.hasRange,
     required this.editMode,
     required this.snappingEnabled,
     required this.selectedCount,
@@ -26,8 +30,10 @@ class _TimelineHeader extends StatelessWidget {
   final Duration duration;
   final VoidCallback? onAudioInventoryOpen;
   final VoidCallback? onMarkerAdd;
-  final VoidCallback? onZoomOut;
-  final VoidCallback? onZoomIn;
+  final ValueChanged<double> onZoomChanged;
+  final VoidCallback? onMarkRangeStart, onMarkRangeEnd, onClearRange;
+  final String rangeLabel;
+  final bool hasRange;
   final TimelineEditMode editMode;
   final bool snappingEnabled;
   final int selectedCount;
@@ -127,6 +133,24 @@ class _TimelineHeader extends StatelessWidget {
                         icon: Icons.auto_delete_outlined,
                         onPressed: canRippleDelete ? onRippleDelete : null,
                       ),
+                      if (onMarkRangeStart != null) ...[
+                        _TimelineHeaderTool(
+                          tooltip: 'I · Marcar início\n$rangeLabel',
+                          icon: Icons.first_page,
+                          onPressed: onMarkRangeStart,
+                        ),
+                        _TimelineHeaderTool(
+                          tooltip: 'O · Marcar fim\n$rangeLabel',
+                          icon: Icons.last_page,
+                          onPressed: onMarkRangeEnd,
+                        ),
+                        if (hasRange)
+                          _TimelineHeaderTool(
+                            tooltip: 'Limpar trecho',
+                            icon: Icons.close,
+                            onPressed: onClearRange,
+                          ),
+                      ],
                       const SizedBox(width: TgiSpacing.sm),
                       TimelineZoomControls(
                         zoom: zoom,
@@ -134,8 +158,7 @@ class _TimelineHeader extends StatelessWidget {
                         duration: duration,
                         onAudioInventoryOpen: onAudioInventoryOpen,
                         onMarkerAdd: onMarkerAdd,
-                        onZoomOut: onZoomOut,
-                        onZoomIn: onZoomIn,
+                        onZoomChanged: onZoomChanged,
                       ),
                     ],
                   ),
@@ -174,9 +197,11 @@ class _TimelineHeaderTool extends StatelessWidget {
         onPressed: onPressed,
         style: IconButton.styleFrom(
           backgroundColor: selected
-              ? TgiColors.accent.withValues(alpha: 0.18)
+              ? TgiColors.surfaceHover
               : Colors.transparent,
-          foregroundColor: selected ? TgiColors.accent : TgiColors.textMuted,
+          foregroundColor: selected
+              ? TgiColors.textPrimary
+              : TgiColors.textSecondary,
         ),
         icon: Icon(icon, size: 18),
       ),

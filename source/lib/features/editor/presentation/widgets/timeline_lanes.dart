@@ -345,7 +345,11 @@ class _TimelineLane extends StatefulWidget {
                   ),
                 ),
               ),
-              _TimelineGrid(duration: duration),
+              _TimelineGrid(
+                duration: duration,
+                scrollOffset: viewportStart,
+                viewportWidth: viewportWidth,
+              ),
               if (accepting && dropPreview != null)
                 Positioned(
                   key: ValueKey('media-drop-preview-${track.id}'),
@@ -362,7 +366,7 @@ class _TimelineLane extends StatefulWidget {
                   child: IgnorePointer(
                     child: DecoratedBox(
                       decoration: BoxDecoration(
-                        color: TgiColors.accent.withValues(alpha: .16),
+                        color: TgiColors.surfaceHover,
                         border: Border.all(
                           color:
                               _trackHasClipOverlap(
@@ -374,6 +378,7 @@ class _TimelineLane extends StatefulWidget {
                               )
                               ? TgiColors.danger
                               : TgiColors.accent,
+                          width: 2,
                         ),
                       ),
                       child: Padding(
@@ -481,41 +486,48 @@ class _TimelineLaneState extends State<_TimelineLane> {
 }
 
 class _TimelineGrid extends StatelessWidget {
-  const _TimelineGrid({required this.duration});
-
+  const _TimelineGrid({
+    required this.duration,
+    required this.scrollOffset,
+    required this.viewportWidth,
+  });
   final Duration duration;
-
+  final double scrollOffset, viewportWidth;
   @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return Stack(
+  Widget build(BuildContext context) => Positioned.fill(
+    child: LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = TimelineRulerScale(
+          duration: duration,
+          contentWidth: constraints.maxWidth,
+        );
+        return IgnorePointer(
+          child: Stack(
             children: [
-              for (final seconds in _tickSeconds(duration))
-                Positioned(
-                  left: _leftFor(
-                    Duration(seconds: seconds),
-                    duration,
-                    constraints.maxWidth,
+              for (final tick in scale.visibleTicks(
+                scrollOffset: scrollOffset,
+                viewportWidth: viewportWidth,
+              ))
+                if (tick.major)
+                  Positioned(
+                    left: _leftFor(
+                      tick.position,
+                      duration,
+                      constraints.maxWidth,
+                    ),
+                    top: 0,
+                    bottom: 0,
+                    child: const ColoredBox(
+                      color: TgiColors.timelineGrid,
+                      child: SizedBox(width: 1),
+                    ),
                   ),
-                  top: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: seconds % 5 == 0 ? 1.2 : 1,
-                    color:
-                        (seconds % 5 == 0
-                                ? TgiColors.borderStrong
-                                : TgiColors.timelineGrid)
-                            .withValues(alpha: seconds % 5 == 0 ? 0.62 : 0.38),
-                  ),
-                ),
             ],
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
 }
 
 class _PositionedClip extends StatefulWidget {

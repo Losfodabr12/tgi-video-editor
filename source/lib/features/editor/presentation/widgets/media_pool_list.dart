@@ -118,7 +118,7 @@ class _MediaPoolListState extends State<MediaPoolList> {
                     size: 17,
                     color: _typeFilter == null
                         ? TgiColors.textMuted
-                        : TgiColors.accent,
+                        : TgiColors.textPrimary,
                   ),
                   onSelected: (value) => setState(
                     () => _typeFilter = switch (value) {
@@ -261,7 +261,8 @@ class _MediaPoolTile extends StatelessWidget {
                 ? TgiColors.surfacePressed
                 : TgiColors.surface.withValues(alpha: 0.62),
             border: Border.all(
-              color: selected ? TgiColors.accentMuted : TgiColors.borderSubtle,
+              color: selected ? TgiColors.accent : TgiColors.borderSubtle,
+              width: selected ? 2 : 1,
             ),
             borderRadius: BorderRadius.circular(TgiRadii.lg),
           ),
@@ -443,7 +444,7 @@ class _MediaTypePill extends StatelessWidget {
           _typeLabel(type),
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: TgiColors.textMuted,
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: FontWeight.w800,
           ),
         ),

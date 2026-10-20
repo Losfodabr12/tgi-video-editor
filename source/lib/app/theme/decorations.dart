@@ -54,11 +54,11 @@ class TgiDecorations {
 
   static BoxDecoration activeControl({
     double radius = TgiRadii.md,
-    Color color = TgiColors.surfacePressed,
+    Color color = TgiColors.surfaceHover,
   }) {
     return BoxDecoration(
       color: color,
-      border: Border.all(color: TgiColors.accent),
+      border: Border.all(color: TgiColors.border),
       borderRadius: BorderRadius.circular(radius),
     );
   }

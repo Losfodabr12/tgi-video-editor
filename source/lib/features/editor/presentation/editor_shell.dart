@@ -12,23 +12,17 @@ const _customPlaybackSpeedMenuValue = -1.0;
 
 class _PreviewEditingActions extends StatelessWidget {
   const _PreviewEditingActions({
-    required this.speed,
-    required this.speedEnabled,
     required this.cutActive,
     required this.enabled,
     required this.deleteEnabled,
-    required this.onSpeedChanged,
     required this.onCutPressed,
     required this.onDeletePressed,
     required this.onTextPressed,
   });
 
-  final double speed;
-  final bool speedEnabled;
   final bool cutActive;
   final bool enabled;
   final bool deleteEnabled;
-  final ValueChanged<double> onSpeedChanged;
   final VoidCallback onCutPressed;
   final VoidCallback onDeletePressed;
   final VoidCallback onTextPressed;
@@ -36,14 +30,9 @@ class _PreviewEditingActions extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
+      key: const ValueKey('preview-edit-tools'),
       mainAxisSize: MainAxisSize.min,
       children: [
-        _PlaybackSpeedMenu(
-          speed: speed,
-          enabled: speedEnabled,
-          onChanged: onSpeedChanged,
-        ),
-        const SizedBox(width: 4),
         _PreviewToolButton(
           tooltip: cutActive ? 'Sair do modo corte' : 'Ferramenta de corte',
           icon: Icons.content_cut,
@@ -101,20 +90,16 @@ class _PreviewToolButton extends StatelessWidget {
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 8),
             backgroundColor: active
-                ? TgiColors.surfacePressed
+                ? TgiColors.surfaceHover
                 : TgiColors.surfaceAlt,
-            foregroundColor: active
-                ? TgiColors.accentSoft
-                : TgiColors.textPrimary,
-            side: BorderSide(
-              color: active ? TgiColors.accentMuted : TgiColors.border,
-            ),
+            foregroundColor: TgiColors.textPrimary,
+            side: BorderSide(color: TgiColors.border),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(TgiRadii.md),
             ),
           ),
           icon: Icon(icon, size: 15),
-          label: Text(label, style: const TextStyle(fontSize: 12)),
+          label: Text(label, style: const TextStyle(fontSize: 13)),
         ),
       ),
     );
@@ -174,7 +159,9 @@ class _PreviewOptimizeButton extends StatelessWidget {
               : onPressed,
           style: OutlinedButton.styleFrom(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            backgroundColor: TgiColors.surfaceAlt,
+            backgroundColor: isOptimizingPreview || usesProxy
+                ? TgiColors.surfaceHover
+                : TgiColors.surfaceRaised,
             foregroundColor: isOptimizingPreview || usesProxy
                 ? TgiColors.accentSoft
                 : TgiColors.textSecondary,
@@ -201,7 +188,7 @@ class _PreviewOptimizeButton extends StatelessWidget {
                 ),
           label: Text(
             label,
-            style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w800),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ),
       ),
@@ -522,7 +509,7 @@ class _Panel extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 11,
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: TgiColors.textSecondary,
                       ),

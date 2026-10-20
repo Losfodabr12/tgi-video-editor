@@ -1222,7 +1222,7 @@ class _TransformCropInteractionOverlay extends StatelessWidget {
                     : () => onInteractionEnd?.call(),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
-                    border: Border.all(color: TgiColors.accent, width: 1.5),
+                    border: Border.all(color: TgiColors.accent, width: 2),
                   ),
                   child: Center(
                     child: Icon(

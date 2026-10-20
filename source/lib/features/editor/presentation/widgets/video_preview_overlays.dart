@@ -107,7 +107,7 @@ class _TextOverlayState extends State<_TextOverlay> {
                         decoration: BoxDecoration(
                           color: backgroundColor,
                           border: entry.isActive
-                              ? Border.all(color: TgiColors.white, width: 1.2)
+                              ? Border.all(color: TgiColors.accent, width: 2)
                               : null,
                           borderRadius: BorderRadius.circular(TgiRadii.md),
                         ),
@@ -516,8 +516,8 @@ class _VideoOverlayState extends State<_VideoOverlay> {
                           DecoratedBox(
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: TgiColors.white.withValues(alpha: 0.86),
-                                width: 1,
+                                color: TgiColors.accent,
+                                width: 2,
                               ),
                               borderRadius: BorderRadius.circular(TgiRadii.sm),
                             ),
@@ -1201,10 +1201,7 @@ class _ImageOverlayState extends State<_ImageOverlay> {
               if (widget.active)
                 DecoratedBox(
                   decoration: BoxDecoration(
-                    border: Border.all(
-                      color: TgiColors.white.withValues(alpha: 0.86),
-                      width: 1,
-                    ),
+                    border: Border.all(color: TgiColors.accent, width: 2),
                   ),
                 ),
             ],
@@ -1296,8 +1293,8 @@ class _ImageOverlayState extends State<_ImageOverlay> {
                           DecoratedBox(
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: TgiColors.white.withValues(alpha: 0.86),
-                                width: 1,
+                                color: TgiColors.accent,
+                                width: 2,
                               ),
                             ),
                           ),
@@ -1803,8 +1800,10 @@ class _HandleGlyph extends StatelessWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: TgiColors.black.withValues(alpha: 0.78),
-        border: Border.all(color: TgiColors.white, width: 1),
-        borderRadius: BorderRadius.circular(isCorner ? 2 : 999),
+        border: Border.all(color: TgiColors.accent, width: 2),
+        borderRadius: BorderRadius.circular(
+          isCorner ? TgiRadii.xs : TgiRadii.sm,
+        ),
       ),
       child: SizedBox(width: isCorner ? 10 : 18, height: isCorner ? 10 : 4),
     );
