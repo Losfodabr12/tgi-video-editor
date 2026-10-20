@@ -59,10 +59,11 @@ O cache interno de `subosito/flutter-action@v2` também usa cache v5 / Node 24.
 
 O relatório remoto é gerado **depois** de analyze/test/integração/build pelo
 `tool/write_ci_report.ps1`, com o SHA e o URL do run efetivamente executado.
-Ele acompanha o artefato e a release. O documento versionado aponta para essa
-evidência gerada, evitando um commit adicional apenas para registrar o próprio
-resultado do CI (que mudaria novamente o SHA a validar). O estado final do
-workflow é conferido na API antes da entrega.
+Ele acompanha o artefato e a release. Os resultados concluídos também estão
+transcritos no `RELATORIO_ALTERACOES.md` versionado, para revisão sem baixar
+assets. Cada registro identifica o SHA realmente executado; publicações
+posteriores da documentação não são confundidas com o commit validado.
+O estado final do workflow foi conferido na API antes da entrega.
 
 Nome, marca e cores ficam em `source/lib/app/app_identity.dart`. O gerador
 `tool/generate_branding.ps1` produz os ícones e `windows/runner/app_branding.h`;

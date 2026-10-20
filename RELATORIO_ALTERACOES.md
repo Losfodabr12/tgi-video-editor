@@ -1,5 +1,10 @@
 # Relatório de alterações
 
+O texto completo, incluindo os resultados remotos da release 0.3.0, está
+disponível neste arquivo do repositório público. Não é necessário baixar
+um asset de release para lê-lo. Os registros abaixo identificam o SHA que
+foi executado; esta publicação posterior serve para facilitar a revisão.
+
 Execução por etapas na ordem solicitada (a lista recebida não contém etapa 2).
 Formato de projeto preservado em v14. Resultados locais e remotos são identificados em cada seção. Logs locais
 completos ficam em `.work/`, ignorada pelo Git.
@@ -289,16 +294,58 @@ reescrita completa deles. Log: `.work/etapa11-wc.log`.
 
 A etapa visual `403aabf` também passou no
 [CI remoto](https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39497056306).
-Para o commit final, o próprio CI gera **depois dos comandos** uma cópia deste
-relatório com o SHA exato e o run executado. Essa cópia acompanha o ZIP e o
-artefato `frame-studio-windows-x64`; na release ela fica também disponível como
-[RELATORIO_ALTERACOES.md do build final](https://github.com/Losfodabr12/tgi-video-editor/releases/download/v0.3.0/RELATORIO_ALTERACOES.md).
-Assim o registro do resultado não exige um terceiro commit que mudaria o SHA
-que acabou de ser validado. [Workflow e runs](https://github.com/Losfodabr12/tgi-video-editor/actions/workflows/ci.yml).
+O CI gerou **depois dos comandos** uma cópia deste relatório com o SHA exato
+e o run executado. O resultado concluído está transcrito integralmente abaixo,
+para leitura direta no repositório. Há também cópias no ZIP, no artefato
+`frame-studio-windows-x64` e na release.
+[Workflow e runs](https://github.com/Losfodabr12/tgi-video-editor/actions/workflows/ci.yml).
 
 <!-- CI_RESULT_START -->
-O resultado do CI do commit final é acrescentado à cópia do relatório que
-acompanha o artefato/release. Este trecho versionado não antecipa seu sucesso.
+## Resultado remoto do commit da release — conferido após conclusão
+
+Commit **`e407885c086d4d06b49f0925bb14100965f60c44`**, tag **v0.3.0**.
+Estado consultado pela API do GitHub depois de ambos os workflows terminarem:
+
+| Execução | Estado remoto final |
+| --- | --- |
+| [CI da branch main — 39498721935](https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39498721935) | **completed / success** |
+| [Release por tag — 39498725045](https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39498725045) | **completed / success**, jobs build e publish aprovados |
+
+Logs remotos lidos: analyze sem problemas (17,3 s no CI main), **172 testes
+padrão aprovados / 13 opcionais ignorados**, **185 aprovados com integração**,
+build Windows aprovado (168,6 s no CI main), empacotamento e upload aprovados.
+A execução da tag registrou os mesmos totais de testes. Busca nos logs dos
+dois runs por Node.js 20 / Node20 / node20: **zero ocorrências**. Os avisos
+CMake do media_kit continuam presentes. O watcher auxiliar encontrou HTTP 502
+nas anotações; a consulta direta posterior e os logs confirmaram sucesso.
+
+Artefato do CI main: `frame-studio-windows-x64`, ID **12299935483**, 299.080.856
+bytes, disponível no run. [Release publicada](https://github.com/Losfodabr12/tgi-video-editor/releases/tag/v0.3.0),
+sem draft/prerelease. O ZIP da release foi baixado e extraído nesta máquina:
+
+- `FrameStudio-0.3.0-windows-x64.zip`: **299.061.481 bytes**.
+- SHA-256: `e5de95a56b701ffde863ad3bda9bc26bb768d712bbe57830a6616f4f8db99be3`,
+  igual a SHA256SUMS.txt e ao digest informado pelo GitHub.
+- **120 arquivos** conferidos contra o manifesto do ZIP, sem divergências.
+- `BUILD_INFO.json` identifica o commit acima; ProductVersion do EXE
+  extraído **0.3.0+3**. O manifesto registra `workingTreeDirty=true` após a
+  preparação; o diff remoto não foi capturado, portanto não se afirma que
+  todos os arquivos gerados pelo build permaneceram iguais ao checkout.
+- FFmpeg extraído: **8.1.2-essentials_build-www.gyan.dev**; `-version` e `-L`
+  executados com exit 0, GPL v3 ou posterior confirmado no binário.
+- Whisper CLI extraído: `-h` executado com exit 0. Não houve transcrição
+  completa de voz nem sessão audiovisual manual na janela nativa.
+
+Este resultado pós-CI foi incorporado ao relatório local, ao asset da release
+e agora ao texto versionado, a pedido de disponibilizar a leitura sem assets.
+As etapas 10 e 11 foram entregues em commits separados; esta publicação
+adicional contém documentação. As aprovações acima correspondem ao commit
+`e407885`, identificado nos dois runs, e não são apresentadas como resultados
+de uma nova execução para este commit posterior de documentação. O relatório
+dentro do ZIP registra os checks quando executados e aponta para o mesmo run.
+
+Evidências locais: `.work/final-ci-remote.log`, `.work/final-release-remote.log`,
+`.work/final-remote-results.json`, `.work/final-package-results.json`.
 <!-- CI_RESULT_END -->
 
 ### Teste manual ainda necessário
