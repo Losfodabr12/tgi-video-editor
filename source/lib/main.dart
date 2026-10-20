@@ -1,3 +1,4 @@
+import 'app/app_identity.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:media_kit/media_kit.dart';
@@ -11,6 +12,7 @@ Future<void> main() async {
   MediaKit.ensureInitialized();
   if (Platform.isWindows) {
     await windowManager.ensureInitialized();
+    await windowManager.setTitle(AppIdentity.name);
     await windowManager.setMinimumSize(const Size(720, 520));
   }
   await initializeAppComponentPaths();

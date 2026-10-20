@@ -1,3 +1,4 @@
+import '../../../app/app_identity.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -15,6 +16,7 @@ Future<void> showPremiumDownloadsDialog(
   Future<void> Function()? onOpenPlans,
   VoidCallback? onAccessGranted,
 }) {
+  if (kStandalone) return Future<void>.value();
   return showDialog<void>(
     context: context,
     builder: (_) => PremiumDownloadsDialog(

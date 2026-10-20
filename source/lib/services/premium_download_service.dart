@@ -1,3 +1,4 @@
+import '../app/app_identity.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -232,6 +233,7 @@ class PremiumDownloadService implements PremiumDownloadManager {
     PremiumDownloadProgress? onProgress,
     PremiumDownloadCancellationToken? cancellationToken,
   ) async {
+    requireOnlineIntegrations();
     final client = HttpClient();
     try {
       _throwIfCancelled(cancellationToken);

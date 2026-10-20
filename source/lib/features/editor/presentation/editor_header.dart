@@ -151,7 +151,7 @@ class _EditorHeader extends StatelessWidget {
                   if (Navigator.of(context).canPop())
                     command('Voltar', Icons.arrow_back, onBack),
                   const Text(
-                    'TGI',
+                    AppIdentity.shortName,
                     style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
@@ -161,7 +161,7 @@ class _EditorHeader extends StatelessWidget {
                   const SizedBox(width: 7),
                   if (MediaQuery.sizeOf(context).width >= 880)
                     const Text(
-                      'VIDEO EDITOR',
+                      AppIdentity.tagline,
                       style: TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.w500,

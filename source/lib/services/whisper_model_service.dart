@@ -1,3 +1,4 @@
+import '../app/app_identity.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -191,6 +192,7 @@ class WhisperModelService {
     WhisperModelDownloadProgress? onProgress,
     WhisperModelDownloadCancellationToken? cancellationToken,
   }) async {
+    requireOnlineIntegrations();
     final output = File(await pathForModel(info));
     await output.parent.create(recursive: true);
     final temp = File('${output.path}.download');

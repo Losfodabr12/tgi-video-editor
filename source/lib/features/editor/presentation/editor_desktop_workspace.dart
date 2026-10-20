@@ -7,7 +7,7 @@ extension _DesktopWorkspace on _EditorScreenState {
     Widget content;
     final mode = switch (_libraryTab) {
       _EditorLibraryTab.media => _LeftPanelMode.mediaPool,
-      _EditorLibraryTab.audio => _LeftPanelMode.soundEffects,
+      _EditorLibraryTab.audio => kStandalone ? _LeftPanelMode.mediaPool : _LeftPanelMode.soundEffects,
       _EditorLibraryTab.transitions => _LeftPanelMode.transitions,
       _EditorLibraryTab.captions => _LeftPanelMode.captions,
       _ => null,

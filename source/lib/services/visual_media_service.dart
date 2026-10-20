@@ -1,3 +1,4 @@
+import '../app/app_identity.dart';
 import 'dart:async';
 import 'dart:io';
 
@@ -86,6 +87,7 @@ class PublicVisualMediaService {
       return target.path;
     }
 
+    requireOnlineIntegrations();
     final temp = File('${target.path}.download');
     if (await temp.exists()) {
       await temp.delete();

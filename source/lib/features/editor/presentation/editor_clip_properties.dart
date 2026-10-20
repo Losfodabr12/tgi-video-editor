@@ -616,7 +616,7 @@ class _ClipKeyframeEditorState extends State<_ClipKeyframeEditor> {
                 SizedBox(width: TgiSpacing.sm),
                 Expanded(
                   child: Text(
-                    'Crie dois pontos com valores diferentes. O TGI faz a '
+                    'Crie dois pontos com valores diferentes. O editor faz a '
                     'mudanca suave entre eles automaticamente.',
                   ),
                 ),

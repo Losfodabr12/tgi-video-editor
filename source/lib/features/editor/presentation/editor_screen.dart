@@ -1,3 +1,4 @@
+import '../../../app/app_identity.dart';
 import 'dart:async';
 import 'editor_keyboard.dart';
 import 'editor_preview_values.dart';
@@ -1470,6 +1471,7 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Future<void> _openPlanDownloads() {
+    if (kStandalone) return Future<void>.value();
     return showPremiumDownloadsDialog(
       context,
       hasPaidPlan: _hasPaidPlan,
@@ -1479,7 +1481,7 @@ class _EditorScreenState extends State<EditorScreen> {
     );
   }
 
-  bool get _hasPaidPlan => widget.hasPaidPlan || _rewardedAccessGranted;
+  bool get _hasPaidPlan => kStandalone || widget.hasPaidPlan || _rewardedAccessGranted;
 
   Future<void> _exportGeneratedCaptions(SubtitleExportFormat format) async {
     if (!_controller.canExportGeneratedCaptions) {

@@ -1,3 +1,4 @@
+import '../app/app_identity.dart';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
@@ -20,13 +21,13 @@ String tgiAppLocalDataRoot() {
   }
   final localAppData = Platform.environment['LOCALAPPDATA']?.trim();
   if (localAppData != null && localAppData.isNotEmpty) {
-    return joinPlatformPath([localAppData, 'TGI_VIDEO_EDITOR']);
+    return joinPlatformPath([localAppData, AppIdentity.dataDirectory]);
   }
   final home = Platform.environment['HOME']?.trim();
   if (home != null && home.isNotEmpty) {
-    return joinPlatformPath([home, '.tgi_video_editor']);
+    return joinPlatformPath([home, AppIdentity.unixDataDirectory]);
   }
-  return joinPlatformPath([Directory.systemTemp.path, 'TGI_VIDEO_EDITOR']);
+  return joinPlatformPath([Directory.systemTemp.path, AppIdentity.dataDirectory]);
 }
 
 String tgiAppComponentsRoot() =>

@@ -1,3 +1,4 @@
+import '../../../../app/app_identity.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../app/theme/design_tokens.dart';
@@ -25,7 +26,7 @@ class TgiMascotNotification extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isError = tone == TgiNotificationTone.error;
-    final title = isError ? 'Birra detectada' : 'TGI avisou';
+    final title = isError ? 'Atenção' : AppIdentity.name;
     final accentColor = isError ? TgiColors.accent : TgiColors.accent;
     final softAccent = isError ? TgiColors.accent : TgiColors.accentSoft;
     final borderColor = isError ? TgiColors.accent : TgiColors.accentDim;
@@ -40,21 +41,27 @@ class TgiMascotNotification extends StatelessWidget {
         SizedBox(
           width: mascotSize,
           height: mascotSize,
-          child: Image.asset(
-            isError ? _notificationBirraAsset : _notificationDefaultAsset,
-            key: Key(
-              isError
-                  ? 'tgi_notification_birra_character'
-                  : 'tgi_notification_default_character',
-            ),
-            fit: BoxFit.contain,
-            alignment: Alignment.bottomCenter,
-            errorBuilder: (_, _, _) => Icon(
-              isError ? Icons.priority_high_rounded : Icons.bolt_outlined,
-              color: softAccent,
-              size: TgiIconSizes.lg,
-            ),
-          ),
+          child: kStandalone
+              ? Icon(
+                  isError ? Icons.error_outline : Icons.movie_outlined,
+                  color: accentColor,
+                  size: mascotSize * .6,
+                )
+              : Image.asset(
+                  isError ? _notificationBirraAsset : _notificationDefaultAsset,
+                  key: Key(
+                    isError
+                        ? 'tgi_notification_birra_character'
+                        : 'tgi_notification_default_character',
+                  ),
+                  fit: BoxFit.contain,
+                  alignment: Alignment.bottomCenter,
+                  errorBuilder: (_, _, _) => Icon(
+                    isError ? Icons.priority_high_rounded : Icons.bolt_outlined,
+                    color: softAccent,
+                    size: TgiIconSizes.lg,
+                  ),
+                ),
         ),
         const SizedBox(width: TgiSpacing.xs),
         Expanded(

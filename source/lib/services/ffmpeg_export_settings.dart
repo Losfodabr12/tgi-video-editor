@@ -1,3 +1,5 @@
+import '../app/app_identity.dart';
+
 class FfmpegExportResolution {
   const FfmpegExportResolution({
     required this.id,
@@ -80,7 +82,7 @@ class FfmpegExportResolution {
 
   String get dimensionsLabel => '${width}x$height';
 
-  bool get requiresPaidPlan => this == p4k;
+  bool get requiresPaidPlan => !kStandalone && this == p4k;
 
   @override
   bool operator ==(Object other) {
@@ -95,7 +97,7 @@ bool canExportResolution(
   FfmpegExportResolution resolution, {
   required bool hasPaidPlan,
 }) {
-  return hasPaidPlan || !resolution.requiresPaidPlan;
+  return kStandalone || hasPaidPlan || !resolution.requiresPaidPlan;
 }
 
 class FfmpegExportQuality {

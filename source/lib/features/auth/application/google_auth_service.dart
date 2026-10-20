@@ -1,3 +1,4 @@
+import '../../../app/app_identity.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -96,6 +97,7 @@ class TgiAuthConfig {
   final Uri baseUri;
 
   bool get isConfigured {
+    if (kStandalone) return false;
     if (baseUri.scheme == 'https' && baseUri.host.isNotEmpty) {
       return true;
     }
@@ -337,6 +339,7 @@ class TgiAccountAuthService implements TgiAuthService {
 
   @override
   Future<void> signOut() async {
+    if (kStandalone) { await _clearSession(); return; }
     final sessionToken = await _store.read(sessionTokenStorageKey);
     if (sessionToken != null && sessionToken.isNotEmpty) {
       try {

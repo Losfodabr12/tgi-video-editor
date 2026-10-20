@@ -1,3 +1,4 @@
+import '../app/app_identity.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -61,6 +62,7 @@ class RewardedAccessService implements RewardedAccessManager {
 
   @override
   Future<bool> isAvailable() async {
+    if (kStandalone) return false;
     if (!_config.isConfigured) return false;
     try {
       final response = await _client
@@ -78,6 +80,7 @@ class RewardedAccessService implements RewardedAccessManager {
 
   @override
   Future<RewardedAccessResult> watchRewardAd() async {
+    requireOnlineIntegrations();
     final sessionToken = await _store.read(
       TgiAccountAuthService.sessionTokenStorageKey,
     );

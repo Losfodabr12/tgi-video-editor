@@ -1,3 +1,4 @@
+import 'app_identity.dart';
 import 'package:flutter/material.dart';
 
 import '../features/editor/presentation/editor_screen.dart';
@@ -27,7 +28,7 @@ class _VideoEditorAppState extends State<VideoEditorApp> {
       valueListenable: _preferences.visualStyleListenable,
       builder: (context, style, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'TGI Video Editor',
+        title: AppIdentity.name,
         theme: TgiTheme.forStyle(style),
         home: FutureBuilder<ProjectRecoveryEntry?>(
           future: _startup,
