@@ -1,8 +1,8 @@
 # Relatório de alterações
 
 Execução por etapas na ordem solicitada (a lista recebida não contém etapa 2).
-Formato de projeto preservado em v14. Resultados abaixo são de comandos
-executados nesta máquina; logs completos ficam em `.work/`, ignorada pelo Git.
+Formato de projeto preservado em v14. Resultados locais e remotos são identificados em cada seção. Logs locais
+completos ficam em `.work/`, ignorada pelo Git.
 
 | Etapa | analyze --no-pub | test --no-pub | Resultado |
 | --- | --- | --- | --- |
@@ -148,8 +148,8 @@ dessas alterações posteriores. O status do commit mais recente fica em
 - Só áudio usa WAV PCM. SRT transporta texto/tempo, não o estilo visual do projeto.
 - Não se validou hardware Intel QSV ou AMD AMF real. Seus caminhos de falha e
   fallback foram simulados; o render CPU de fallback foi executado de verdade.
-- Não foi publicada nova release binária no GitHub. O código está na branch
-  de trabalho e o executável local foi atualizado; a release v0.1.0 é histórica.
+- A etapa 11 acrescenta publicação Windows por tag; o resultado executado fica
+  na seção da etapa 11 e no relatório que acompanha o artefato/release.
 
 ## Sessão manual ainda necessária na janela nativa
 
@@ -208,3 +208,103 @@ cena é conteúdo do projeto histórico de teste, igual nas duas capturas.
 Detalhes e reprodução em [docs/VISUAL.md](docs/VISUAL.md). DPI/monitores,
 interação contínua com mouse e reprodução audiovisual ainda exigem a janela
 nativa.
+
+
+## Etapa 11 — Release 0.3.0
+
+Versão do pacote elevada para **0.3.0+3**; versão do projeto permanece **14**.
+CI Windows / Flutter 3.44.4 agora empacota o build e publica ZIP, SHA256SUMS e
+relatório como artefato. `release.yml`, disparado por tag `v*`, reutiliza esse
+mesmo CI e publica GitHub Release apenas depois do sucesso do build. Tag e
+versão do executável/pubspec precisam corresponder. Checkout 7.0.1, cache
+6.1.0, upload 7.0.2 e download 8.0.2 usam Node 24; os manifests foram lidos
+pela API do GitHub. O cache interno da action Flutter usa cache v5 / Node 24.
+
+Ao sobrescrever projeto migrado, o original fica em `.bak`, sem reserializar
+seus bytes. Gravações seguintes preservam esse primeiro backup. A proteção
+cobre formatos anteriores, sobreposições de versões iniciais do v14 e grupos
+de legendas normalizados, sem novos campos de projeto. Os novos testes
+executaram v13/v14, Save As, concorrência, persistência por outra instância e
+entrada corrompida; os testes anteriores de falha e rollback também passaram.
+
+`tool/test_editor.ps1 -Integration -Build` executado pelo mesmo caminho curto:
+
+| Comando | Resultado local final |
+| --- | --- |
+| `flutter pub get` | exit 0 |
+| `flutter analyze --no-pub` | exit 0, sem problemas, 5,9 s |
+| `flutter test --no-pub` | exit 0, 172 aprovados / 13 opcionais ignorados, 25 s |
+| `flutter test --no-pub --dart-define=TGI_RUN_FFMPEG_INTEGRATION_TESTS=true` | exit 0, 185 aprovados / zero ignorados, 30 s |
+| `flutter build windows --release --no-pub` | exit 0, 113,4 s |
+
+Log: `.work/etapa11-checks-build.log`. Os avisos CMake CMP0175 do media_kit
+continuam presentes; não são avisos de Node 20. Os scripts PowerShell também
+passaram pelo parser. A comparação dos goldens é parte das duas suítes acima.
+
+A última repetição ao fim da etapa também passou: analyze sem problemas
+(5,1 s) e 172 testes padrão aprovados / 13 opcionais ignorados (27 s).
+Logs: `.work/etapa11-final-analyze.log`, `.work/etapa11-final-test.log`.
+
+O ZIP local foi gerado, extraído e seus **91 arquivos** conferidos contra o
+manifesto SHA-256. Executável extraído: ProductVersion **0.3.0+3**.
+FFmpeg `-version` e Whisper CLI `-h` extraídos executados com exit 0. Isso
+verifica inicialização dos runtimes, não transcrição completa de voz.
+`aplicativo/` foi atualizado e os mesmos 91 arquivos foram comparados, sem
+divergências. ZIP local de conferência: 251.917.295 bytes, SHA-256
+`b94863027e3c775085aa6ecc8a72cbd58f55eb20a7bd3ce5f74e5c0037a43b43`.
+Esse ZIP foi criado antes do commit da etapa 11; o manifesto registra essa
+condição com `workingTreeDirty`. O CI recompila o commit final e gera seu
+próprio ZIP/checksum; não se presume igualdade binária entre máquinas.
+Log: `.work/etapa11-package.log`.
+
+### FFmpeg baixado e licença
+
+Build fixado **8.1.2-essentials_build-www.gyan.dev**, Windows x64 estático,
+GCC 16.1.0, [ZIP Gyan 8.1.2](https://github.com/GyanD/codexffmpeg/releases/download/8.1.2/ffmpeg-8.1.2-essentials_build.zip).
+SHA-256 do ZIP baixado conferido novamente:
+`db580001caa24ac104c8cb856cd113a87b0a443f7bdf47d8c12b1d740584a2ec`.
+`ffmpeg -version` e `ffmpeg -L` foram executados; configuração contém
+`--enable-gpl --enable-version3 --enable-static`. Licença declarada pelo
+executável: **GNU GPL v3 ou posterior**. O pacote preserva LICENSE/README.
+Fontes do build: commit FFmpeg `38b88335f9`, indicado no README do distribuidor.
+Detalhes e links em [docs/THIRD_PARTY.md](docs/THIRD_PARTY.md).
+
+### Contagem pedida, executada com wc
+
+Comando real (`wc.exe` do Git for Windows):
+
+```text
+wc -l source/lib/services/ffmpeg_service.dart source/lib/features/editor/application/editor_controller.dart source/lib/features/editor/presentation/editor_screen.dart
+  2267 source/lib/services/ffmpeg_service.dart
+  6072 source/lib/features/editor/application/editor_controller.dart
+  3689 source/lib/features/editor/presentation/editor_screen.dart
+ 12028 total
+```
+
+Esses números deixam explícito que controlador e tela ainda são grandes,
+apesar da extração de módulos nas etapas anteriores. Não se declara uma
+reescrita completa deles. Log: `.work/etapa11-wc.log`.
+
+### Evidência remota e entrega
+
+A etapa visual `403aabf` também passou no
+[CI remoto](https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39497056306).
+Para o commit final, o próprio CI gera **depois dos comandos** uma cópia deste
+relatório com o SHA exato e o run executado. Essa cópia acompanha o ZIP e o
+artefato `frame-studio-windows-x64`; na release ela fica também disponível como
+[RELATORIO_ALTERACOES.md do build final](https://github.com/Losfodabr12/tgi-video-editor/releases/download/v0.3.0/RELATORIO_ALTERACOES.md).
+Assim o registro do resultado não exige um terceiro commit que mudaria o SHA
+que acabou de ser validado. [Workflow e runs](https://github.com/Losfodabr12/tgi-video-editor/actions/workflows/ci.yml).
+
+<!-- CI_RESULT_START -->
+O resultado do CI do commit final é acrescentado à cópia do relatório que
+acompanha o artefato/release. Este trecho versionado não antecipa seu sucesso.
+<!-- CI_RESULT_END -->
+
+### Teste manual ainda necessário
+
+Não foi executada sessão audiovisual na janela nativa. Continuam pendentes
+playback/seek e sincronismo percebido, DPI/monitores, interação contínua com
+mouse, exportação longa por fabricante de GPU, transcrição completa de voz e
+uso com adaptador de rede desligado. O ZIP conter runtimes locais e CRT não
+substitui teste em uma instalação Windows limpa. Goldens são headless.

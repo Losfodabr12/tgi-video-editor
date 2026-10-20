@@ -1,4 +1,4 @@
-FRAME STUDIO - VERSAO LOCAL 0.2.0+2
+FRAME STUDIO - VERSAO LOCAL 0.3.0+3
 
 Mudancas atuais e resultados reais: RELATORIO_ALTERACOES.md e docs/.
 Preparacao automatica: tool\setup_tools.ps1 (na raiz).
@@ -25,7 +25,8 @@ VALIDACAO.txt: resultados executados desta versao.
 Dados proprios: %LOCALAPPDATA%\TGI_VIDEO_EDITOR.
 O projeto INICIAR PROJETO TGI APP permanece intacto.
 Projetos antigos continuam carregaveis; a migracao ocorre em memoria.
-A release publica v0.1.0 no GitHub ainda corresponde a base anterior.
+Pacote 0.3.0: GitHub Releases. Extraia toda a pasta antes de abrir o EXE.
+Projetos migrados preservam o original .bak ao sobrescrever.
 
 Desenvolver (terminal em source):
   flutter pub get

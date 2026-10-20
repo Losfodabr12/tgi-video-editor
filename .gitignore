@@ -1,5 +1,6 @@
 # Aplicativo compilado e arquivos de distribuicao ficam nas releases.
 /aplicativo/
+/dist/
 *.zip
 
 # Registros locais da separacao e da conferencia dos arquivos.

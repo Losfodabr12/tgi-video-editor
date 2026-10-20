@@ -1,8 +1,10 @@
 name: Windows editor
 on:
   push:
+    branches: ['**']
   pull_request:
   workflow_dispatch:
+  workflow_call:
 permissions:
   contents: read
 jobs:
@@ -13,20 +15,42 @@ jobs:
       run:
         shell: pwsh
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7.0.1
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.44.4'
           channel: stable
           cache: true
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6.1.0
         with:
           path: |
-            source/tools/ffmpeg/bin
-            source/tools/whisper/bin
-            source/tools/whisper/models
-          key: windows-media-tools-ffmpeg-8.1.2-whisper-b5454-base-v1
+            source/tools/ffmpeg
+            source/tools/whisper
+          key: windows-media-tools-ffmpeg-8.1.2-whisper-b5454-base-v2
       - name: Install local runtimes
         run: ./tool/setup_tools.ps1
       - name: Pub get, analyze, tests and release build
         run: ./tool/test_editor.ps1 -Integration -Build
+      - name: Record executed remote checks
+        run: ./tool/write_ci_report.ps1 -OutputPath .work/ci-RELATORIO_ALTERACOES.md
+      - name: Package offline Windows build
+        run: ./tool/package_windows.ps1 -ReportPath .work/ci-RELATORIO_ALTERACOES.md
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: frame-studio-windows-x64
+          path: |
+            dist/*.zip
+            dist/SHA256SUMS.txt
+            dist/RELATORIO_ALTERACOES.md
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+      - name: Upload golden differences on failure
+        if: failure()
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: golden-differences
+          path: source/test/failures
+          if-no-files-found: ignore
+          retention-days: 7

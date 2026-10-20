@@ -111,6 +111,7 @@ class ProjectIOService {
   }) => ProjectFileStorage.write(
     filePath,
     () => toJsonString(project, exportSettings: exportSettings),
+    preserveBackup: _requiresMigrationBackup,
   );
 
   Future<void> saveSerializedToFile(
@@ -119,7 +120,32 @@ class ProjectIOService {
   ) => ProjectFileStorage.write(
     filePath,
     () => const JsonEncoder.withIndent('  ').convert(data),
+    preserveBackup: _requiresMigrationBackup,
   );
+
+  bool _requiresMigrationBackup(String previousContents) {
+    try {
+      final data = jsonDecode(previousContents) as Map<String, dynamic>;
+      if (_readVersion(data) < _projectFormatVersion) return true;
+      final original = _objectList(data[_tracksKey]);
+      final migrated = deserializeProject(data).project;
+      if (original.length != migrated.tracks.length) return true;
+      // v14 files from early builds may also need caption group normalization.
+      final oldGroups = {
+        for (final track in original)
+          for (final clip in _objectList(track['clips']))
+            clip['id']: clip['timelineGroupId'],
+      };
+      return migrated.tracks.any(
+        (track) => track.clips.any(
+          (clip) => oldGroups[clip.id] != clip.timelineGroupId,
+        ),
+      );
+    } catch (_) {
+      // Preserve unparseable input as well, before replacing any bytes.
+      return true;
+    }
+  }
 
   Future<Map<String, dynamic>> readFromFile(String filePath) async {
     final content = await ProjectFileStorage.read(filePath);

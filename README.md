@@ -1,7 +1,7 @@
 # Frame Studio
 
 Editor de vídeo offline para Windows em Flutter, derivado do editor TGI.
-Pacote **0.2.0+2**, projetos **v14**, código atual na branch `main`.
+Pacote **0.3.0+3**, projetos **v14**, código atual na branch `main`.
 Para revisar esta implementação, comece pelo
 [relatório das etapas e resultados reais](RELATORIO_ALTERACOES.md).
 
@@ -14,10 +14,9 @@ Para revisar esta implementação, comece pelo
 Na cópia de trabalho, abra **INICIAR EDITOR.cmd** ou **aplicativo/VideoEditor.exe**.
 Os arquivos de runtime devem acompanhar o executável.
 
-A [release pública v0.1.0](https://github.com/Losfodabr12/tgi-video-editor/releases/tag/v0.1.0)
-contém a base anterior. O código da reformulação está na branch `main`; seu
-executável foi compilado localmente e não tem nova release publicada.
-O pacote inicial inclui FFmpeg, ffprobe, Whisper Base, fontes e bibliotecas nativas.
+O workflow por tag publica o [pacote Windows 0.3.0](https://github.com/Losfodabr12/tgi-video-editor/releases/tag/v0.3.0)
+com FFmpeg, ffprobe, Whisper Base, fontes e bibliotecas nativas. Extraia a
+pasta inteira e abra `VideoEditor.exe`. Veja [licenças e versões dos runtimes](docs/THIRD_PARTY.md).
 
 ## Recursos
 
@@ -65,10 +64,11 @@ flutter analyze --no-pub
 flutter test --no-pub --dart-define=TGI_RUN_FFMPEG_INTEGRATION_TESTS=true
 ```
 
-Verificação final das etapas: análise sem problemas, **160 testes padrão
-aprovados / 13 opcionais ignorados** e **173 aprovados com integração habilitada**.
-Logs, builds e resultado do CI estão no [relatório](RELATORIO_ALTERACOES.md).
-Não foi declarada aprovação visual da janela nativa, GPU ou sincronismo percebido.
+Os resultados executados, goldens e verificações remotas estão no
+[relatório](RELATORIO_ALTERACOES.md). O relatório que acompanha o artefato do CI
+registra o SHA exato compilado e o link do run. A revisão visual headless está
+em [docs/VISUAL.md](docs/VISUAL.md). Sessão nativa de playback/DPI e GPU ainda
+requer teste manual.
 
 ## Estrutura e dados
 

@@ -1,44 +1,12 @@
-VALIDACAO DA REFORMULACAO - 18/10/2026
+VALIDACAO - FRAME STUDIO 0.3.0+3 / PROJETOS v14 - 20/10/2026
 
-Versao local: 0.2.0+2 / TGI Video Editor.
-Executavel atualizado: aplicativo\VideoEditor.exe.
-Flutter 3.44.4 / Dart 3.12.2 / FFmpeg e ffprobe 8.1.2.
+Etapa 10: analyze sem problemas; 167 testes padrao aprovados, 13 opcionais
+ignorados. Cinco goldens e teste de persistencia real de paineis incluidos.
+Etapa 11: analyze sem problemas; 172 testes padrao aprovados, 13 opcionais
+ignorados; 185 aprovados com integracao, zero ignorados. Build Windows
+release aprovado em 113,4 s. Avisos CMake do media_kit permanecem.
 
-flutter analyze --no-pub: sem problemas.
-flutter test --no-pub --dart-define=TGI_RUN_FFMPEG_INTEGRATION_TESTS=true:
-  145 aprovados, zero falhas, zero ignorados.
-Testes finais de workspace/indice apos ajuste tipografico: 12 aprovados.
-flutter build windows --release --no-pub: aprovado (caminho curto temporario).
-git diff --check: sem erros de whitespace.
-63 arquivos copiados para aplicativo e conferidos por SHA-256 contra o build:
-zero divergencias. FFmpeg e ffprobe locais inicializaram com codigo de saida 0.
-
-FFmpeg real: composicao visual, pixels, textos, duas camadas de video, fades,
-keyframes/alpha, pista mista, fontes, cortes, volumes e regressao de timing.
-Widgets: arrastes de video/audio, criar camada, pistas bloqueadas, edicao de
-texto, Delete/undo/redo/frame e layout em cinco tamanhos de janela.
-Dominio/persistencia: migracao, vinculos, selecao multipla, colagem, ripple,
-estruturas de pistas, salvar/reabrir e serializacao.
-
-Medicao: 20.000 clipes / 300 consultas equivalentes.
-  Varredura linear: 58,608 ms. Indice: 0,693 ms. Construcao: 33,959 ms.
-Nao representa medicao de FPS, memoria, GPU ou desempenho de exportacao.
-
-Teste nativo com perfil isolado e midia sintetica: processo iniciou e abriu
-janela, media_kit inicializou textura. Capturas da janela ficaram em branco,
-inclusive no binario anterior e na tentativa por software. Portanto, revisao
-visual nativa e reproducao audiovisual manual NAO foram declaradas aprovadas.
-Uma imagem dos widgets reais esta em .work\editor-desktop-review.png.
-
-Logs e artefatos ficam em .work (ignorada no Git). Veja REFORMULACAO.md para
-matriz completa dos cenarios e limitacoes do renderizador.
-Os arquivos ORIGEM_DA_COPIA.json e ARQUIVOS_SHA256.json registram a separacao
-inicial; seus hashes nao descrevem o codigo reformulado desta versao.
-
-REVALIDACAO PARA PUBLICACAO DO CODIGO - 20/10/2026
-flutter analyze --no-pub: sem problemas (72,3 s).
-Suite completa com TGI_RUN_FFMPEG_INTEGRATION_TESTS=true: 145 aprovados,
-zero falhas, zero ignorados; FFmpeg real habilitado.
-Cache nativo antigo exigiu remapeamento temporario V: para executar os testes.
-Unidade liberada ao concluir. Detalhes: ANALISE_RAPIDA.md.
-Nao houve nova compilacao nem validacao audiovisual manual nesta revisao.
+Resultados locais completos, capturas antes/depois, wc -l e limitacoes:
+RELATORIO_ALTERACOES.md. O relatorio do artefato/release registra o SHA e
+run do CI realmente executado. Detalhes de build: docs/BUILD.md.
+Sessao manual audiovisual/DPI/GPU e Windows limpo ainda nao executada.

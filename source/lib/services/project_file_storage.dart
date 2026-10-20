@@ -29,8 +29,9 @@ class ProjectFileStorage {
 
   static Future<void> write(
     String path,
-    FutureOr<String> Function() contents,
-  ) => _run(path, (file) async {
+    FutureOr<String> Function() contents, {
+    bool Function(String previousContents)? preserveBackup,
+  }) => _run(path, (file) async {
     final text = await contents();
     await file.parent.create(recursive: true);
     final staging = await file.parent.createTemp('.tgi_project_write_');
@@ -38,23 +39,38 @@ class ProjectFileStorage {
       '${staging.path}${Platform.pathSeparator}project.tmp',
     );
     final backup = File('${file.path}.bak');
+    // A retained migration backup belongs to the user. Future saves must not
+    // replace it with already-migrated data, including from another service.
+    var retainBackup = false;
+    var rollbackBackup = backup;
     try {
+      final hadBackup = await backup.exists();
+      retainBackup =
+          hadBackup ||
+          (preserveBackup != null &&
+              await file.exists() &&
+              preserveBackup(await file.readAsString()));
+      if (hadBackup) {
+        rollbackBackup = File(
+          '${staging.path}${Platform.pathSeparator}previous.bak',
+        );
+      }
       await temporary.writeAsString(text, flush: true);
       if (await file.exists()) {
-        await file.copy(backup.path);
+        await file.copy(rollbackBackup.path);
       }
       // Substitui somente depois de gravar todo o novo conteudo. Nao apaga
       // primeiro o original: uma falha de escrita nao deve deixar um vazio.
       await temporary.rename(file.path);
       try {
-        if (await backup.exists()) await backup.delete();
+        if (!retainBackup && await backup.exists()) await backup.delete();
       } catch (_) {
         // Falhar ao limpar um backup nao transforma uma gravacao em falha.
       }
     } catch (_) {
       try {
-        if (!await file.exists() && await backup.exists()) {
-          await backup.copy(file.path);
+        if (!await file.exists() && await rollbackBackup.exists()) {
+          await rollbackBackup.copy(file.path);
         }
       } catch (_) {
         // Mantem o backup para recuperacao e preserva a falha original.
