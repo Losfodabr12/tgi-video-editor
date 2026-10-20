@@ -1,3 +1,5 @@
+import '../domain/models/cross_dissolve.dart';
+import 'cross_dissolve_graph.dart';
 import 'dart:math' as math;
 import '../domain/models/clip.dart';
 import '../domain/models/media_item.dart';
@@ -23,12 +25,22 @@ class FfmpegFiltergraphBuilder {
     String? drawTextDirectoryPath,
   }) {
     textFiles.clear();
+    final cuts = CrossDissolve.forProject(project);
+    final withoutDissolves = project.copyWith(
+      transitions: project.transitions
+          .where((t) => !cuts.any((c) => c.transition.id == t.id))
+          .toList(),
+    );
     return _applyEditorExportOptions(
-      _buildFullExportCommand(
-        project,
-        outputPath,
-        settings: settings,
-        drawTextDirectoryPath: drawTextDirectoryPath,
+      CrossDissolveGraph.apply(
+        _buildFullExportCommand(
+          withoutDissolves,
+          outputPath,
+          settings: settings,
+          drawTextDirectoryPath: drawTextDirectoryPath,
+        ),
+        cuts,
+        settings.framesPerSecond,
       ),
       settings,
     );

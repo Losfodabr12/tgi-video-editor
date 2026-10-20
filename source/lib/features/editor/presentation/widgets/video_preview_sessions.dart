@@ -517,6 +517,7 @@ class _TransitionPreviewSession {
 }
 
 double _transitionPreviewOpacity(TransitionPreviewEntry entry) {
+  if (entry.opacityOverride != null) return entry.opacityOverride!.clamp(0.0, 1.0);
   final baseOpacity = switch (entry.blendMode) {
     TimelineTransitionBlendMode.normal => 1.0,
     TimelineTransitionBlendMode.screen => 0.78,

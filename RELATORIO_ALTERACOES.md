@@ -9,6 +9,7 @@ executados nesta máquina; logs completos ficam em `.work/`, ignorada pelo Git.
 | 1 — Paridade | exit 0, sem problemas | exit 0, 138 aprovados / 13 ignorados | Frames FFmpeg, correção de dessaturação por máscara e docs/PARIDADE.md |
 | 3 - Refatoracao | exit 0, sem problemas | exit 0, 141 aprovados / 13 ignorados | Builder puro, executor/parser, historico, legendas, preview e atalhos |
 | 4 — Independente | exit 0, sem problemas | exit 0, 144 aprovados / 13 ignorados | Flag standalone padrão, 4K livre, rede TGI bloqueada e identidade central |
+| 5 — Transições | exit 0, sem problemas | exit 0, 146 aprovados / 13 ignorados | xfade/acrossfade com pixels, duração e espectro de áudio; preview A/B aproximado |
 
 Os 13 testes históricos opcionais dependem de um dart-define e são ignorados
 pelo comando padrão pedido. Os seis novos testes de pixels rodam por padrão.
@@ -45,3 +46,11 @@ runtimes; execução offline pressupõe esses componentes instalados.
 Testes novos verificam 4K, autenticação sem HTTP e rejeição de downloads antes
 da requisição. Não foi executada uma sessão nativa com o adaptador de rede
 desligado; esse teste manual continua pendente.
+
+## Etapa 5
+
+Dissolve em emendas de vídeos adjacentes usa xfade/acrossfade antes da
+codificação; duração da timeline preservada. O modelo v14 de transição global
+foi mantido. O preview usa dois vídeos com mistura alfa. Handles repetem bordas;
+os limites e diferenças estão em docs/PARIDADE.md. Não foi implementado um
+modelo novo de transições por par/pista nem edição de handles fora do trim.

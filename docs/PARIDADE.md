@@ -25,8 +25,27 @@ Comandos: em `source`, `flutter analyze --no-pub` e `flutter test --no-pub`.
 A suíte adicional histórica com `TGI_RUN_FFMPEG_INTEGRATION_TESTS=true` cobre
 texto, fontes e mais composições; não confundir execução padrão com essa suíte.
 
-A etapa 1 corrigiu uma regress?o: a entrada gray de maskedmerge podia
-dessaturar a imagem inteira. A m?scara agora fornece todos os planos em
-yuva444p. O efeito escurecer usa lumin?ncia YUV no export; ele n?o equivale
+A etapa 1 corrigiu uma regressão: a entrada gray de maskedmerge podia
+dessaturar a imagem inteira. A máscara agora fornece todos os planos em
+yuva444p. O efeito escurecer usa luminância YUV no export; ele não equivale
 a multiplicar canais RGB por preto no preview. O teste exige escurecimento
-da regi?o correta e preserva??o da cor fora dela, n?o igualdade desse efeito.
+da região correta e preservação da cor fora dela, não igualdade desse efeito.
+
+## Dissolve A/B
+
+Um preset `dissolve` numa emenda entre vídeos adjacentes da mesma pista agora
+gera `xfade` e `acrossfade` sobre a timeline composta, antes da codificação.
+Como as transições v14 são globais, a mistura afeta a composição inteira na
+emenda, inclusive outras camadas. Não há novo campo ou alteração de formato.
+
+A duração da timeline é preservada: frames de borda são segurados nos handles
+visuais e pequenos trechos de áudio de borda são repetidos para o crossfade,
+sem preencher o centro com silêncio. Isso não é um editor de handles externos
+ao trim. A duração é limitada pelos clipes adjacentes e por janelas anteriores.
+Transições sem par adjacente mantêm o comportamento sintético anterior.
+
+O preview mistura duas superfícies media_kit dos arquivos A/B, com a mesma
+rampa linear, sem áudio adicional. É aproximado: não recompõe todos os efeitos
+dessas superfícies, não mistura todo o áudio e depende do seek/decodificador.
+O teste executado checa pixels, duração e presença simultânea de tons de
+220/880 Hz no export. Não foi validado visualmente na janela nativa.

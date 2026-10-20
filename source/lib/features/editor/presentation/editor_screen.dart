@@ -1,3 +1,4 @@
+import '../../../domain/models/cross_dissolve.dart';
 import '../../../app/app_identity.dart';
 import 'dart:async';
 import 'editor_keyboard.dart';
@@ -1481,7 +1482,8 @@ class _EditorScreenState extends State<EditorScreen> {
     );
   }
 
-  bool get _hasPaidPlan => kStandalone || widget.hasPaidPlan || _rewardedAccessGranted;
+  bool get _hasPaidPlan =>
+      kStandalone || widget.hasPaidPlan || _rewardedAccessGranted;
 
   Future<void> _exportGeneratedCaptions(SubtitleExportFormat format) async {
     if (!_controller.canExportGeneratedCaptions) {
@@ -1839,24 +1841,59 @@ class _EditorScreenState extends State<EditorScreen> {
 
   List<TransitionPreviewEntry> _activeTransitionPreviewEntries() {
     final playhead = _controller.playheadPosition;
+    final dissolves = CrossDissolve.forProject(_controller.project);
+    Duration sourceAt(domain.Clip clip) {
+      final elapsed =
+          (playhead - clip.timelineStart).inMicroseconds * clip.playbackSpeed;
+      final offset = elapsed.round().clamp(
+        0,
+        (clip.effectiveSourceDuration.inMicroseconds - 50000).clamp(0, 1 << 60),
+      );
+      return clip.sourceStart +
+          Duration(
+            microseconds: clip.reverseVideo
+                ? clip.effectiveSourceDuration.inMicroseconds - offset - 1
+                : offset,
+          );
+    }
+
     return [
+      for (final dissolve in dissolves)
+        if (playhead >= dissolve.start && playhead < dissolve.end)
+          for (final side in [dissolve.left, dissolve.right])
+            if (_controller.project.mediaItemById(side.mediaItemId)
+                case final media?)
+              TransitionPreviewEntry(
+                id: '${dissolve.transition.id}:${side.id}',
+                name: dissolve.transition.name,
+                filePath: media.previewProxyPath ?? media.filePath,
+                sourcePosition: sourceAt(side),
+                timelinePosition: playhead,
+                duration: dissolve.duration,
+                blendMode: TimelineTransitionBlendMode.normal,
+                placement: dissolve.transition.placement,
+                opacityOverride: side.id == dissolve.left.id
+                    ? 1
+                    : dissolve.progressAt(playhead),
+              ),
       for (final transition in _controller.project.transitions)
-        if (transition.timelineStart <= playhead &&
-            playhead < transition.timelineEnd)
-          TransitionPreviewEntry(
-            id: transition.id,
-            name: transition.name,
-            filePath: transition.filePath,
-            sourcePosition: playhead - transition.timelineStart,
-            timelinePosition: playhead,
-            duration: transition.duration,
-            blendMode: transition.blendMode,
-            placement: transition.placement,
-            preset: transition.preset,
-            direction: transition.direction,
-            color: transition.color,
-            intensity: transition.intensity,
-          ),
+        if (!dissolves.any((d) => d.transition.id == transition.id))
+          if (transition.timelineStart <= playhead &&
+              playhead < transition.timelineEnd)
+            TransitionPreviewEntry(
+              id: transition.id,
+              name: transition.name,
+              filePath: transition.filePath,
+              sourcePosition: playhead - transition.timelineStart,
+              timelinePosition: playhead,
+              duration: transition.duration,
+              blendMode: transition.blendMode,
+              placement: transition.placement,
+              preset: transition.preset,
+              direction: transition.direction,
+              color: transition.color,
+              intensity: transition.intensity,
+            ),
     ];
   }
 

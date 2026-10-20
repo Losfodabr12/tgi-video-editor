@@ -440,11 +440,13 @@ class TransitionPreviewEntry {
     required this.blendMode,
     required this.placement,
     this.preset,
+    this.opacityOverride,
     this.direction = TimelineTransitionDirection.leftToRight,
     this.color = 0xFF000000,
     this.intensity = 1,
   });
 
+  final double? opacityOverride;
   final String id;
   final String name;
   final String filePath;
