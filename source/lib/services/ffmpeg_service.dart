@@ -3841,8 +3841,8 @@ class FfmpegService {
         '[$baseLabel]split=2[$cleanLabel][$effectSourceLabel];'
         '[$effectSourceLabel]$effectFilter[$effectLabel];'
         'color=c=black:s=${outputWidth}x$outputHeight:r=30:'
-        'd=${_seconds(segment.duration)},format=gray,'
-        "geq=lum='$maskExpression'[$maskLabel];"
+        'd=${_seconds(segment.duration)},format=yuva444p,'
+        "geq=lum='$maskExpression':cb='$maskExpression':cr='$maskExpression':a='$maskExpression'[$maskLabel];"
         '[$cleanLabel][$effectLabel][$maskLabel]maskedmerge[segv$segmentIndex]';
   }
 
@@ -3952,8 +3952,8 @@ class FfmpegService {
     return [
       '[$baseLabel]split=3[$cleanLabel][$effectSourceLabel][$maskSourceLabel]',
       '[$effectSourceLabel]$effectFilter[$effectLabel]',
-      '[$maskSourceLabel]format=gray,'
-          "geq=lum='$maskExpression'[$maskLabel]",
+      '[$maskSourceLabel]format=yuva444p,'
+          "geq=lum='$maskExpression':cb='$maskExpression':cr='$maskExpression':a='$maskExpression'[$maskLabel]",
       '[$cleanLabel][$effectLabel][$maskLabel]maskedmerge[$outputLabel]',
     ];
   }
