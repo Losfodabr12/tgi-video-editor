@@ -742,9 +742,12 @@ void main() {
       controller.setPlayheadPosition(const Duration(seconds: 4));
       controller.addTextToTimeline('Terceira');
 
-      final textClips = controller.project.tracks
-          .firstWhere((track) => track.type == TrackType.text)
-          .clips;
+      final textClips =
+          controller.project.tracks
+              .expand((track) => track.clips)
+              .where((clip) => clip.trackType == TrackType.text)
+              .toList()
+            ..sort((a, b) => a.timelineStart.compareTo(b.timelineStart));
       controller.selectTimelineClipGroups({
         for (final clip in textClips) clip.timelineGroupId,
       });
@@ -759,9 +762,12 @@ void main() {
       );
       controller.updateSelectedTextOverlayPosition(overlayX: 0.22);
 
-      final updatedTextClips = controller.project.tracks
-          .firstWhere((track) => track.type == TrackType.text)
-          .clips;
+      final updatedTextClips =
+          controller.project.tracks
+              .expand((track) => track.clips)
+              .where((clip) => clip.trackType == TrackType.text)
+              .toList()
+            ..sort((a, b) => a.timelineStart.compareTo(b.timelineStart));
       expect(updatedTextClips.map((clip) => clip.textContent), [
         'Primeira',
         'Segunda',
@@ -795,18 +801,24 @@ void main() {
       expect(controller.selectedTimelineGroupIds, {
         for (final clip in updatedTextClips) clip.timelineGroupId,
       });
-      final movedTextClips = controller.project.tracks
-          .firstWhere((track) => track.type == TrackType.text)
-          .clips;
+      final movedTextClips =
+          controller.project.tracks
+              .expand((track) => track.clips)
+              .where((clip) => clip.trackType == TrackType.text)
+              .toList()
+            ..sort((a, b) => a.timelineStart.compareTo(b.timelineStart));
       for (final clip in movedTextClips) {
         expect(clip.overlayX, 0.72);
         expect(clip.overlayY, 0.35);
       }
 
       controller.undo();
-      final textClipsAfterUndo = controller.project.tracks
-          .firstWhere((track) => track.type == TrackType.text)
-          .clips;
+      final textClipsAfterUndo =
+          controller.project.tracks
+              .expand((track) => track.clips)
+              .where((clip) => clip.trackType == TrackType.text)
+              .toList()
+            ..sort((a, b) => a.timelineStart.compareTo(b.timelineStart));
       for (final clip in textClipsAfterUndo) {
         expect(clip.overlayX, 0.22);
       }

@@ -429,14 +429,15 @@ class _TimelineBoxSelectionRegionState
       trackIndex++
     ) {
       final track = widget.project.tracks[trackIndex];
-      final trackTop = _timelineTracksTop + trackIndex * _trackHeight;
-      final trackBottom = trackTop + _trackHeight;
+      final trackTop =
+          _timelineTracksTop + _trackTop(widget.project.tracks, trackIndex);
+      final trackBottom = trackTop + track.height;
       if (trackBottom < normalized.top || trackTop > normalized.bottom) {
         continue;
       }
 
       for (final clip in track.clips) {
-        final clipRect = _clipRectFor(clip, trackTop);
+        final clipRect = _clipRectFor(clip, trackTop, track.height);
         if (clipRect.overlaps(normalized)) {
           selected.add(clip.timelineGroupId);
         }
@@ -445,7 +446,7 @@ class _TimelineBoxSelectionRegionState
     return selected;
   }
 
-  Rect _clipRectFor(domain.Clip clip, double trackTop) {
+  Rect _clipRectFor(domain.Clip clip, double trackTop, double height) {
     final left = _leftFor(clip.timelineStart, widget.duration, widget.width);
     final rawWidth = _widthFor(clip.duration, widget.duration, widget.width);
     final availableWidth = math.max(
@@ -456,7 +457,7 @@ class _TimelineBoxSelectionRegionState
       math.max(rawWidth, _minimumTimelineClipWidth),
       availableWidth,
     );
-    return Rect.fromLTWH(left, trackTop + 7, clipWidth, _trackHeight - 14);
+    return Rect.fromLTWH(left, trackTop + 7, clipWidth, height - 14);
   }
 
   Rect _normalizeRect(Rect rect) {

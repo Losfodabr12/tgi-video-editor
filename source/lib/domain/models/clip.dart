@@ -140,6 +140,7 @@ class Clip {
   final String mediaItemId;
   final String timelineGroupId;
   final TrackType trackType;
+  ClipKind get kind => trackType;
   final Duration timelineStart;
   final Duration sourceStart;
   final Duration duration;

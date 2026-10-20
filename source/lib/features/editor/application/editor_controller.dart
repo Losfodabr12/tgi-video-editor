@@ -23,6 +23,7 @@ import '../../../services/audio_ducking.dart';
 part 'editor_controller_preview_models.dart';
 part 'editor_controller_internal_models.dart';
 part 'editor_controller_tools.dart';
+part 'editor_controller_timeline.dart';
 
 const _gapPlaybackInterval = Duration(milliseconds: 100);
 const _historyLimit = 50;
@@ -190,6 +191,7 @@ class EditorController extends ChangeNotifier {
   String? _statusMessage;
   String? _selectedMediaItemId;
   String? _selectedTimelineGroupId;
+  String? _selectedTimelineClipId;
   final Set<String> _selectedTimelineGroupIds = {};
   Duration _playheadPosition = Duration.zero;
   bool _isCutMode = false;
@@ -207,6 +209,15 @@ class EditorController extends ChangeNotifier {
   SmartCutAnalysis? _smartCutAnalysis;
   TgiProject? _smartCutProjectSnapshot;
   bool _disposed = false;
+  bool _usePreviewProxies = true;
+
+  bool get usePreviewProxies => _usePreviewProxies;
+
+  void setUsePreviewProxies(bool value) {
+    if (value == _usePreviewProxies) return;
+    _usePreviewProxies = value;
+    notifyListeners();
+  }
 
   TgiProject get project => _project;
   bool get isImporting => _isImporting;
@@ -222,6 +233,7 @@ class EditorController extends ChangeNotifier {
   bool get previewOptimizationAutomatic => _previewOptimizationAutomatic;
   String? get previewOptimizationTargetName => _previewOptimizationTargetName;
   bool get previewUsesProxy {
+    if (!_usePreviewProxies) return false;
     final path = _previewOptimizationTarget?.previewProxyPath;
     return path != null && path.isNotEmpty && File(path).existsSync();
   }
@@ -359,6 +371,13 @@ class EditorController extends ChangeNotifier {
   }
 
   domain.Clip? get selectedTimelineClip {
+    final focused = _selectedTimelineClipId == null
+        ? null
+        : _findClipById(_selectedTimelineClipId!);
+    if (focused != null &&
+        _selectedTimelineGroupIds.contains(focused.timelineGroupId)) {
+      return focused;
+    }
     final selectedGroupId = _selectedTimelineGroupId;
     if (selectedGroupId == null) {
       return null;
@@ -577,6 +596,7 @@ class EditorController extends ChangeNotifier {
   }
 
   MediaItem _withPreviewProxy(MediaItem item) {
+    if (!_usePreviewProxies) return item;
     final proxyPath = item.previewProxyPath;
     if (item.type != MediaType.video ||
         proxyPath == null ||
@@ -610,8 +630,7 @@ class EditorController extends ChangeNotifier {
   List<TimelineVideoOverlayPreviewClip> get allVideoOverlaysAtPlayhead {
     final activeClipId =
         (_selectedVideoOverlayClip ?? _playheadVideoOverlayClip)?.id;
-    final inactive = <TimelineVideoOverlayPreviewClip>[];
-    final active = <TimelineVideoOverlayPreviewClip>[];
+    final entries = <TimelineVideoOverlayPreviewClip>[];
 
     for (final clip in _pipVideoClipsAt(_playheadPosition)) {
       final mediaItem = _mediaItemForPreview(clip.mediaItemId);
@@ -629,14 +648,9 @@ class EditorController extends ChangeNotifier {
         opacity: keyframedOpacityForClip(clip),
         isActive: clip.id == activeClipId,
       );
-      if (clip.id == activeClipId) {
-        active.add(entry);
-      } else {
-        inactive.add(entry);
-      }
+      entries.add(entry);
     }
-
-    return List.unmodifiable([...inactive, ...active]);
+    return List.unmodifiable(entries);
   }
 
   domain.Clip? get _selectedVideoOverlayClip {
@@ -666,7 +680,9 @@ class EditorController extends ChangeNotifier {
     if (track == null || track.isHidden) {
       return null;
     }
-    for (final clip in track.clips) {
+    for (final clip in track.clips.where(
+      (clip) => clip.trackType == TrackType.video,
+    )) {
       if (_clipContainsTimelinePosition(clip, position)) {
         return clip;
       }
@@ -675,36 +691,15 @@ class EditorController extends ChangeNotifier {
   }
 
   List<domain.Clip> _pipVideoClipsAt(Duration position) {
-    final mainTrackId = _mainVideoTrackId();
-    if (mainTrackId == null) {
-      return const [];
-    }
-    final clips = <domain.Clip>[];
-    for (final track in _project.tracks) {
-      if (track.type != TrackType.video ||
-          track.isHidden ||
-          track.id == mainTrackId) {
-        continue;
-      }
-      for (final clip in track.clips) {
-        if (_clipContainsTimelinePosition(clip, position)) {
-          clips.add(clip);
-        }
-      }
-    }
-    return clips;
+    final base = activeTimelineClip?.id;
+    return _project
+        .visualClipsAt(position)
+        .where((clip) => clip.trackType == TrackType.video && clip.id != base)
+        .toList();
   }
 
   String? _mainVideoTrackId() {
-    for (final track in _project.tracks) {
-      if (track.type != TrackType.video || track.isHidden) {
-        continue;
-      }
-      if (track.clips.isNotEmpty) {
-        return track.id;
-      }
-    }
-    return null;
+    return _project.baseVideoTrack?.id;
   }
 
   domain.Clip? get _selectedImageOverlayClip {
@@ -713,10 +708,9 @@ class EditorController extends ChangeNotifier {
       return null;
     }
     for (final track in _project.tracks) {
-      if (track.type != TrackType.image || track.isHidden) {
-        continue;
-      }
+      if (track.isHidden) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.image) continue;
         if (clip.timelineGroupId == selectedGroupId) {
           final mediaItem = _project.mediaItemById(clip.mediaItemId);
           if (mediaItem?.type == MediaType.image) {
@@ -738,10 +732,9 @@ class EditorController extends ChangeNotifier {
     final active = <domain.Clip>[];
 
     for (final track in _project.tracks.reversed) {
-      if (track.type != TrackType.image || track.isHidden) {
-        continue;
-      }
+      if (track.isHidden) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.image) continue;
         if (!_clipContainsTimelinePosition(clip, _playheadPosition)) {
           continue;
         }
@@ -753,7 +746,10 @@ class EditorController extends ChangeNotifier {
       }
     }
 
-    return [...inactive, ...active];
+    return _project
+        .visualClipsAt(_playheadPosition)
+        .where((clip) => clip.trackType == TrackType.image)
+        .toList();
   }
 
   MediaItem? get imageOverlayMediaItem {
@@ -770,10 +766,9 @@ class EditorController extends ChangeNotifier {
     final active = <domain.Clip>[];
 
     for (final track in _project.tracks.reversed) {
-      if (track.type != TrackType.text || track.isHidden) {
-        continue;
-      }
+      if (track.isHidden) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.text) continue;
         if (!_clipContainsTimelinePosition(clip, _playheadPosition)) {
           continue;
         }
@@ -785,7 +780,10 @@ class EditorController extends ChangeNotifier {
       }
     }
 
-    return [...inactive, ...active];
+    return _project
+        .visualClipsAt(_playheadPosition)
+        .where((clip) => clip.trackType == TrackType.text)
+        .toList();
   }
 
   domain.Clip? get _selectedTextOverlayClip {
@@ -794,10 +792,9 @@ class EditorController extends ChangeNotifier {
       return null;
     }
     for (final track in _project.tracks) {
-      if (track.type != TrackType.text || track.isHidden) {
-        continue;
-      }
+      if (track.isHidden) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.text) continue;
         if (clip.timelineGroupId == selectedGroupId) {
           return clip;
         }
@@ -840,7 +837,7 @@ class EditorController extends ChangeNotifier {
 
   double get activeVideoPreviewOpacity {
     final clip = activeTimelineClip;
-    return clip == null ? 1 : previewOpacityForClip(clip);
+    return clip == null ? 1 : keyframedOpacityForClip(clip);
   }
 
   double get previewPlaybackSpeed {
@@ -1320,6 +1317,7 @@ class EditorController extends ChangeNotifier {
     String? targetTrackId,
     bool forceNewVideoTrack = false,
     bool forceNewAudioTrack = false,
+    bool insert = false,
   }) {
     if (!_project.mediaPool.any((mediaItem) => mediaItem.id == item.id)) {
       _errorMessage = 'O item n\u00E3o existe no Media Pool deste projeto.';
@@ -1340,18 +1338,32 @@ class EditorController extends ChangeNotifier {
     final imageFit = item.type == MediaType.image && !_hasVisibleVideoAt(start)
         ? domain.ImageClipFit.cover
         : domain.ImageClipFit.overlay;
-    final nextProject = _project.addMediaItemToTimeline(
-      item,
-      timelineStart: start,
-      targetTrackId: targetTrackId,
-      forceNewVideoTrack: forceNewVideoTrack,
-      forceNewAudioTrack: forceNewAudioTrack,
-      imageFit: imageFit,
-      overlayX: imageFit == domain.ImageClipFit.cover ? 0.5 : 1,
-      overlayY: imageFit == domain.ImageClipFit.cover ? 0.5 : 0,
-      overlayScale: imageFit == domain.ImageClipFit.cover ? 4 : 1,
-    );
+    final nextProject = insert && targetTrackId != null
+        ? _project.insertMedia(
+            item,
+            timelineStart: start,
+            targetTrackId: targetTrackId,
+            imageFit: imageFit,
+            overlayX: imageFit == domain.ImageClipFit.cover ? .5 : 1,
+            overlayY: imageFit == domain.ImageClipFit.cover ? .5 : 0,
+            overlayScale: imageFit == domain.ImageClipFit.cover ? 4 : 1,
+          )
+        : _project.addMediaItemToTimeline(
+            item,
+            timelineStart: start,
+            targetTrackId: targetTrackId,
+            forceNewVideoTrack: forceNewVideoTrack,
+            forceNewAudioTrack: forceNewAudioTrack,
+            imageFit: imageFit,
+            overlayX: imageFit == domain.ImageClipFit.cover ? 0.5 : 1,
+            overlayY: imageFit == domain.ImageClipFit.cover ? 0.5 : 0,
+            overlayScale: imageFit == domain.ImageClipFit.cover ? 4 : 1,
+          );
     if (identical(nextProject, _project)) {
+      _errorMessage = insert
+          ? 'Inserção cancelada. Solte em uma borda livre e destrave as pistas vinculadas.'
+          : 'Destino ocupado ou incompatível. Use outra camada ou segure Shift para inserir entre clipes.';
+      notifyListeners();
       return;
     }
 
@@ -1711,10 +1723,17 @@ class EditorController extends ChangeNotifier {
       return;
     }
     final start = _normalizeTimelinePosition(timelineStart);
-    final nextProject = _project.moveClipToTrack(
+    final groups =
+        _selectedTimelineGroupIds.contains(
+          _findClipById(clipId)?.timelineGroupId,
+        )
+        ? Set<String>.from(_selectedTimelineGroupIds)
+        : null;
+    final nextProject = _project.placeClipGroups(
       clipId,
       targetTrackId: targetTrackId,
       timelineStart: start,
+      selectedGroups: groups,
     );
     if (identical(nextProject, _project)) {
       return;
@@ -1725,7 +1744,10 @@ class EditorController extends ChangeNotifier {
     _playheadPosition = start;
     _selectedTimelineGroupId = _findClipById(clipId)?.timelineGroupId;
     _setSelectedTimelineGroups(
-      _selectedTimelineGroupId == null ? const {} : {_selectedTimelineGroupId!},
+      groups ??
+          (_selectedTimelineGroupId == null
+              ? const {}
+              : {_selectedTimelineGroupId!}),
     );
     _errorMessage = null;
     _syncGapPlaybackTimer();
@@ -1739,9 +1761,16 @@ class EditorController extends ChangeNotifier {
       return;
     }
     final start = _normalizeTimelinePosition(timelineStart);
-    final nextProject = _project.moveClipToNewTrack(
+    final groups =
+        _selectedTimelineGroupIds.contains(
+          _findClipById(clipId)?.timelineGroupId,
+        )
+        ? Set<String>.from(_selectedTimelineGroupIds)
+        : null;
+    final nextProject = _project.placeClipOnNewTrack(
       clipId,
-      timelineStart: start,
+      start,
+      selectedGroups: groups,
     );
     if (identical(nextProject, _project)) {
       return;
@@ -1752,7 +1781,10 @@ class EditorController extends ChangeNotifier {
     _playheadPosition = start;
     _selectedTimelineGroupId = _findClipById(clipId)?.timelineGroupId;
     _setSelectedTimelineGroups(
-      _selectedTimelineGroupId == null ? const {} : {_selectedTimelineGroupId!},
+      groups ??
+          (_selectedTimelineGroupId == null
+              ? const {}
+              : {_selectedTimelineGroupId!}),
     );
     _errorMessage = null;
     _syncGapPlaybackTimer();
@@ -2478,8 +2510,9 @@ class EditorController extends ChangeNotifier {
     if (clip == null || timelineDelta == Duration.zero) return;
     final touchingGroups = <String>{clip.timelineGroupId};
     for (final track in _project.tracks) {
-      if (track.type != TrackType.video) continue;
+      if (track.kind != TrackKind.visual) continue;
       for (final candidate in track.clips) {
+        if (candidate.kind != TrackType.video) continue;
         if (candidate.timelineEnd == clip.timelineStart ||
             candidate.timelineStart == clip.timelineEnd) {
           touchingGroups.add(candidate.timelineGroupId);
@@ -3662,12 +3695,24 @@ class EditorController extends ChangeNotifier {
     String timelineGroupId, {
     bool additive = false,
     bool toggle = false,
+    String? clipId,
   }) {
+    final focusChanged = clipId != null && clipId != _selectedTimelineClipId;
+    if (clipId != null) _selectedTimelineClipId = clipId;
+    if (!additive &&
+        !toggle &&
+        _selectedTimelineGroupIds.length > 1 &&
+        _selectedTimelineGroupIds.contains(timelineGroupId)) {
+      _selectedTimelineGroupId = timelineGroupId;
+      notifyListeners();
+      return;
+    }
     final overlayClip = _overlayClipForTimelineGroup(timelineGroupId);
     final shouldMovePlayheadToOverlay =
         overlayClip != null &&
         !_clipContainsTimelinePosition(overlayClip, _playheadPosition);
-    if (!additive &&
+    if (!focusChanged &&
+        !additive &&
         !toggle &&
         _selectedTimelineGroupId == timelineGroupId &&
         _selectedTimelineGroupIds.length == 1 &&
@@ -4709,9 +4754,11 @@ class EditorController extends ChangeNotifier {
   void setPlayheadPosition(Duration timelinePosition) {
     final next = _normalizeTimelinePosition(timelinePosition);
     final currentClip = activeTimelineClip;
-    final nextClip = _project.clipAt(next, trackType: TrackType.video);
+    final nextClip = _activeMainVideoClipAt(next);
     final deltaMs = (next - _playheadPosition).inMilliseconds;
-    if (deltaMs.abs() < 50 && identical(currentClip, nextClip)) {
+    // Explicit seeks must preserve sub-50 ms edits and frame stepping. Playback
+    // echoes are throttled separately in updatePlayheadFromPreview.
+    if (next == _playheadPosition) {
       return;
     }
 
@@ -4909,10 +4956,8 @@ class EditorController extends ChangeNotifier {
     }
     final clips = <domain.Clip>[];
     for (final track in _project.tracks) {
-      if (track.type != trackType) {
-        continue;
-      }
       for (final clip in track.clips) {
+        if (clip.trackType != trackType) continue;
         if (selectedGroups.contains(clip.timelineGroupId)) {
           clips.add(clip);
         }
@@ -4980,83 +5025,29 @@ class EditorController extends ChangeNotifier {
     List<_ClipboardClip> entries, {
     required Duration timelineStart,
   }) {
-    if (entries.isEmpty) {
-      return _PasteClipboardResult(_project, const {});
+    final copied = <String, List<domain.Clip>>{};
+    final orderedIds = <String>{
+      ..._project.tracks.map((track) => track.id),
+      ...entries.map((entry) => entry.trackId),
+    };
+    for (final id in orderedIds) {
+      final clips = entries
+          .where((entry) => entry.trackId == id)
+          .map((entry) => entry.clip)
+          .toList();
+      if (clips.isNotEmpty) copied[id] = clips;
     }
-
-    final availableEntries = entries
-        .where((entry) => _project.trackById(entry.trackId) != null)
-        .toList();
-    if (availableEntries.isEmpty) {
-      return _PasteClipboardResult(_project, const {});
-    }
-
-    final earliestStart = availableEntries
-        .map((entry) => entry.clip.timelineStart)
-        .reduce((a, b) => a < b ? a : b);
-    final targetStart = _normalizeTimelinePosition(timelineStart);
-    final groupIdMap = <String, String>{};
-    final selectedGroups = <String>{};
-    final timestamp = DateTime.now().microsecondsSinceEpoch;
-    var clipIndex = 0;
-    var groupIndex = 0;
-    var changed = false;
-
-    final updatedTracks = _project.tracks.map((track) {
-      final duplicates = <domain.Clip>[];
-      for (final entry in availableEntries) {
-        if (entry.trackId != track.id) {
-          continue;
-        }
-        final sourceClip = entry.clip;
-        final newGroupId = groupIdMap.putIfAbsent(
-          sourceClip.timelineGroupId,
-          () => 'group_paste_${timestamp}_${++groupIndex}',
-        );
-        selectedGroups.add(newGroupId);
-        final offset = sourceClip.timelineStart - earliestStart;
-        duplicates.add(
-          sourceClip.copyWith(
-            id: 'clip_paste_${timestamp}_${++clipIndex}_${_clipIdSuffix(sourceClip.trackType)}',
-            timelineGroupId: newGroupId,
-            timelineStart: targetStart + offset,
-          ),
-        );
-      }
-      if (duplicates.isEmpty) {
-        return track;
-      }
-      changed = true;
-      return track.copyWith(
-        clips: _sortTimelineClips([...track.clips, ...duplicates]),
-      );
-    }).toList();
-
-    if (!changed) {
-      return _PasteClipboardResult(_project, const {});
-    }
-    return _PasteClipboardResult(
-      _project.copyWith(tracks: updatedTracks, updatedAt: DateTime.now()),
-      selectedGroups,
-    );
-  }
-
-  List<domain.Clip> _sortTimelineClips(List<domain.Clip> clips) {
-    return [...clips]
-      ..sort((a, b) => a.timelineStart.compareTo(b.timelineStart));
-  }
-
-  String _clipIdSuffix(TrackType type) {
-    switch (type) {
-      case TrackType.video:
-        return 'v';
-      case TrackType.audio:
-        return 'a';
-      case TrackType.image:
-        return 'img';
-      case TrackType.text:
-        return 'txt';
-    }
+    final next = _project.pasteClips(copied, timelineStart: timelineStart);
+    final existingGroups = {
+      for (final track in _project.tracks)
+        for (final clip in track.clips) clip.timelineGroupId,
+    };
+    return _PasteClipboardResult(next, {
+      for (final track in next.tracks)
+        for (final clip in track.clips)
+          if (!existingGroups.contains(clip.timelineGroupId))
+            clip.timelineGroupId,
+    });
   }
 
   Track? _trackForClipId(String clipId) {
@@ -5148,10 +5139,8 @@ class EditorController extends ChangeNotifier {
     TrackType trackType,
   ) {
     for (final track in project.tracks) {
-      if (track.type != trackType) {
-        continue;
-      }
       for (final clip in track.clips) {
+        if (clip.trackType != trackType) continue;
         if (!previousClipIds.contains(clip.id) &&
             clip.mediaItemId == mediaItemId) {
           return clip;
@@ -5167,10 +5156,8 @@ class EditorController extends ChangeNotifier {
     TrackType trackType,
   ) {
     for (final track in project.tracks) {
-      if (track.type != trackType) {
-        continue;
-      }
       for (final clip in track.clips) {
+        if (clip.trackType != trackType) continue;
         if (!previousClipIds.contains(clip.id)) {
           return clip;
         }
@@ -5186,10 +5173,8 @@ class EditorController extends ChangeNotifier {
   ) {
     final clips = <domain.Clip>[];
     for (final track in project.tracks) {
-      if (track.type != trackType) {
-        continue;
-      }
       for (final clip in track.clips) {
+        if (clip.trackType != trackType) continue;
         if (!previousClipIds.contains(clip.id)) {
           clips.add(clip);
         }
@@ -5472,8 +5457,8 @@ class EditorController extends ChangeNotifier {
   List<domain.Clip> _generatedCaptionClipsFromProject() {
     final clips = <domain.Clip>[];
     for (final track in _project.tracks) {
-      if (track.type != TrackType.text) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.text) continue;
         if (!clip.isCaption ||
             clip.textContent.trim().isEmpty ||
             clip.duration <= Duration.zero) {
@@ -5482,7 +5467,13 @@ class EditorController extends ChangeNotifier {
         clips.add(clip);
       }
     }
-    clips.sort((a, b) => a.timelineStart.compareTo(b.timelineStart));
+    clips.sort((a, b) {
+      final time = a.timelineStart.compareTo(b.timelineStart);
+      if (time != 0) return time;
+      int number(String id) =>
+          int.tryParse(RegExp(r'\d+').firstMatch(id)?.group(0) ?? '') ?? 0;
+      return number(a.id).compareTo(number(b.id));
+    });
     return clips;
   }
 
@@ -5521,16 +5512,8 @@ class EditorController extends ChangeNotifier {
     return _findClipByIdInProject(_project, clipId);
   }
 
-  domain.Clip? _findClipByIdInProject(TgiProject project, String clipId) {
-    for (final track in project.tracks) {
-      for (final clip in track.clips) {
-        if (clip.id == clipId) {
-          return clip;
-        }
-      }
-    }
-    return null;
-  }
+  domain.Clip? _findClipByIdInProject(TgiProject project, String clipId) =>
+      project.clipById(clipId);
 
   domain.Clip? _clipForTimelineGroupInProject(
     TgiProject project,
@@ -5539,10 +5522,8 @@ class EditorController extends ChangeNotifier {
   ) {
     for (final type in preferredTypes) {
       for (final track in project.tracks) {
-        if (track.type != type) {
-          continue;
-        }
         for (final clip in track.clips) {
+          if (clip.trackType != type) continue;
           if (clip.timelineGroupId == timelineGroupId) {
             return clip;
           }
@@ -5554,10 +5535,10 @@ class EditorController extends ChangeNotifier {
 
   bool _timelineGroupHasClipType(String timelineGroupId, TrackType type) {
     for (final track in _project.tracks) {
-      if (track.type != type) {
-        continue;
-      }
-      if (track.clips.any((clip) => clip.timelineGroupId == timelineGroupId)) {
+      if (track.clips.any(
+        (clip) =>
+            clip.trackType == type && clip.timelineGroupId == timelineGroupId,
+      )) {
         return true;
       }
     }
@@ -5578,10 +5559,8 @@ class EditorController extends ChangeNotifier {
         ? TrackType.audio
         : TrackType.video;
     for (final track in _project.tracks) {
-      if (track.type != targetType) {
-        continue;
-      }
       for (final candidate in track.clips) {
+        if (candidate.trackType != targetType) continue;
         if (candidate.timelineGroupId == selected.timelineGroupId ||
             !_clipsRemainAlignedForRelink(selected, candidate)) {
           continue;
@@ -5618,10 +5597,9 @@ class EditorController extends ChangeNotifier {
     if (_selectedTimelineGroupIds.isNotEmpty) {
       final selectedClips = <domain.Clip>[];
       for (final track in _project.tracks) {
-        if (track.type != TrackType.video || track.isHidden) {
-          continue;
-        }
+        if (track.isHidden) continue;
         for (final clip in track.clips) {
+          if (clip.trackType != TrackType.video) continue;
           if (_selectedTimelineGroupIds.contains(clip.timelineGroupId) &&
               clip.duration > Duration.zero) {
             selectedClips.add(clip);
@@ -5642,10 +5620,9 @@ class EditorController extends ChangeNotifier {
       return [active];
     }
     for (final track in _project.tracks) {
-      if (track.type != TrackType.video || track.isHidden) {
-        continue;
-      }
+      if (track.isHidden) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.video) continue;
         if (clip.duration > Duration.zero) {
           return [clip];
         }
@@ -5676,10 +5653,8 @@ class EditorController extends ChangeNotifier {
   ) {
     for (final type in preferredTypes) {
       for (final track in _project.tracks) {
-        if (track.type != type) {
-          continue;
-        }
         for (final clip in track.clips) {
+          if (clip.trackType != type) continue;
           if (clip.timelineGroupId == timelineGroupId) {
             return clip;
           }
@@ -5775,11 +5750,15 @@ class EditorController extends ChangeNotifier {
   ) {
     final targets = <_TimelineVideoTransitionTarget>[];
     for (final track in project.tracks) {
-      if (track.type != TrackType.video || track.isHidden) {
-        continue;
-      }
+      if (track.isHidden) continue;
       final clips =
-          track.clips.where((clip) => clip.duration > Duration.zero).toList()
+          track.clips
+              .where(
+                (clip) =>
+                    clip.trackType == TrackType.video &&
+                    clip.duration > Duration.zero,
+              )
+              .toList()
             ..sort(
               (first, second) =>
                   first.timelineStart.compareTo(second.timelineStart),
@@ -5843,12 +5822,12 @@ class EditorController extends ChangeNotifier {
   List<_TimelineVideoEdit> _videoEdits(TgiProject project) {
     final edits = <_TimelineVideoEdit>[];
     for (final track in project.tracks) {
-      if (track.type != TrackType.video || track.isHidden) {
-        continue;
-      }
+      if (track.isHidden) continue;
       final starts = <int>{};
       final ends = <int>{};
-      for (final clip in track.clips) {
+      for (final clip in track.clips.where(
+        (clip) => clip.trackType == TrackType.video,
+      )) {
         if (clip.duration <= Duration.zero) {
           continue;
         }
@@ -6117,10 +6096,9 @@ class EditorController extends ChangeNotifier {
     final earliestAllowed = activeClip.timelineEnd - _clipBoundaryTolerance;
     domain.Clip? nextClip;
     for (final track in _project.tracks) {
-      if (track.type != TrackType.video || track.isHidden) {
-        continue;
-      }
+      if (track.isHidden) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.video) continue;
         if (clip.id == activeClip.id || clip.timelineStart < earliestAllowed) {
           continue;
         }
@@ -6210,10 +6188,8 @@ class EditorController extends ChangeNotifier {
   }) {
     domain.Clip? bestClip;
     for (final track in _project.tracks) {
-      if (track.type != TrackType.video) {
-        continue;
-      }
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.video) continue;
         if (clip.mediaItemId != mediaItemId ||
             !_sourcePositionBelongsToClip(
               clip,
@@ -6276,10 +6252,8 @@ class EditorController extends ChangeNotifier {
     final targetProject = project ?? _project;
     final clips = <String>[];
     for (final track in targetProject.tracks) {
-      if (track.type != TrackType.video) {
-        continue;
-      }
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.video) continue;
         clips.add('${track.id}:${_clipDebugLabel(clip)}');
       }
     }

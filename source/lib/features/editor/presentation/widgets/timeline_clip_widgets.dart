@@ -639,7 +639,12 @@ class _TimelineClip extends StatelessWidget {
         ),
       ),
     );
-    return child;
+    return isAudio
+        ? Tooltip(
+            message: 'Alt + arraste a linha para ajustar o volume',
+            child: child,
+          )
+        : child;
   }
 }
 
@@ -1488,12 +1493,11 @@ int? _timelineGroupTrackIndex(
   return _trackIndexFor(tracks).groupTracks[(timelineGroupId, type)];
 }
 
-bool _canDropMediaOnTrack(MediaItem item, Track track) {
-  if (item.type == MediaType.audio) {
-    return track.type == TrackType.audio;
-  }
-  return true;
-}
+bool _canDropMediaOnTrack(MediaItem item, Track track) =>
+    !track.isLocked &&
+    (item.type == MediaType.audio
+        ? track.kind == TrackKind.audio
+        : track.kind == TrackKind.visual);
 
 bool _shouldCreateVideoTrackForDroppedMedia(
   MediaItem item,
@@ -1501,23 +1505,7 @@ bool _shouldCreateVideoTrackForDroppedMedia(
   Track? targetTrack,
   Duration timelineStart, {
   required bool isEmptyLaneArea,
-}) {
-  if (item.type != MediaType.video) {
-    return false;
-  }
-  if (targetTrack == null) {
-    return isEmptyLaneArea;
-  }
-
-  final videoTrack = _videoTrackUsedByVideoDrop(project, targetTrack);
-  if (videoTrack == null) {
-    return false;
-  }
-  final duration = item.duration <= Duration.zero
-      ? const Duration(milliseconds: 1)
-      : item.duration;
-  return _trackHasClipOverlap(videoTrack, timelineStart, duration);
-}
+}) => item.type != MediaType.audio && targetTrack == null && isEmptyLaneArea;
 
 Duration _snapMediaDropPosition({
   required MediaItem item,
@@ -1577,22 +1565,8 @@ Duration _snapMediaDropPosition({
   );
 }
 
-Track? _videoTrackUsedByVideoDrop(TgiProject project, Track targetTrack) {
-  if (targetTrack.type == TrackType.video) {
-    return targetTrack;
-  }
-  if (targetTrack.type == TrackType.audio) {
-    return project.trackById(_pairedVideoTrackIdForAudioTrack(targetTrack.id));
-  }
-  return project.trackById(TgiProject.defaultVideoTrackId);
-}
-
-String _pairedVideoTrackIdForAudioTrack(String audioTrackId) {
-  if (audioTrackId == TgiProject.defaultAudioTrackId) {
-    return TgiProject.defaultVideoTrackId;
-  }
-  return audioTrackId.replaceFirst('track_audio_', 'track_video_');
-}
+Track? _videoTrackUsedByVideoDrop(TgiProject project, Track targetTrack) =>
+    targetTrack.kind == TrackKind.visual ? targetTrack : null;
 
 bool _trackHasClipOverlap(
   Track track,
@@ -1616,19 +1590,6 @@ String _playbackSpeedLabel(double speed) {
   return '${speed.toStringAsFixed(2)}x';
 }
 
-IconData _trackIcon(TrackType type) {
-  switch (type) {
-    case TrackType.video:
-      return Icons.movie_outlined;
-    case TrackType.audio:
-      return Icons.volume_up_outlined;
-    case TrackType.image:
-      return Icons.image_outlined;
-    case TrackType.text:
-      return Icons.title;
-  }
-}
-
 MediaItem? _findMediaItem(TgiProject project, String id) {
   final index = _mediaIndexes[project] ??= {
     for (final item in project.mediaPool) item.id: item,
@@ -1636,7 +1597,11 @@ MediaItem? _findMediaItem(TgiProject project, String id) {
   return index[id];
 }
 
-String _timelineSignatureFor(TgiProject project) {
+final _timelineSignatures = Expando<String>();
+String _timelineSignatureFor(TgiProject project) =>
+    _timelineSignatures[project] ??= _computeTimelineSignature(project);
+
+String _computeTimelineSignature(TgiProject project) {
   final buffer = StringBuffer()
     ..write('tracks:')
     ..write(project.tracks.length)
@@ -1648,6 +1613,7 @@ String _timelineSignatureFor(TgiProject project) {
     buffer
       ..write('|t:')
       ..write(track.id)
+      ..write(track.height)
       ..write(',')
       ..write(track.type.name)
       ..write(',')

@@ -235,6 +235,9 @@ class _ExportSegment {
 
 class _VideoOverlaySegment {
   const _VideoOverlaySegment({
+    this.fadeIn = Duration.zero,
+    this.fadeOut = Duration.zero,
+    this.zOrder = 0,
     required this.filePath,
     required this.outputStart,
     required this.sourceStart,
@@ -291,6 +294,9 @@ class _VideoOverlaySegment {
     required this.kenBurnsEnd,
     required this.keyframes,
   });
+
+  final int zOrder;
+  final Duration fadeIn, fadeOut;
 
   final String filePath;
   final Duration outputStart;
@@ -381,6 +387,9 @@ class _AudioMixSegment {
 
 class _TextOverlaySegment {
   const _TextOverlaySegment({
+    this.fadeIn = Duration.zero,
+    this.fadeOut = Duration.zero,
+    this.zOrder = 0,
     required this.text,
     required this.outputStart,
     required this.duration,
@@ -394,6 +403,9 @@ class _TextOverlaySegment {
     required this.animation,
     required this.keyframes,
   });
+
+  final int zOrder;
+  final Duration fadeIn, fadeOut;
 
   final String text;
   final Duration outputStart;
@@ -437,6 +449,7 @@ class _TransitionOverlaySegment {
 
 class _ImageOverlaySegment {
   const _ImageOverlaySegment({
+    this.zOrder = 0,
     required this.filePath,
     required this.outputStart,
     required this.duration,
@@ -465,6 +478,8 @@ class _ImageOverlaySegment {
     required this.kenBurnsEnd,
     required this.keyframes,
   });
+
+  final int zOrder;
 
   final String filePath;
   final Duration outputStart;

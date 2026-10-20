@@ -15,7 +15,7 @@ class _TimelineTrackIndex {
       for (final clip in track.clips) {
         groupTracks.putIfAbsent((
           clip.timelineGroupId,
-          track.type,
+          clip.trackType,
         ), () => index);
         for (final boundary in [clip.timelineStart, clip.timelineEnd]) {
           boundaryGroups

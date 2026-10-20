@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.tgi" "\0"
-            VALUE "FileDescription", "Editor de Video" "\0"
+            VALUE "FileDescription", "TGI Video Editor" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "Editor de Video" "\0"
+            VALUE "InternalName", "TGI Video Editor" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.tgi. All rights reserved." "\0"
             VALUE "OriginalFilename", "VideoEditor.exe" "\0"
-            VALUE "ProductName", "Editor de Video" "\0"
+            VALUE "ProductName", "TGI Video Editor" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

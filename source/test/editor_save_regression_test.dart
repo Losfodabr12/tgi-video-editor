@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tgi_video_editor/domain/models/project.dart';
 import 'package:tgi_video_editor/domain/models/track.dart';
@@ -12,6 +13,19 @@ import 'package:tgi_video_editor/services/project_recovery_service.dart';
 import 'package:tgi_video_editor/services/recent_project_service.dart';
 
 void main() {
+  testWidgets('Ctrl+S saves the current snapshot to its existing path', (
+    tester,
+  ) async {
+    final io = _PausedProjectIO()..pending.complete();
+    await _openEditor(tester, io, _MemoryRecovery());
+    final snapshot = await _edit(tester);
+    await tester.sendKeyDownEvent(LogicalKeyboardKey.controlLeft);
+    await tester.sendKeyEvent(LogicalKeyboardKey.keyS);
+    await tester.sendKeyUpEvent(LogicalKeyboardKey.controlLeft);
+    await tester.pumpAndSettle();
+    expect(io.written.single, same(snapshot));
+    await tester.pumpWidget(const SizedBox());
+  });
   testWidgets('failed manual save keeps the draft and permits a later retry', (
     tester,
   ) async {

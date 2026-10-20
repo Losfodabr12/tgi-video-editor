@@ -29,7 +29,7 @@ class ProjectSaveData {
     'mediaPool': mediaPool,
     'markers': markers,
     'transitions': transitions,
-    'version': 13,
+    'version': 14,
   };
 }
 
@@ -58,7 +58,7 @@ class MediaRelinkResult {
 }
 
 class ProjectIOService {
-  static const _projectFormatVersion = 13;
+  static const _projectFormatVersion = 14;
   static const _mediaPoolKey = 'mediaPool';
   static const _tracksKey = 'tracks';
   static const _markersKey = 'markers';
@@ -131,11 +131,14 @@ class ProjectIOService {
         if (value is! String || value.isEmpty) return;
         final relative = value.replaceAll('\\', '/');
         final uri = root.resolve(relative).normalizePath();
-        if (!uri.toString().startsWith(root.toString()) || relative.startsWith('/') || relative.contains(':')) {
+        if (!uri.toString().startsWith(root.toString()) ||
+            relative.startsWith('/') ||
+            relative.contains(':')) {
           throw const FormatException('Caminho inválido no projeto portátil.');
         }
         owner[key] = uri.toFilePath();
       }
+
       final portableMedia = _objectList(data['mediaPool']);
       data['mediaPool'] = portableMedia;
       for (final item in portableMedia) {
@@ -159,7 +162,7 @@ class ProjectIOService {
     final version = _readVersion(data);
     if (version > _projectFormatVersion) {
       throw FormatException(
-        'Projeto salvo em uma versao mais nova do TGIAPP '
+        'Projeto salvo em uma versao mais nova do TGI Video Editor '
         '(formato $version, app suporta $_projectFormatVersion).',
       );
     }
@@ -212,7 +215,9 @@ class ProjectIOService {
       createdAt: createdAt ?? now,
       updatedAt: updatedAt ?? createdAt ?? now,
       mediaPool: mediaItems,
-      tracks: _separateLegacyCaptionGroups(tracks),
+      tracks: _separateLegacyCaptionGroups(
+        version < 14 ? _migrateLegacyTrackOrder(tracks) : tracks,
+      ),
       markers: markers,
       transitions: transitions,
       watermark: _deserializeWatermark(watermarkData),
@@ -228,13 +233,22 @@ class ProjectIOService {
     );
   }
 
+  // Formats 1–13 rendered video lanes forward, then image/text lanes reversed.
+  // Canonical order is now top-to-bottom. IDs, clips, links and timing stay intact.
+  List<Track> _migrateLegacyTrackOrder(List<Track> tracks) => [
+    ...tracks.where((track) => track.type == TrackType.text),
+    ...tracks.where((track) => track.type == TrackType.image),
+    ...tracks.where((track) => track.type == TrackType.video).toList().reversed,
+    ...tracks.where((track) => track.type == TrackType.audio),
+  ];
+
   List<Track> _separateLegacyCaptionGroups(List<Track> tracks) {
     // Older splits used the clip counter for group IDs. A later caption
     // could inherit a video/audio group and move/delete unrelated media.
     final mediaGroups = {
       for (final track in tracks)
-        if (track.type != TrackType.text)
-          for (final clip in track.clips) clip.timelineGroupId,
+        for (final clip in track.clips)
+          if (clip.trackType != TrackType.text) clip.timelineGroupId,
     };
     final occupied = {
       for (final track in tracks)
@@ -242,16 +256,18 @@ class ProjectIOService {
     };
     return [
       for (final track in tracks)
-        if (track.type != TrackType.text ||
-            !track.clips.any(
-              (clip) => mediaGroups.contains(clip.timelineGroupId),
-            ))
+        if (!track.clips.any(
+          (clip) =>
+              clip.trackType == TrackType.text &&
+              mediaGroups.contains(clip.timelineGroupId),
+        ))
           track
         else
           track.copyWith(
             clips: [
               for (final clip in track.clips)
-                if (!mediaGroups.contains(clip.timelineGroupId))
+                if (clip.trackType != TrackType.text ||
+                    !mediaGroups.contains(clip.timelineGroupId))
                   clip
                 else
                   clip.copyWith(
@@ -349,6 +365,8 @@ class ProjectIOService {
       'id': track.id,
       'name': track.name,
       'type': track.type.name,
+      'kind': track.kind.name,
+      'height': track.height,
       'isLocked': track.isLocked,
       'isHidden': track.isHidden,
       'isMuted': track.isMuted,
@@ -373,6 +391,14 @@ class ProjectIOService {
       id: trackId == null || trackId.isEmpty ? 'track_${index + 1}' : trackId,
       name: data['name'] as String? ?? 'Trilha',
       type: type,
+      kind: data['kind'] == 'audio'
+          ? TrackKind.audio
+          : data['kind'] == 'visual'
+          ? TrackKind.visual
+          : null,
+      height: (data['height'] is num && (data['height'] as num).isFinite)
+          ? (data['height'] as num).toDouble().clamp(44.0, 180.0)
+          : 64,
       clips: clips,
       isLocked: data['isLocked'] as bool? ?? false,
       isHidden: data['isHidden'] as bool? ?? false,

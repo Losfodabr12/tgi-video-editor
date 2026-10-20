@@ -21,28 +21,42 @@ import 'timeline_zoom_controls.dart';
 
 part 'timeline_content.dart';
 part 'timeline_tracks.dart';
+part 'timeline_track_headers.dart';
 part 'timeline_guides.dart';
 part 'timeline_lanes.dart';
 part 'timeline_clip_widgets.dart';
 part 'timeline_index.dart';
 
-const _trackHeaderWidth = 190.0;
+const _trackHeaderWidth = 158.0;
 const _timelineHeaderHeight = 44.0;
 const _rulerHeight = 34.0;
-const _trackHeight = 64.0;
+const _newLaneExtent = 24.0;
+
+double _trackTop(List<Track> tracks, int index) =>
+    _newLaneExtent +
+    tracks.take(index).fold<double>(0, (sum, track) => sum + track.height);
+
+int _trackAtY(List<Track> tracks, double y) {
+  var top = _newLaneExtent;
+  for (var index = 0; index < tracks.length; index++) {
+    if (y >= top && y < top + tracks[index].height) return index;
+    top += tracks[index].height;
+  }
+  return -1;
+}
+
 const _minimumTimelineDuration = Duration(seconds: 30);
 const _minimumClipResizeDuration = Duration(seconds: 1);
 const _pixelsPerSecond = 76.0;
 const _minimumTimelineContentWidth = 1280.0;
-const _minimumTimelineZoom = 0.5;
-const _maximumTimelineZoom = 4.0;
-const _timelineZoomStep = 0.25;
+const _minimumTimelineZoom = 0.005;
+const _maximumTimelineZoom = 32.0;
 const _timelineSnapThresholdPx = 12.0;
 const _timelineAutoScrollEdgeThreshold = 50.0;
 const _timelineAutoScrollMaxStep = 18.0;
 const _timelineAutoScrollInterval = Duration(milliseconds: 16);
 const _maxClipVolume = 2.0;
-const _audioVolumeLineHitRadius = 20.0;
+const _audioVolumeLineHitRadius = 4.0;
 const _clipDragStartThreshold = 4.0;
 const _clipTrimHandleWidth = 12.0;
 const _minimumTimelineClipWidth = 1.0;
@@ -98,18 +112,12 @@ Color _clipAccentFor(TrackType type) {
   }
 }
 
-Color _clipFillFor(TrackType type) {
-  switch (type) {
-    case TrackType.video:
-      return TgiColors.surfacePressed;
-    case TrackType.audio:
-      return TgiColors.surfacePressed;
-    case TrackType.image:
-      return TgiColors.surfacePressed;
-    case TrackType.text:
-      return TgiColors.surfacePressed;
-  }
-}
+Color _clipFillFor(TrackType type) => switch (type) {
+  TrackType.video => TgiColors.clipVideo,
+  TrackType.audio => TgiColors.clipAudio,
+  TrackType.image => TgiColors.clipImage,
+  TrackType.text => TgiColors.clipText,
+};
 
 typedef TimelineMediaDropCallback =
     void Function(
@@ -152,7 +160,12 @@ typedef _TimelineTrackDropTargetAtOffset =
     );
 
 typedef TimelineClipSelectionCallback =
-    void Function(String timelineGroupId, {bool additive, bool toggle});
+    void Function(
+      String timelineGroupId, {
+      bool additive,
+      bool toggle,
+      String? clipId,
+    });
 
 typedef TimelineBoxSelectionCallback =
     void Function(
@@ -176,10 +189,15 @@ enum TimelineEditMode { move, slip, slide }
 enum _TimelineTextMenuAction { addText, addQuickCaption, addTextTrack }
 
 class _TimelineTrackDropTarget {
-  const _TimelineTrackDropTarget({this.trackId, this.isBelowTracks = false});
+  const _TimelineTrackDropTarget({
+    this.trackId,
+    this.isBelowTracks = false,
+    this.invalid = false,
+  });
 
   final String? trackId;
   final bool isBelowTracks;
+  final bool invalid;
 }
 
 class _TimelineMediaDropZone {
@@ -222,6 +240,11 @@ class TimelinePanel extends StatefulWidget {
     this.onImageClipMovedToTrack,
     this.onAddTrack,
     this.onAudioInventoryOpen,
+    this.onTrackDeleted,
+    this.onTrackReordered,
+    this.onTrackHeightChanged,
+    this.onTrackResizeStart,
+    this.onTrackResizeEnd,
     this.onTrackRenamed,
     this.onTrackLockedChanged,
     this.onTrackHiddenChanged,
@@ -273,6 +296,10 @@ class TimelinePanel extends StatefulWidget {
   final ImageClipTrackMoveCallback? onImageClipMovedToTrack;
   final ValueChanged<TrackType>? onAddTrack;
   final VoidCallback? onAudioInventoryOpen;
+  final ValueChanged<String>? onTrackDeleted;
+  final void Function(String trackId, int index)? onTrackReordered;
+  final void Function(String trackId, double height)? onTrackHeightChanged;
+  final VoidCallback? onTrackResizeStart, onTrackResizeEnd;
   final void Function(String trackId, String name)? onTrackRenamed;
   final void Function(String trackId, bool isLocked)? onTrackLockedChanged;
   final void Function(String trackId, bool isHidden)? onTrackHiddenChanged;
@@ -307,7 +334,6 @@ class _TimelinePanelState extends State<TimelinePanel> {
   double _timelineZoom = 1.0;
   bool _snappingEnabled = true;
   TimelineEditMode _editMode = TimelineEditMode.move;
-  double? _pendingHorizontalScrollFraction;
   late String _timelineStructureSignature;
   int _timelineRenderRevision = 0;
 
@@ -361,285 +387,308 @@ class _TimelinePanelState extends State<TimelinePanel> {
         .clipAt(widget.playheadPosition, trackType: TrackType.video)
         ?.timelineGroupId;
 
-    return DragTarget<MediaItem>(
-      hitTestBehavior: HitTestBehavior.translucent,
-      onWillAcceptWithDetails: (_) => true,
-      onAcceptWithDetails: (details) {
-        _handleMediaDrop(details.data, details.offset, duration);
+    return Listener(
+      onPointerSignal: (event) {
+        if (event is PointerScrollEvent &&
+            (HardwareKeyboard.instance.isControlPressed ||
+                HardwareKeyboard.instance.isMetaPressed)) {
+          _setTimelineZoom(
+            _timelineZoom * math.exp(-event.scrollDelta.dy * .002),
+            globalPosition: event.position,
+          );
+        }
       },
-      builder: (context, candidateData, rejectedData) {
-        return Column(
-          children: [
-            SizedBox(
-              height: _timelineHeaderHeight,
-              child: _TimelineHeader(
-                zoom: _timelineZoom,
-                playheadPosition: widget.playheadPosition,
-                duration: duration,
-                onAudioInventoryOpen: widget.onAudioInventoryOpen,
-                onMarkerAdd: widget.onMarkerAdd,
-                onZoomOut: _timelineZoom > _minimumTimelineZoom
-                    ? () => _setTimelineZoom(_timelineZoom - _timelineZoomStep)
-                    : null,
-                onZoomIn: _timelineZoom < _maximumTimelineZoom
-                    ? () => _setTimelineZoom(_timelineZoom + _timelineZoomStep)
-                    : null,
-                editMode: _editMode,
-                snappingEnabled: _snappingEnabled,
-                selectedCount: widget.selectedTimelineGroupIds.isNotEmpty
-                    ? widget.selectedTimelineGroupIds.length
-                    : (widget.selectedTimelineGroupId == null ? 0 : 1),
-                canRippleDelete:
-                    widget.selectedTimelineGroupId != null ||
-                    widget.selectedTimelineGroupIds.isNotEmpty,
-                audioVideoLinked: widget.audioVideoLinked,
-                onAudioVideoLinkToggle: widget.onAudioVideoLinkToggle,
-                onEditModeChanged: (mode) => setState(() => _editMode = mode),
-                onSnappingChanged: () =>
-                    setState(() => _snappingEnabled = !_snappingEnabled),
-                onFocusSelection: _focusSelectedClips,
-                onRippleDelete: widget.onRippleDelete,
-              ),
-            ),
-            if (widget.onMarkRangeStart != null)
+      child: DragTarget<MediaItem>(
+        hitTestBehavior: HitTestBehavior.translucent,
+        onWillAcceptWithDetails: (_) => true,
+        onAcceptWithDetails: (details) {
+          _handleMediaDrop(details.data, details.offset, duration);
+        },
+        builder: (context, candidateData, rejectedData) {
+          return Column(
+            children: [
               SizedBox(
-                height: 32,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      TextButton(
-                        onPressed: widget.onMarkRangeStart,
-                        child: const Text('I · Marcar início'),
-                      ),
-                      TextButton(
-                        onPressed: widget.onMarkRangeEnd,
-                        child: const Text('O · Marcar fim'),
-                      ),
-                      Text(
-                        widget.rangeStart == null && widget.rangeEnd == null
-                            ? 'Exportação: timeline inteira'
-                            : 'Trecho: ${formatDuration(widget.rangeStart ?? Duration.zero)} — ${formatDuration(widget.rangeEnd ?? widget.project.timelineDuration)}',
-                      ),
-                      if (widget.rangeStart != null || widget.rangeEnd != null)
-                        IconButton(
-                          tooltip: 'Limpar trecho',
-                          onPressed: widget.onClearRange,
-                          icon: const Icon(Icons.close, size: 16),
-                        ),
-                    ],
-                  ),
+                height: _timelineHeaderHeight,
+                child: _TimelineHeader(
+                  zoom: _timelineZoom,
+                  playheadPosition: widget.playheadPosition,
+                  duration: duration,
+                  onAudioInventoryOpen: widget.onAudioInventoryOpen,
+                  onMarkerAdd: widget.onMarkerAdd,
+                  onZoomOut: _timelineZoom > _minimumTimelineZoom
+                      ? () => _setTimelineZoom(_timelineZoom / 1.25)
+                      : null,
+                  onZoomIn: _timelineZoom < _maximumTimelineZoom
+                      ? () => _setTimelineZoom(_timelineZoom * 1.25)
+                      : null,
+                  editMode: _editMode,
+                  snappingEnabled: _snappingEnabled,
+                  selectedCount: widget.selectedTimelineGroupIds.isNotEmpty
+                      ? widget.selectedTimelineGroupIds.length
+                      : (widget.selectedTimelineGroupId == null ? 0 : 1),
+                  canRippleDelete:
+                      widget.selectedTimelineGroupId != null ||
+                      widget.selectedTimelineGroupIds.isNotEmpty,
+                  audioVideoLinked: widget.audioVideoLinked,
+                  onAudioVideoLinkToggle: widget.onAudioVideoLinkToggle,
+                  onEditModeChanged: (mode) => setState(() => _editMode = mode),
+                  onSnappingChanged: () =>
+                      setState(() => _snappingEnabled = !_snappingEnabled),
+                  onFocusSelection: _focusSelectedClips,
+                  onRippleDelete: widget.onRippleDelete,
                 ),
               ),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _TrackLabels(
-                    tracks: widget.project.tracks,
-                    scrollController: _trackLabelScrollController,
-                    onAddTrack: widget.onAddTrack,
-                    onTrackRenamed: widget.onTrackRenamed,
-                    onTrackLockedChanged: widget.onTrackLockedChanged,
-                    onTrackHiddenChanged: widget.onTrackHiddenChanged,
-                    onTrackMutedChanged: widget.onTrackMutedChanged,
-                    onTrackSoloChanged: widget.onTrackSoloChanged,
+              if (widget.onMarkRangeStart != null)
+                SizedBox(
+                  height: 32,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        TextButton(
+                          onPressed: widget.onMarkRangeStart,
+                          child: const Text('I · Marcar início'),
+                        ),
+                        TextButton(
+                          onPressed: widget.onMarkRangeEnd,
+                          child: const Text('O · Marcar fim'),
+                        ),
+                        Text(
+                          widget.rangeStart == null && widget.rangeEnd == null
+                              ? 'Exportação: timeline inteira'
+                              : 'Trecho: ${formatDuration(widget.rangeStart ?? Duration.zero)} — ${formatDuration(widget.rangeEnd ?? widget.project.timelineDuration)}',
+                        ),
+                        if (widget.rangeStart != null ||
+                            widget.rangeEnd != null)
+                          IconButton(
+                            tooltip: 'Limpar trecho',
+                            onPressed: widget.onClearRange,
+                            icon: const Icon(Icons.close, size: 16),
+                          ),
+                      ],
+                    ),
                   ),
-                  const VerticalDivider(width: 1),
-                  Expanded(
-                    child: DragTarget<TimelineTransition>(
-                      hitTestBehavior: HitTestBehavior.opaque,
-                      onWillAcceptWithDetails: (_) =>
-                          widget.onTransitionMoved != null,
-                      onAcceptWithDetails: (details) {
-                        _handleTimelineTransitionMove(
-                          details.data,
-                          details.offset,
-                          duration,
-                        );
-                      },
-                      builder: (context, movedTransitionCandidateData, rejectedData) {
-                        return DragTarget<TimelineTransitionAsset>(
-                          hitTestBehavior: HitTestBehavior.opaque,
-                          onWillAcceptWithDetails: (_) =>
-                              widget.onTransitionDropped != null,
-                          onAcceptWithDetails: (details) {
-                            _handleTransitionDrop(
-                              details.data,
-                              details.offset,
-                              duration,
-                            );
-                          },
-                          builder: (context, transitionCandidateData, rejectedData) {
-                            return DragTarget<MediaItem>(
-                              hitTestBehavior: HitTestBehavior.opaque,
-                              onWillAcceptWithDetails: (_) => true,
-                              onAcceptWithDetails: (details) {
-                                _handleMediaDrop(
-                                  details.data,
-                                  details.offset,
-                                  duration,
-                                );
-                              },
-                              builder: (context, mediaCandidateData, rejectedData) {
-                                final accepting =
-                                    mediaCandidateData.isNotEmpty ||
-                                    transitionCandidateData.isNotEmpty ||
-                                    movedTransitionCandidateData.isNotEmpty;
-                                final acceptingTransition =
-                                    transitionCandidateData.isNotEmpty ||
-                                    movedTransitionCandidateData.isNotEmpty;
-                                return LayoutBuilder(
-                                  builder: (context, constraints) {
-                                    final contentWidth = _timelineContentWidth(
-                                      duration,
-                                      constraints.maxWidth,
-                                      zoom: _timelineZoom,
-                                    );
+                ),
+              Expanded(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _TrackLabels(
+                      tracks: widget.project.tracks,
+                      scrollController: _trackLabelScrollController,
+                      onAddTrack: widget.onAddTrack,
+                      onTrackDeleted: widget.onTrackDeleted,
+                      onTrackReordered: widget.onTrackReordered,
+                      onTrackHeightChanged: widget.onTrackHeightChanged,
+                      onTrackResizeStart: widget.onTrackResizeStart,
+                      onTrackResizeEnd: widget.onTrackResizeEnd,
+                      onTrackRenamed: widget.onTrackRenamed,
+                      onTrackLockedChanged: widget.onTrackLockedChanged,
+                      onTrackHiddenChanged: widget.onTrackHiddenChanged,
+                      onTrackMutedChanged: widget.onTrackMutedChanged,
+                      onTrackSoloChanged: widget.onTrackSoloChanged,
+                    ),
+                    const VerticalDivider(width: 1),
+                    Expanded(
+                      child: DragTarget<TimelineTransition>(
+                        hitTestBehavior: HitTestBehavior.opaque,
+                        onWillAcceptWithDetails: (_) =>
+                            widget.onTransitionMoved != null,
+                        onAcceptWithDetails: (details) {
+                          _handleTimelineTransitionMove(
+                            details.data,
+                            details.offset,
+                            duration,
+                          );
+                        },
+                        builder: (context, movedTransitionCandidateData, rejectedData) {
+                          return DragTarget<TimelineTransitionAsset>(
+                            hitTestBehavior: HitTestBehavior.opaque,
+                            onWillAcceptWithDetails: (_) =>
+                                widget.onTransitionDropped != null,
+                            onAcceptWithDetails: (details) {
+                              _handleTransitionDrop(
+                                details.data,
+                                details.offset,
+                                duration,
+                              );
+                            },
+                            builder: (context, transitionCandidateData, rejectedData) {
+                              return DragTarget<MediaItem>(
+                                hitTestBehavior: HitTestBehavior.opaque,
+                                onWillAcceptWithDetails: (_) => true,
+                                onAcceptWithDetails: (details) {
+                                  _handleMediaDrop(
+                                    details.data,
+                                    details.offset,
+                                    duration,
+                                  );
+                                },
+                                builder: (context, mediaCandidateData, rejectedData) {
+                                  final accepting =
+                                      mediaCandidateData.isNotEmpty ||
+                                      transitionCandidateData.isNotEmpty ||
+                                      movedTransitionCandidateData.isNotEmpty;
+                                  final acceptingTransition =
+                                      transitionCandidateData.isNotEmpty ||
+                                      movedTransitionCandidateData.isNotEmpty;
+                                  return LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final contentWidth =
+                                          _timelineContentWidth(
+                                            duration,
+                                            constraints.maxWidth,
+                                            zoom: _timelineZoom,
+                                          );
 
-                                    return AnimatedContainer(
-                                      duration: const Duration(
-                                        milliseconds: 120,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: acceptingTransition
-                                            ? _timelineTransitionDropBackground
-                                            : accepting
-                                            ? _timelineDropBackground
-                                            : TgiColors.surface,
-                                      ),
-                                      child: Scrollbar(
-                                        controller: _horizontalScrollController,
-                                        thumbVisibility:
-                                            contentWidth > constraints.maxWidth,
-                                        child: SingleChildScrollView(
-                                          key: const ValueKey(
-                                            'timeline-horizontal-scroll',
-                                          ),
+                                      return AnimatedContainer(
+                                        duration: const Duration(
+                                          milliseconds: 120,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: acceptingTransition
+                                              ? _timelineTransitionDropBackground
+                                              : accepting
+                                              ? _timelineDropBackground
+                                              : TgiColors.surface,
+                                        ),
+                                        child: Scrollbar(
                                           controller:
                                               _horizontalScrollController,
-                                          scrollDirection: Axis.horizontal,
-                                          child: SizedBox(
-                                            key: _timelineContentKey,
-                                            width: contentWidth,
-                                            child: GestureDetector(
-                                              behavior:
-                                                  HitTestBehavior.translucent,
-                                              onSecondaryTapDown:
-                                                  widget.onTextInsertRequested ==
-                                                          null &&
-                                                      widget.onQuickCaptionInsertRequested ==
-                                                          null
-                                                  ? null
-                                                  : (
-                                                      details,
-                                                    ) => _showTextContextMenu(
-                                                      details.globalPosition,
-                                                      _positionFromDx(
-                                                        details
-                                                            .localPosition
-                                                            .dx,
-                                                        duration,
-                                                        contentWidth,
+                                          thumbVisibility:
+                                              contentWidth >
+                                              constraints.maxWidth,
+                                          child: SingleChildScrollView(
+                                            key: const ValueKey(
+                                              'timeline-horizontal-scroll',
+                                            ),
+                                            controller:
+                                                _horizontalScrollController,
+                                            scrollDirection: Axis.horizontal,
+                                            child: SizedBox(
+                                              key: _timelineContentKey,
+                                              width: contentWidth,
+                                              child: GestureDetector(
+                                                behavior:
+                                                    HitTestBehavior.translucent,
+                                                onSecondaryTapDown:
+                                                    widget.onTextInsertRequested ==
+                                                            null &&
+                                                        widget.onQuickCaptionInsertRequested ==
+                                                            null
+                                                    ? null
+                                                    : (
+                                                        details,
+                                                      ) => _showTextContextMenu(
+                                                        details.globalPosition,
+                                                        _positionFromDx(
+                                                          details
+                                                              .localPosition
+                                                              .dx,
+                                                          duration,
+                                                          contentWidth,
+                                                        ),
                                                       ),
-                                                    ),
-                                              child: _TimelineContent(
-                                                key: ValueKey(
-                                                  'timeline_content_$_timelineRenderRevision',
+                                                child: _TimelineContent(
+                                                  key: ValueKey(
+                                                    'timeline_content_$_timelineRenderRevision',
+                                                  ),
+                                                  project: widget.project,
+                                                  horizontalScrollController:
+                                                      _horizontalScrollController,
+                                                  viewportWidth:
+                                                      constraints.maxWidth,
+                                                  audioWaveforms:
+                                                      widget.audioWaveforms,
+                                                  duration: duration,
+                                                  contentWidth: contentWidth,
+                                                  accepting: accepting,
+                                                  playheadPosition:
+                                                      widget.playheadPosition,
+                                                  activeTimelineGroupId:
+                                                      activeGroupId,
+                                                  selectedTimelineGroupId: widget
+                                                      .selectedTimelineGroupId,
+                                                  selectedTimelineGroupIds: widget
+                                                      .selectedTimelineGroupIds,
+                                                  cutMode: widget.cutMode,
+                                                  editMode: _editMode,
+                                                  snappingEnabled:
+                                                      _snappingEnabled,
+                                                  onClipMoved:
+                                                      widget.onClipMoved,
+                                                  onClipResized:
+                                                      widget.onClipResized,
+                                                  onClipCut: widget.onClipCut,
+                                                  onClipSelected:
+                                                      widget.onClipSelected,
+                                                  onBoxSelection:
+                                                      widget.onBoxSelection,
+                                                  onTextClipEdit:
+                                                      widget.onTextClipEdit,
+                                                  onPlayheadChanged:
+                                                      widget.onPlayheadChanged,
+                                                  onRulerPan: _panTimelineBy,
+                                                  onClipVolumeChanged: widget
+                                                      .onClipVolumeChanged,
+                                                  onClipFadeChanged:
+                                                      widget.onClipFadeChanged,
+                                                  onClipTrimPreview:
+                                                      widget.onClipTrimPreview,
+                                                  onClipTrimmed:
+                                                      widget.onClipTrimmed,
+                                                  onClipTrimCanceled:
+                                                      widget.onClipTrimCanceled,
+                                                  onMediaDropped:
+                                                      widget.onMediaDropped,
+                                                  onClipMovedToTrack:
+                                                      widget
+                                                          .onClipMovedToTrack ??
+                                                      widget
+                                                          .onImageClipMovedToTrack,
+                                                  onClipMovedToNewTrack: widget
+                                                      .onClipMovedToNewTrack,
+                                                  onClipSlipped:
+                                                      widget.onClipSlipped,
+                                                  onClipSlid: widget.onClipSlid,
+                                                  verticalScrollController:
+                                                      _timelineLaneScrollController,
+                                                  lanesViewportKey:
+                                                      _timelineLanesViewportKey,
+                                                  onClipDragHover:
+                                                      _handleClipDragHover,
+                                                  onMarkerRenamed:
+                                                      widget.onMarkerRenamed,
+                                                  onMarkerDeleted:
+                                                      widget.onMarkerDeleted,
+                                                  onTransitionMoved:
+                                                      widget.onTransitionMoved,
+                                                  onTransitionEdit:
+                                                      widget.onTransitionEdit,
+                                                  onTransitionDeleted: widget
+                                                      .onTransitionDeleted,
                                                 ),
-                                                project: widget.project,
-                                                horizontalScrollController:
-                                                    _horizontalScrollController,
-                                                viewportWidth:
-                                                    constraints.maxWidth,
-                                                audioWaveforms:
-                                                    widget.audioWaveforms,
-                                                duration: duration,
-                                                contentWidth: contentWidth,
-                                                accepting: accepting,
-                                                playheadPosition:
-                                                    widget.playheadPosition,
-                                                activeTimelineGroupId:
-                                                    activeGroupId,
-                                                selectedTimelineGroupId: widget
-                                                    .selectedTimelineGroupId,
-                                                selectedTimelineGroupIds: widget
-                                                    .selectedTimelineGroupIds,
-                                                cutMode: widget.cutMode,
-                                                editMode: _editMode,
-                                                snappingEnabled:
-                                                    _snappingEnabled,
-                                                onClipMoved: widget.onClipMoved,
-                                                onClipResized:
-                                                    widget.onClipResized,
-                                                onClipCut: widget.onClipCut,
-                                                onClipSelected:
-                                                    widget.onClipSelected,
-                                                onBoxSelection:
-                                                    widget.onBoxSelection,
-                                                onTextClipEdit:
-                                                    widget.onTextClipEdit,
-                                                onPlayheadChanged:
-                                                    widget.onPlayheadChanged,
-                                                onRulerPan: _panTimelineBy,
-                                                onClipVolumeChanged:
-                                                    widget.onClipVolumeChanged,
-                                                onClipFadeChanged:
-                                                    widget.onClipFadeChanged,
-                                                onClipTrimPreview:
-                                                    widget.onClipTrimPreview,
-                                                onClipTrimmed:
-                                                    widget.onClipTrimmed,
-                                                onClipTrimCanceled:
-                                                    widget.onClipTrimCanceled,
-                                                onMediaDropped:
-                                                    widget.onMediaDropped,
-                                                onClipMovedToTrack:
-                                                    widget.onClipMovedToTrack ??
-                                                    widget
-                                                        .onImageClipMovedToTrack,
-                                                onClipMovedToNewTrack: widget
-                                                    .onClipMovedToNewTrack,
-                                                onClipSlipped:
-                                                    widget.onClipSlipped,
-                                                onClipSlid: widget.onClipSlid,
-                                                verticalScrollController:
-                                                    _timelineLaneScrollController,
-                                                lanesViewportKey:
-                                                    _timelineLanesViewportKey,
-                                                onClipDragHover:
-                                                    _handleClipDragHover,
-                                                onMarkerRenamed:
-                                                    widget.onMarkerRenamed,
-                                                onMarkerDeleted:
-                                                    widget.onMarkerDeleted,
-                                                onTransitionMoved:
-                                                    widget.onTransitionMoved,
-                                                onTransitionEdit:
-                                                    widget.onTransitionEdit,
-                                                onTransitionDeleted:
-                                                    widget.onTransitionDeleted,
                                               ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                            );
-                          },
-                        );
-                      },
+                                      );
+                                    },
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -719,6 +768,11 @@ class _TimelinePanelState extends State<TimelinePanel> {
       width: content is RenderBox ? content.size.width : 0,
       enabled: _snappingEnabled,
     );
+    if (dropZone.track != null &&
+        (dropZone.track!.isLocked ||
+            !_canDropMediaOnTrack(item, dropZone.track!))) {
+      return;
+    }
     widget.onMediaDropped(
       item,
       timelineStart,
@@ -832,55 +886,55 @@ class _TimelinePanelState extends State<TimelinePanel> {
         ? _timelineLaneScrollController.offset
         : 0.0;
     final absoluteTrackY = scrollOffset + trackY;
-    final totalTrackHeight = widget.project.tracks.length * _trackHeight;
-    if (absoluteTrackY >= totalTrackHeight) {
+    final trackIndex = _trackAtY(widget.project.tracks, absoluteTrackY);
+    if (trackIndex < 0) {
       return const _TimelineMediaDropZone(isEmptyLaneArea: true);
-    }
-
-    final trackIndex = (absoluteTrackY / _trackHeight).floor();
-    if (trackIndex < 0 || trackIndex >= widget.project.tracks.length) {
-      return const _TimelineMediaDropZone();
     }
     return _TimelineMediaDropZone(track: widget.project.tracks[trackIndex]);
   }
 
-  void _setTimelineZoom(double value) {
-    final nextZoom = value
+  void _setTimelineZoom(double value, {Offset? globalPosition}) {
+    final next = value
         .clamp(_minimumTimelineZoom, _maximumTimelineZoom)
         .toDouble();
-    if ((nextZoom - _timelineZoom).abs() < 0.001) {
-      return;
-    }
-
-    if (_horizontalScrollController.hasClients &&
-        _horizontalScrollController.position.maxScrollExtent > 0) {
-      _pendingHorizontalScrollFraction =
-          _horizontalScrollController.offset /
-          _horizontalScrollController.position.maxScrollExtent;
-    } else {
-      _pendingHorizontalScrollFraction = 0;
-    }
-
-    setState(() {
-      _timelineZoom = nextZoom;
-    });
+    if ((next - _timelineZoom).abs() < .0001) return;
+    final content = _timelineContentKey.currentContext?.findRenderObject();
+    final scroll = _horizontalScrollController.hasClients
+        ? _horizontalScrollController.offset
+        : 0.0;
+    final viewport = _horizontalScrollController.hasClients
+        ? _horizontalScrollController.position.viewportDimension
+        : 0.0;
+    final oldWidth = content is RenderBox ? content.size.width : 1.0;
+    final anchor = globalPosition != null && content is RenderBox
+        ? content.globalToLocal(globalPosition).dx
+        : scroll + viewport / 2;
+    final fraction = anchor / math.max(1, oldWidth);
+    final viewportAnchor = anchor - scroll;
+    final vertical = _timelineLaneScrollController.hasClients
+        ? _timelineLaneScrollController.offset
+        : 0.0;
+    setState(() => _timelineZoom = next);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _restoreHorizontalScrollFraction();
+      if (!mounted || !_horizontalScrollController.hasClients) return;
+      final box = _timelineContentKey.currentContext?.findRenderObject();
+      if (box is! RenderBox) return;
+      final position = _horizontalScrollController.position;
+      _horizontalScrollController.jumpTo(
+        (box.size.width * fraction - viewportAnchor).clamp(
+          position.minScrollExtent,
+          position.maxScrollExtent,
+        ),
+      );
+      if (globalPosition != null && _timelineLaneScrollController.hasClients) {
+        _timelineLaneScrollController.jumpTo(
+          vertical.clamp(
+            0,
+            _timelineLaneScrollController.position.maxScrollExtent,
+          ),
+        );
+      }
     });
-  }
-
-  void _restoreHorizontalScrollFraction() {
-    final fraction = _pendingHorizontalScrollFraction;
-    _pendingHorizontalScrollFraction = null;
-    if (fraction == null || !_horizontalScrollController.hasClients) {
-      return;
-    }
-
-    final max = _horizontalScrollController.position.maxScrollExtent;
-    if (max <= 0) {
-      return;
-    }
-    _horizontalScrollController.jumpTo((max * fraction).clamp(0.0, max));
   }
 
   void _panTimelineBy(double delta) {

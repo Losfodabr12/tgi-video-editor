@@ -14,6 +14,7 @@ class _ClipPropertiesPanel extends StatelessWidget {
     required this.onDurationChanged,
     required this.onVolumeChanged,
     required this.onAudioNoiseReductionChanged,
+    this.onAudioSpeedChanged,
     required this.onUnlinkAudio,
     required this.onFadeInChanged,
     required this.onFadeOutChanged,
@@ -103,6 +104,7 @@ class _ClipPropertiesPanel extends StatelessWidget {
 
   final domain.Clip? clip;
   final int selectedClipCount;
+  final ValueChanged<double>? onAudioSpeedChanged;
   final MediaItem? mediaItem;
   final domain.Clip? audioClip;
   final domain.Clip? videoClip;
@@ -212,6 +214,109 @@ class _ClipPropertiesPanel extends StatelessWidget {
           ),
         ),
         const SizedBox(height: TgiSpacing.md),
+        if (isText) ...[
+          const SizedBox(height: 12),
+          const _PropertySectionTitle('Texto'),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final preset in _textStylePresets)
+                OutlinedButton(
+                  onPressed: () => onTextPresetSelected(selectedClip, preset),
+                  child: Text(preset.label),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          TextFormField(
+            key: ValueKey('clip_text_${selectedClip.id}'),
+            initialValue: selectedClip.textContent,
+            maxLines: 3,
+            minLines: 1,
+            textInputAction: TextInputAction.done,
+            decoration: const InputDecoration(labelText: 'Conteudo'),
+            onChanged: (value) => onTextChanged(selectedClip, value),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            isExpanded: true,
+            initialValue: fontFamily,
+            decoration: const InputDecoration(labelText: 'Fonte'),
+            items: [
+              for (final family in _fontFamilies)
+                DropdownMenuItem(
+                  value: family,
+                  child: Text(
+                    family,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontFamily: family),
+                  ),
+                ),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                onTextFontFamilyChanged(selectedClip, value);
+              }
+            },
+          ),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<domain.TextClipAnimation>(
+            isExpanded: true,
+            initialValue: textAnimation,
+            decoration: const InputDecoration(labelText: 'Animacao'),
+            items: [
+              for (final option in _textAnimations)
+                DropdownMenuItem(
+                  value: option.animation,
+                  child: Text(option.label),
+                ),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                onTextAnimationChanged(selectedClip, value);
+              }
+            },
+          ),
+          const SizedBox(height: 10),
+          _DeferredDoubleSlider(
+            key: ValueKey('clip_font_size_${selectedClip.id}'),
+            label: 'Tamanho',
+            value: selectedClip.fontSize,
+            min: 12,
+            max: 160,
+            divisions: 148,
+            valueLabel: (value) => value.round().toString(),
+            onChanged: (value) => onTextFontSizeChanged(selectedClip, value),
+          ),
+          const SizedBox(height: 10),
+          _ColorChoiceGroup(
+            label: 'Cor do texto',
+            options: _textColors,
+            selectedValue: selectedClip.textColor,
+            onSelected: (value) => onTextColorChanged(selectedClip, value),
+          ),
+          const SizedBox(height: 12),
+          _ColorChoiceGroup(
+            label: 'Fundo',
+            options: _backgroundColors,
+            selectedValue: selectedClip.backgroundColor,
+            onSelected: (value) =>
+                onTextBackgroundColorChanged(selectedClip, value),
+          ),
+          const SizedBox(height: 10),
+          _DeferredDoubleSlider(
+            key: ValueKey('clip_text_opacity_${selectedClip.id}'),
+            label: 'Opacidade',
+            value: selectedClip.opacity,
+            min: 0.2,
+            max: 1,
+            divisions: 8,
+            valueLabel: (value) => '${(value * 100).round()}%',
+            onChanged: (value) => onTextOpacityChanged(selectedClip, value),
+          ),
+        ],
+        const _PropertyDivider(),
         _PropertyReadout(
           label: 'Tipo',
           value: _clipTypeLabel(selectedClip.trackType),
@@ -313,6 +418,17 @@ class _ClipPropertiesPanel extends StatelessWidget {
         if (selectedAudioClip != null) ...[
           const SizedBox(height: 12),
           const _PropertySectionTitle('Audio'),
+          if (selectedClip.trackType == TrackType.audio &&
+              onAudioSpeedChanged != null)
+            _DeferredDoubleSlider(
+              label: 'Velocidade',
+              value: selectedAudioClip.playbackSpeed,
+              min: .25,
+              max: 4,
+              divisions: 15,
+              valueLabel: (value) => '${value.toStringAsFixed(2)}×',
+              onChanged: onAudioSpeedChanged!,
+            ),
           _DeferredDoubleSlider(
             key: ValueKey('clip_volume_${selectedAudioClip.id}'),
             label: 'Volume',
@@ -385,102 +501,6 @@ class _ClipPropertiesPanel extends StatelessWidget {
               ),
             ),
           ],
-        ],
-        if (isText) ...[
-          const SizedBox(height: 12),
-          const _PropertySectionTitle('Texto'),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              for (final preset in _textStylePresets)
-                OutlinedButton(
-                  onPressed: () => onTextPresetSelected(selectedClip, preset),
-                  child: Text(preset.label),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextFormField(
-            key: ValueKey('clip_text_${selectedClip.id}'),
-            initialValue: selectedClip.textContent,
-            maxLines: 3,
-            minLines: 1,
-            textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(labelText: 'Conteudo'),
-            onFieldSubmitted: (value) => onTextChanged(selectedClip, value),
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: fontFamily,
-            decoration: const InputDecoration(labelText: 'Fonte'),
-            items: [
-              for (final family in _fontFamilies)
-                DropdownMenuItem(
-                  value: family,
-                  child: Text(family, style: TextStyle(fontFamily: family)),
-                ),
-            ],
-            onChanged: (value) {
-              if (value != null) {
-                onTextFontFamilyChanged(selectedClip, value);
-              }
-            },
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<domain.TextClipAnimation>(
-            initialValue: textAnimation,
-            decoration: const InputDecoration(labelText: 'Animacao'),
-            items: [
-              for (final option in _textAnimations)
-                DropdownMenuItem(
-                  value: option.animation,
-                  child: Text(option.label),
-                ),
-            ],
-            onChanged: (value) {
-              if (value != null) {
-                onTextAnimationChanged(selectedClip, value);
-              }
-            },
-          ),
-          const SizedBox(height: 10),
-          _DeferredDoubleSlider(
-            key: ValueKey('clip_font_size_${selectedClip.id}'),
-            label: 'Tamanho',
-            value: selectedClip.fontSize,
-            min: 12,
-            max: 160,
-            divisions: 148,
-            valueLabel: (value) => value.round().toString(),
-            onChanged: (value) => onTextFontSizeChanged(selectedClip, value),
-          ),
-          const SizedBox(height: 10),
-          _ColorChoiceGroup(
-            label: 'Cor do texto',
-            options: _textColors,
-            selectedValue: selectedClip.textColor,
-            onSelected: (value) => onTextColorChanged(selectedClip, value),
-          ),
-          const SizedBox(height: 12),
-          _ColorChoiceGroup(
-            label: 'Fundo',
-            options: _backgroundColors,
-            selectedValue: selectedClip.backgroundColor,
-            onSelected: (value) =>
-                onTextBackgroundColorChanged(selectedClip, value),
-          ),
-          const SizedBox(height: 10),
-          _DeferredDoubleSlider(
-            key: ValueKey('clip_text_opacity_${selectedClip.id}'),
-            label: 'Opacidade',
-            value: selectedClip.opacity,
-            min: 0.2,
-            max: 1,
-            divisions: 8,
-            valueLabel: (value) => '${(value * 100).round()}%',
-            onChanged: (value) => onTextOpacityChanged(selectedClip, value),
-          ),
         ],
       ],
     );
@@ -1378,54 +1398,19 @@ double _normalizedClipTime(domain.Clip clip, Duration playheadPosition) {
 
 class _PropertySectionTitle extends StatelessWidget {
   const _PropertySectionTitle(this.label);
-
   final String label;
-
   @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: TgiSpacing.xs, bottom: TgiSpacing.sm),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 26,
-            height: 26,
-            child: TgiFramedBox(
-              radius: TgiRadii.sm,
-              strokeWidth: 1,
-              child: TgiAccentIcon(
-                _propertySectionIcon(label),
-                size: TgiIconSizes.sm,
-              ),
-            ),
-          ),
-          const SizedBox(width: TgiSpacing.sm),
-          TgiAccentText(
-            label,
-            style:
-                Theme.of(
-                  context,
-                ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w900) ??
-                const TextStyle(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(width: TgiSpacing.sm),
-          const Expanded(child: Divider(height: 1)),
-        ],
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(top: 8, bottom: 10),
+    child: Text(
+      label,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
+        color: TgiColors.textSecondary,
       ),
-    );
-  }
-
-  IconData _propertySectionIcon(String label) {
-    return switch (label) {
-      'Tempo' => Icons.schedule_outlined,
-      'Transicao' => Icons.gradient_outlined,
-      'Video' => Icons.movie_filter_outlined,
-      'Audio' => Icons.graphic_eq_outlined,
-      'Overlay' => Icons.open_with_outlined,
-      'Texto' => Icons.title,
-      _ => Icons.tune_outlined,
-    };
-  }
+    ),
+  );
 }
 
 class _PropertyCard extends StatelessWidget {
@@ -1435,16 +1420,9 @@ class _PropertyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: TgiColors.surface.withValues(alpha: 0.72),
-      shape: RoundedRectangleBorder(
-        side: const BorderSide(color: TgiColors.borderSubtle),
-        borderRadius: BorderRadius.circular(TgiRadii.lg),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(TgiSpacing.md),
-        child: child,
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: TgiSpacing.sm),
+      child: child,
     );
   }
 }
@@ -1524,17 +1502,8 @@ class _PropertyReadout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: TgiSpacing.xs),
-      padding: const EdgeInsets.symmetric(
-        horizontal: TgiSpacing.sm,
-        vertical: TgiSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: TgiColors.background.withValues(alpha: 0.44),
-        border: Border.all(color: TgiColors.borderSubtle),
-        borderRadius: BorderRadius.circular(TgiRadii.sm),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: TgiSpacing.xs),
       child: Row(
         children: [
           Text(

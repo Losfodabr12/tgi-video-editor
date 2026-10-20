@@ -30,12 +30,16 @@ class TgiTheme {
   static ThemeData get darkTheme => forStyle(AppVisualStyle.clean);
 
   static ThemeData forStyle(AppVisualStyle style) {
-    final base = ThemeData.dark(useMaterial3: true);
+    final base = ThemeData(
+      brightness: Brightness.dark,
+      useMaterial3: true,
+      fontFamily: TgiTextStyles.family,
+    );
     final clean = style == AppVisualStyle.clean;
     final highContrast = style == AppVisualStyle.highContrast;
     final controlRadius = clean ? 4.0 : (highContrast ? 3.0 : TgiRadii.md);
     final primary = switch (style) {
-      AppVisualStyle.clean => const Color(0xFFB8B8BE),
+      AppVisualStyle.clean => const Color(0xFF72B7F7),
       AppVisualStyle.studio => const Color(0xFFF1C84B),
       AppVisualStyle.highContrast => const Color(0xFF00CFC3),
     };
@@ -156,9 +160,12 @@ class TgiTheme {
           ),
       filledButtonTheme: FilledButtonThemeData(
         style: ButtonStyle(
-          minimumSize: const WidgetStatePropertyAll(Size(44, 42)),
-          padding: const WidgetStatePropertyAll(
-            EdgeInsets.symmetric(horizontal: 18, vertical: 13),
+          minimumSize: WidgetStatePropertyAll(Size(44, clean ? 30 : 42)),
+          padding: WidgetStatePropertyAll(
+            EdgeInsets.symmetric(
+              horizontal: clean ? 12 : 18,
+              vertical: clean ? 7 : 13,
+            ),
           ),
           elevation: const WidgetStatePropertyAll(0),
           foregroundColor: WidgetStateProperty.resolveWith(
@@ -181,9 +188,7 @@ class TgiTheme {
               borderRadius: BorderRadius.circular(controlRadius),
             ),
           ),
-          textStyle: const WidgetStatePropertyAll(
-            TextStyle(fontWeight: FontWeight.w700),
-          ),
+          textStyle: const WidgetStatePropertyAll(TgiTextStyles.control),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -197,13 +202,18 @@ class TgiTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(controlRadius),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+          minimumSize: Size(44, clean ? 30 : 42),
+          padding: EdgeInsets.symmetric(
+            horizontal: clean ? 12 : 18,
+            vertical: clean ? 7 : 14,
+          ),
+          textStyle: TgiTextStyles.control,
           animationDuration: const Duration(milliseconds: 140),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: ButtonStyle(
+          minimumSize: WidgetStatePropertyAll(Size(44, clean ? 30 : 42)),
           foregroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.disabled)
                 ? TgiColors.textDisabled
@@ -232,18 +242,19 @@ class TgiTheme {
               borderRadius: BorderRadius.circular(controlRadius),
             ),
           ),
-          padding: const WidgetStatePropertyAll(
-            EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          padding: WidgetStatePropertyAll(
+            EdgeInsets.symmetric(
+              horizontal: clean ? 12 : 18,
+              vertical: clean ? 7 : 14,
+            ),
           ),
-          textStyle: const WidgetStatePropertyAll(
-            TextStyle(fontWeight: FontWeight.w700),
-          ),
+          textStyle: const WidgetStatePropertyAll(TgiTextStyles.control),
           animationDuration: const Duration(milliseconds: 140),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: ButtonStyle(
-          minimumSize: const WidgetStatePropertyAll(Size(40, 40)),
+          minimumSize: WidgetStatePropertyAll(Size(40, clean ? 30 : 40)),
           foregroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.disabled)
                 ? TgiColors.textDisabled
@@ -255,14 +266,12 @@ class TgiTheme {
               borderRadius: BorderRadius.circular(controlRadius),
             ),
           ),
-          textStyle: const WidgetStatePropertyAll(
-            TextStyle(fontWeight: FontWeight.w700),
-          ),
+          textStyle: const WidgetStatePropertyAll(TgiTextStyles.control),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
         style: ButtonStyle(
-          minimumSize: const WidgetStatePropertyAll(Size.square(40)),
+          minimumSize: WidgetStatePropertyAll(Size.square(clean ? 30 : 40)),
           foregroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.disabled)
                 ? TgiColors.textDisabled

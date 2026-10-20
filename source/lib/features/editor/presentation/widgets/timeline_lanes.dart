@@ -76,49 +76,68 @@ class _TimelineLanes extends StatelessWidget {
       builder: (context, _) => ListView.builder(
         key: viewportKey,
         controller: scrollController,
-        itemExtent: _trackHeight,
-        itemCount: project.tracks.length,
-        itemBuilder: (context, index) {
+        itemCount: project.tracks.length + 1,
+        itemBuilder: (context, row) {
+          if (row == 0) {
+            return const SizedBox(
+              key: ValueKey('timeline-new-track-drop-zone'),
+              height: _newLaneExtent,
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: EdgeInsets.only(left: 12),
+                  child: Text(
+                    '+ Solte aqui para criar uma camada',
+                    style: TextStyle(fontSize: 10, color: TgiColors.textMuted),
+                  ),
+                ),
+              ),
+            );
+          }
+          final index = row - 1;
           final track = project.tracks[index];
-          return _TimelineLane(
-            key: ValueKey(track.id),
-            viewportStart: horizontalScrollController.hasClients
-                ? horizontalScrollController.offset
-                : 0,
-            viewportWidth: viewportWidth,
-            track: track,
-            tracks: project.tracks,
-            markers: project.markers,
-            trackIndex: index,
-            project: project,
-            audioWaveforms: audioWaveforms,
-            duration: duration,
-            width: width,
-            activeTimelineGroupId: activeTimelineGroupId,
-            selectedTimelineGroupId: selectedTimelineGroupId,
-            selectedTimelineGroupIds: selectedTimelineGroupIds,
-            playheadPosition: playheadPosition,
-            cutMode: cutMode,
-            editMode: editMode,
-            snappingEnabled: snappingEnabled,
-            onClipMoved: onClipMoved,
-            onClipResized: onClipResized,
-            onClipCut: onClipCut,
-            onClipSelected: onClipSelected,
-            onTextClipEdit: onTextClipEdit,
-            onClipVolumeChanged: onClipVolumeChanged,
-            onClipFadeChanged: onClipFadeChanged,
-            onClipTrimPreview: onClipTrimPreview,
-            onClipTrimmed: onClipTrimmed,
-            onClipTrimCanceled: onClipTrimCanceled,
-            onMediaDropped: onMediaDropped,
-            onClipMovedToTrack: onClipMovedToTrack,
-            onClipMovedToNewTrack: onClipMovedToNewTrack,
-            onClipSlipped: onClipSlipped,
-            onClipSlid: onClipSlid,
-            onClipDragHover: onClipDragHover,
-            trackDropTargetFromGlobalPosition:
-                _trackDropTargetFromGlobalPosition,
+          return SizedBox(
+            height: track.height,
+            child: _TimelineLane(
+              key: ValueKey(track.id),
+              viewportStart: horizontalScrollController.hasClients
+                  ? horizontalScrollController.offset
+                  : 0,
+              viewportWidth: viewportWidth,
+              track: track,
+              tracks: project.tracks,
+              markers: project.markers,
+              trackIndex: index,
+              project: project,
+              audioWaveforms: audioWaveforms,
+              duration: duration,
+              width: width,
+              activeTimelineGroupId: activeTimelineGroupId,
+              selectedTimelineGroupId: selectedTimelineGroupId,
+              selectedTimelineGroupIds: selectedTimelineGroupIds,
+              playheadPosition: playheadPosition,
+              cutMode: cutMode,
+              editMode: editMode,
+              snappingEnabled: snappingEnabled,
+              onClipMoved: onClipMoved,
+              onClipResized: onClipResized,
+              onClipCut: onClipCut,
+              onClipSelected: onClipSelected,
+              onTextClipEdit: onTextClipEdit,
+              onClipVolumeChanged: onClipVolumeChanged,
+              onClipFadeChanged: onClipFadeChanged,
+              onClipTrimPreview: onClipTrimPreview,
+              onClipTrimmed: onClipTrimmed,
+              onClipTrimCanceled: onClipTrimCanceled,
+              onMediaDropped: onMediaDropped,
+              onClipMovedToTrack: onClipMovedToTrack,
+              onClipMovedToNewTrack: onClipMovedToNewTrack,
+              onClipSlipped: onClipSlipped,
+              onClipSlid: onClipSlid,
+              onClipDragHover: onClipDragHover,
+              trackDropTargetFromGlobalPosition:
+                  _trackDropTargetFromGlobalPosition,
+            ),
           );
         },
       ),
@@ -140,16 +159,15 @@ class _TimelineLanes extends StatelessWidget {
         ? scrollController.offset
         : 0.0;
     final absoluteY = scrollOffset + localY;
-    if (absoluteY >= project.tracks.length * _trackHeight) {
+    if (localY < 0) return const _TimelineTrackDropTarget(invalid: true);
+    final targetIndex = _trackAtY(project.tracks, absoluteY);
+    if (targetIndex < 0) {
       return const _TimelineTrackDropTarget(isBelowTracks: true);
     }
-    final targetIndex = (absoluteY / _trackHeight).floor();
-    if (targetIndex < 0 || targetIndex >= project.tracks.length) {
-      return const _TimelineTrackDropTarget();
-    }
-    final targetTrack = project.tracks[targetIndex];
+    final target = project.tracks[targetIndex];
     return _TimelineTrackDropTarget(
-      trackId: targetTrack.type == trackType ? targetTrack.id : null,
+      trackId: target.accepts(trackType) && !target.isLocked ? target.id : null,
+      invalid: !target.accepts(trackType) || target.isLocked,
     );
   }
 
@@ -235,12 +253,39 @@ class _TimelineLane extends StatefulWidget {
   @override
   State<_TimelineLane> createState() => _TimelineLaneState();
 
-  Widget buildLane(BuildContext context, GlobalKey laneKey) {
+  Widget buildLane(
+    BuildContext context,
+    GlobalKey laneKey, {
+    Duration? dropPreview,
+    required ValueChanged<Duration?> onDropHover,
+  }) {
     return DragTarget<MediaItem>(
       hitTestBehavior: HitTestBehavior.opaque,
       onWillAcceptWithDetails: (details) =>
           !track.isLocked && _canDropMediaOnTrack(details.data, track),
+      onMove: (details) {
+        final box = laneKey.currentContext?.findRenderObject();
+        if (box is! RenderBox) return;
+        onDropHover(
+          _snapMediaDropPosition(
+            item: details.data,
+            project: project,
+            targetTrack: track,
+            proposedStart: _positionFromDx(
+              box.globalToLocal(details.offset).dx,
+              duration,
+              width,
+            ),
+            playheadPosition: playheadPosition,
+            duration: duration,
+            width: width,
+            enabled: snappingEnabled,
+          ),
+        );
+      },
+      onLeave: (_) => onDropHover(null),
       onAcceptWithDetails: (details) {
+        onDropHover(null);
         if (track.isLocked) {
           return;
         }
@@ -301,48 +346,88 @@ class _TimelineLane extends StatefulWidget {
                 ),
               ),
               _TimelineGrid(duration: duration),
-              for (final clip in track.clips)
-                if (_clipInViewport(clip))
-                  _PositionedClip(
-                    key: ValueKey(clip.id),
-                    clip: clip,
-                    mediaItem: _findMediaItem(project, clip.mediaItemId),
-                    audioWaveform: audioWaveforms[clip.mediaItemId],
-                    duration: duration,
-                    width: width,
-                    active: clip.timelineGroupId == activeTimelineGroupId,
-                    selected:
-                        selectedTimelineGroupIds.contains(
-                          clip.timelineGroupId,
-                        ) ||
-                        clip.timelineGroupId == selectedTimelineGroupId,
-                    trackLocked: track.isLocked,
-                    trackHidden: track.isHidden,
-                    playheadPosition: playheadPosition,
-                    cutMode: cutMode,
-                    editMode: editMode,
-                    snappingEnabled: snappingEnabled,
-                    onClipMoved: onClipMoved,
-                    onClipResized: onClipResized,
-                    onClipCut: onClipCut,
-                    onClipSelected: onClipSelected,
-                    onTextClipEdit: onTextClipEdit,
-                    onClipVolumeChanged: onClipVolumeChanged,
-                    onClipFadeChanged: onClipFadeChanged,
-                    onClipTrimPreview: onClipTrimPreview,
-                    onClipTrimmed: onClipTrimmed,
-                    onClipTrimCanceled: onClipTrimCanceled,
-                    tracks: tracks,
-                    markers: markers,
-                    trackIndex: trackIndex,
-                    onClipMovedToTrack: onClipMovedToTrack,
-                    onClipMovedToNewTrack: onClipMovedToNewTrack,
-                    onClipSlipped: onClipSlipped,
-                    onClipSlid: onClipSlid,
-                    onClipDragHover: onClipDragHover,
-                    trackDropTargetFromGlobalPosition:
-                        trackDropTargetFromGlobalPosition,
+              if (accepting && dropPreview != null)
+                Positioned(
+                  key: ValueKey('media-drop-preview-${track.id}'),
+                  left: _leftFor(dropPreview, duration, width),
+                  top: 3,
+                  bottom: 3,
+                  width: _widthFor(
+                    candidateData.first!.type == MediaType.image
+                        ? const Duration(seconds: 5)
+                        : candidateData.first!.duration,
+                    duration,
+                    width,
                   ),
+                  child: IgnorePointer(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: TgiColors.accent.withValues(alpha: .16),
+                        border: Border.all(
+                          color:
+                              _trackHasClipOverlap(
+                                track,
+                                dropPreview,
+                                candidateData.first!.type == MediaType.image
+                                    ? const Duration(seconds: 5)
+                                    : candidateData.first!.duration,
+                              )
+                              ? TgiColors.danger
+                              : TgiColors.accent,
+                        ),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(5),
+                        child: Text(
+                          formatDuration(dropPreview),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: TgiColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              for (final clip in _visibleClips())
+                _PositionedClip(
+                  key: ValueKey(clip.id),
+                  clip: clip,
+                  mediaItem: _findMediaItem(project, clip.mediaItemId),
+                  audioWaveform: audioWaveforms[clip.mediaItemId],
+                  duration: duration,
+                  width: width,
+                  active: clip.timelineGroupId == activeTimelineGroupId,
+                  selected:
+                      selectedTimelineGroupIds.contains(clip.timelineGroupId) ||
+                      clip.timelineGroupId == selectedTimelineGroupId,
+                  trackLocked: track.isLocked,
+                  trackHidden: track.isHidden,
+                  playheadPosition: playheadPosition,
+                  cutMode: cutMode,
+                  editMode: editMode,
+                  snappingEnabled: snappingEnabled,
+                  onClipMoved: onClipMoved,
+                  onClipResized: onClipResized,
+                  onClipCut: onClipCut,
+                  onClipSelected: onClipSelected,
+                  onTextClipEdit: onTextClipEdit,
+                  onClipVolumeChanged: onClipVolumeChanged,
+                  onClipFadeChanged: onClipFadeChanged,
+                  onClipTrimPreview: onClipTrimPreview,
+                  onClipTrimmed: onClipTrimmed,
+                  onClipTrimCanceled: onClipTrimCanceled,
+                  tracks: tracks,
+                  markers: markers,
+                  trackIndex: trackIndex,
+                  onClipMovedToTrack: onClipMovedToTrack,
+                  onClipMovedToNewTrack: onClipMovedToNewTrack,
+                  onClipSlipped: onClipSlipped,
+                  onClipSlid: onClipSlid,
+                  onClipDragHover: onClipDragHover,
+                  trackDropTargetFromGlobalPosition:
+                      trackDropTargetFromGlobalPosition,
+                ),
             ],
           ),
         );
@@ -350,28 +435,49 @@ class _TimelineLane extends StatefulWidget {
     );
   }
 
-  bool _clipInViewport(domain.Clip clip) {
-    // Keep selected clips mounted while their handles/drag leave the viewport.
-    if (selectedTimelineGroupIds.contains(clip.timelineGroupId) ||
-        selectedTimelineGroupId == clip.timelineGroupId) {
-      return true;
-    }
+  Iterable<domain.Clip> _visibleClips() sync* {
     const overscan = 160.0;
-    final left = _leftFor(clip.timelineStart, duration, width);
-    final clipWidth = math.max(
-      _minimumTimelineClipWidth,
-      _widthFor(clip.duration, duration, width),
+    final start = _positionFromDx(
+      math.max(0, viewportStart - overscan),
+      duration,
+      width,
     );
-    return left + clipWidth >= viewportStart - overscan &&
-        left <= viewportStart + viewportWidth + overscan;
+    final end = _positionFromDx(
+      viewportStart + viewportWidth + overscan,
+      duration,
+      width,
+    );
+    final seen = <String>{};
+    for (final clip in track.clipIndex.intersecting(start, end)) {
+      seen.add(clip.id);
+      yield clip;
+    }
+    for (final group in {
+      ...selectedTimelineGroupIds,
+      ?selectedTimelineGroupId,
+    }) {
+      for (final clip in track.clipIndex.group(group)) {
+        if (seen.add(clip.id)) yield clip;
+      }
+    }
   }
 }
 
 class _TimelineLaneState extends State<_TimelineLane> {
   final _laneKey = GlobalKey();
+  Duration? _dropPreview;
 
   @override
-  Widget build(BuildContext context) => widget.buildLane(context, _laneKey);
+  Widget build(BuildContext context) => widget.buildLane(
+    context,
+    _laneKey,
+    dropPreview: _dropPreview,
+    onDropHover: (value) {
+      if (mounted && value != _dropPreview) {
+        setState(() => _dropPreview = value);
+      }
+    },
+  );
 }
 
 class _TimelineGrid extends StatelessWidget {
@@ -649,7 +755,6 @@ class _PositionedClipState extends State<_PositionedClip> {
           TrackType.video,
         );
     final canDragClip =
-        !linkedAudioClip &&
         !widget.trackLocked &&
         !widget.cutMode &&
         (widget.editMode == TimelineEditMode.move ||
@@ -704,7 +809,7 @@ class _PositionedClipState extends State<_PositionedClip> {
       left: left,
       top: topInset,
       width: clipWidth,
-      height: _trackHeight - topInset - bottomInset,
+      height: widget.tracks[widget.trackIndex].height - topInset - bottomInset,
       child: MouseRegion(
         onEnter: (_) {
           if (!_hovering) {
@@ -727,7 +832,20 @@ class _PositionedClipState extends State<_PositionedClip> {
           ),
           child: Listener(
             behavior: HitTestBehavior.translucent,
-            onPointerDown: useRawAudioDrag ? _startRawAudioDrag : null,
+            onPointerDown: useRawAudioDrag
+                ? _startRawAudioDrag
+                : (event) {
+                    if (widget.cutMode ||
+                        (event.buttons & kPrimaryMouseButton) == 0) {
+                      return;
+                    }
+                    widget.onClipSelected?.call(
+                      widget.clip.timelineGroupId,
+                      clipId: widget.clip.id,
+                      additive: _additiveSelectPressed(),
+                      toggle: _toggleSelectPressed(),
+                    );
+                  },
             onPointerMove: useRawAudioDrag
                 ? (event) => _updateRawAudioDrag(event, snapCandidates)
                 : null,
@@ -738,6 +856,21 @@ class _PositionedClipState extends State<_PositionedClip> {
             child: Stack(
               fit: StackFit.expand,
               children: [
+                if (_dragging)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            width: 2,
+                            color: _trackDropTargetForDrag().invalid
+                                ? TgiColors.danger
+                                : TgiColors.accent,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 GestureDetector(
                   key: ValueKey('timeline-clip-body-${widget.clip.id}'),
                   behavior: HitTestBehavior.opaque,
@@ -757,12 +890,6 @@ class _PositionedClipState extends State<_PositionedClip> {
                       }
                       return;
                     }
-
-                    widget.onClipSelected?.call(
-                      widget.clip.timelineGroupId,
-                      additive: _additiveSelectPressed(),
-                      toggle: _toggleSelectPressed(),
-                    );
                   },
                   onDoubleTap:
                       widget.clip.trackType == TrackType.text &&
@@ -771,6 +898,7 @@ class _PositionedClipState extends State<_PositionedClip> {
                       ? () {
                           widget.onClipSelected?.call(
                             widget.clip.timelineGroupId,
+                            clipId: widget.clip.id,
                           );
                           widget.onTextClipEdit?.call(widget.clip);
                         }
@@ -916,7 +1044,12 @@ class _PositionedClipState extends State<_PositionedClip> {
     if (size == null) {
       return;
     }
-    widget.onClipSelected?.call(widget.clip.timelineGroupId);
+    widget.onClipSelected?.call(
+      widget.clip.timelineGroupId,
+      clipId: widget.clip.id,
+      additive: _additiveSelectPressed(),
+      toggle: _toggleSelectPressed(),
+    );
     _rawDragPointer = event.pointer;
     _rawDragStartGlobalPosition = event.position;
     _rawDragStartedOnVolumeLine = _audioVolumeLineContains(
@@ -946,6 +1079,7 @@ class _PositionedClipState extends State<_PositionedClip> {
     }
     if (_rawAudioDragMode == _AudioClipDragMode.pending) {
       if (_rawDragStartedOnVolumeLine &&
+          HardwareKeyboard.instance.isAltPressed &&
           delta.dy.abs() > delta.dx.abs() &&
           _canAdjustRawAudioVolume()) {
         _rawAudioDragMode = _AudioClipDragMode.volume;
@@ -1025,11 +1159,6 @@ class _PositionedClipState extends State<_PositionedClip> {
 
   bool _canMoveRawAudioClip() {
     return widget.clip.trackType == TrackType.audio &&
-        !_timelineGroupHasTrackType(
-          widget.tracks,
-          widget.clip.timelineGroupId,
-          TrackType.video,
-        ) &&
         !widget.trackLocked &&
         !widget.cutMode &&
         !_resizing;
@@ -1093,6 +1222,7 @@ class _PositionedClipState extends State<_PositionedClip> {
     final target = _trackDropTargetForDrag();
     widget.onClipDragHover(null);
     _resetClipDragState();
+    if (target.invalid) return;
     if (target.trackId != null && widget.onClipMovedToTrack != null) {
       widget.onClipMovedToTrack!(widget.clip.id, target.trackId!, nextStart);
     } else if (_shouldMoveClipToNewTrack(target) &&
@@ -1126,37 +1256,35 @@ class _PositionedClipState extends State<_PositionedClip> {
     }
 
     final targetIndex =
-        widget.trackIndex + (_dragVerticalDelta / _trackHeight).round();
+        widget.trackIndex +
+        (_dragVerticalDelta / widget.tracks[widget.trackIndex].height).round();
     if (targetIndex >= widget.tracks.length) {
       return const _TimelineTrackDropTarget(isBelowTracks: true);
     }
     if (targetIndex < 0) {
-      return const _TimelineTrackDropTarget();
+      return const _TimelineTrackDropTarget(isBelowTracks: true);
     }
     final targetTrack = widget.tracks[targetIndex];
     return _TimelineTrackDropTarget(
-      trackId: targetTrack.type == widget.clip.trackType
+      trackId:
+          targetTrack.accepts(widget.clip.trackType) && !targetTrack.isLocked
           ? targetTrack.id
           : null,
+      invalid:
+          !targetTrack.accepts(widget.clip.trackType) || targetTrack.isLocked,
     );
   }
 
-  bool _shouldMoveClipToNewTrack(_TimelineTrackDropTarget target) {
-    return target.isBelowTracks &&
-        widget.clip.trackType == TrackType.audio &&
-        _canMoveRawAudioClip();
-  }
+  bool _shouldMoveClipToNewTrack(_TimelineTrackDropTarget target) =>
+      target.isBelowTracks;
 
-  bool _canMoveClipBetweenTracks() {
-    return switch (widget.clip.trackType) {
-      TrackType.audio => _canMoveRawAudioClip(),
-      TrackType.image || TrackType.text => true,
-      TrackType.video => false,
-    };
-  }
+  bool _canMoveClipBetweenTracks() => !widget.trackLocked && !widget.cutMode;
 
   void _startFadeAdjustment(_ClipResizeEdge edge) {
-    widget.onClipSelected?.call(widget.clip.timelineGroupId);
+    widget.onClipSelected?.call(
+      widget.clip.timelineGroupId,
+      clipId: widget.clip.id,
+    );
     _clearRawAudioDrag();
     setState(() {
       _dragging = false;
@@ -1238,7 +1366,10 @@ class _PositionedClipState extends State<_PositionedClip> {
         'timelineStart=${widget.clip.timelineStart.inMilliseconds}ms '
         'duration=${widget.clip.duration.inMilliseconds}ms',
       );
-      widget.onClipSelected?.call(widget.clip.timelineGroupId);
+      widget.onClipSelected?.call(
+        widget.clip.timelineGroupId,
+        clipId: widget.clip.id,
+      );
       _logTrim(
         'start-preview edge=${edge.name} clip=${widget.clip.id} '
         'sourceStart=${next.sourceStart.inMilliseconds}ms '
@@ -1360,7 +1491,10 @@ class _PositionedClipState extends State<_PositionedClip> {
   }
 
   void _startResize(_ClipResizeEdge edge) {
-    widget.onClipSelected?.call(widget.clip.timelineGroupId);
+    widget.onClipSelected?.call(
+      widget.clip.timelineGroupId,
+      clipId: widget.clip.id,
+    );
     setState(() {
       _dragging = false;
       _dragDelta = 0;

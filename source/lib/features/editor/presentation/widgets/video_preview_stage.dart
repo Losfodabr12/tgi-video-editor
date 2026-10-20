@@ -37,97 +37,8 @@ class _PreviewFrame extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: TgiColors.black,
-        border: Border.all(color: TgiColors.borderStrong),
-        borderRadius: BorderRadius.circular(TgiRadii.lg),
-        boxShadow: const [
-          BoxShadow(
-            color: TgiColors.shadow,
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-          BoxShadow(
-            color: TgiColors.glowSoft,
-            blurRadius: 20,
-            spreadRadius: -3,
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(TgiSpacing.xs),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(TgiRadii.md),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              child,
-              const IgnorePointer(child: _PreviewCornerGuides()),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PreviewCornerGuides extends StatelessWidget {
-  const _PreviewCornerGuides();
-
-  @override
-  Widget build(BuildContext context) {
-    return CustomPaint(painter: _PreviewCornerGuidesPainter());
-  }
-}
-
-class _PreviewCornerGuidesPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (size.width <= 0 || size.height <= 0) {
-      return;
-    }
-    final paint = Paint()
-      ..color = TgiColors.accentSoft.withValues(alpha: 0.34)
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
-    const length = 22.0;
-    const inset = 10.0;
-    final points = <List<Offset>>[
-      [
-        const Offset(inset, inset + length),
-        const Offset(inset, inset),
-        const Offset(inset + length, inset),
-      ],
-      [
-        Offset(size.width - inset - length, inset),
-        Offset(size.width - inset, inset),
-        Offset(size.width - inset, inset + length),
-      ],
-      [
-        Offset(inset, size.height - inset - length),
-        Offset(inset, size.height - inset),
-        Offset(inset + length, size.height - inset),
-      ],
-      [
-        Offset(size.width - inset - length, size.height - inset),
-        Offset(size.width - inset, size.height - inset),
-        Offset(size.width - inset, size.height - inset - length),
-      ],
-    ];
-    for (final pathPoints in points) {
-      final path = Path()..moveTo(pathPoints.first.dx, pathPoints.first.dy);
-      for (final point in pathPoints.skip(1)) {
-        path.lineTo(point.dx, point.dy);
-      }
-      canvas.drawPath(path, paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _PreviewCornerGuidesPainter oldDelegate) =>
-      false;
+  Widget build(BuildContext context) =>
+      ColoredBox(color: TgiColors.black, child: child);
 }
 
 class _PreviewViewport extends StatelessWidget {
@@ -144,6 +55,8 @@ class _PreviewViewport extends StatelessWidget {
     required this.imageOverlayY,
     required this.imageOverlayScale,
     this.videoOverlayEntries = const [],
+    this.visualLayerOrder = const {},
+    this.baseVideoClipId,
     this.imageOverlayEntries = const [],
     this.textOverlayEntries = const [],
     this.transitionPreviewEntries = const [],
@@ -206,6 +119,8 @@ class _PreviewViewport extends StatelessWidget {
   final double imageOverlayY;
   final double imageOverlayScale;
   final List<VideoOverlayEntry> videoOverlayEntries;
+  final Map<String, int> visualLayerOrder;
+  final String? baseVideoClipId;
   final List<ImageOverlayEntry> imageOverlayEntries;
   final List<TextOverlayEntry> textOverlayEntries;
   final List<TransitionPreviewEntry> transitionPreviewEntries;
@@ -285,13 +200,11 @@ class _PreviewViewport extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             const ColoredBox(color: TgiColors.black),
-            ..._buildVideoOverlays(),
-            ..._buildImageOverlays(),
+            ..._orderedVisualLayers(),
             _TimelineTransitionPreviewLayer(
               entries: transitionPreviewEntries,
               playing: transitionPreviewPlaying,
             ),
-            ..._buildTextOverlays(),
             if (kenBurnsToolActive)
               _KenBurnsToolOverlay(
                 pickStart: kenBurnsPickStart,
@@ -352,9 +265,9 @@ class _PreviewViewport extends StatelessWidget {
         return Stack(
           fit: StackFit.expand,
           children: [
-            ColoredBox(
-              color: TgiColors.black,
-              child: Stack(
+            const ColoredBox(color: TgiColors.black),
+            ..._orderedVisualLayers(
+              base: Stack(
                 fit: StackFit.expand,
                 children: [
                   if (visualAdjustments.chromaKeyEnabled &&
@@ -366,17 +279,14 @@ class _PreviewViewport extends StatelessWidget {
                     opacity: _clampOpacity(videoOpacity),
                     child: _buildAdjustedVideoSurface(currentVideoController),
                   ),
+                  if (mask != null) _PreviewMaskEffect(mask: mask!),
                 ],
               ),
             ),
-            if (mask != null) _PreviewMaskEffect(mask: mask!),
-            ..._buildVideoOverlays(),
-            ..._buildImageOverlays(),
             _TimelineTransitionPreviewLayer(
               entries: transitionPreviewEntries,
               playing: transitionPreviewPlaying,
             ),
-            ..._buildTextOverlays(),
             if (loading || buffering)
               const Center(
                 child: SizedBox(
@@ -506,6 +416,24 @@ class _PreviewViewport extends StatelessWidget {
         color: TgiColors.textSecondary,
       ),
     );
+  }
+
+  List<Widget> _orderedVisualLayers({Widget? base}) {
+    final layers = <Widget>[
+      if (base != null)
+        KeyedSubtree(key: ValueKey(baseVideoClipId ?? 'base'), child: base),
+      ..._buildVideoOverlays(),
+      ..._buildImageOverlays(),
+      ..._buildTextOverlays(),
+    ];
+    if (visualLayerOrder.isNotEmpty) {
+      layers.sort(
+        (a, b) => (visualLayerOrder[(a.key as ValueKey).value] ?? -1).compareTo(
+          visualLayerOrder[(b.key as ValueKey).value] ?? -1,
+        ),
+      );
+    }
+    return layers;
   }
 
   List<Widget> _buildVideoOverlays() {

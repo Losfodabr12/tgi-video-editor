@@ -1503,7 +1503,7 @@ class FfmpegService {
           ..add(
             'color=c=black:s=${outputWidth}x$outputHeight:'
             'r=${settings.framesPerSecond}:d=$segmentSeconds,'
-            'format=yuv420p,setsar=1[segv$index]',
+            'format=rgba,setsar=1[segv$index]',
           )
           ..add(_silentAudioFilter(index, segment.duration));
         concatInputs.write('[segv$index][a$index]');
@@ -1546,10 +1546,29 @@ class FfmpegService {
           'atrim=duration=$totalSeconds,asetpts=PTS-STARTPTS[a]',
         );
     }
-    var currentVideoLabel = 'basev';
+    filters.add(
+      'color=c=black:s=${outputWidth}x$outputHeight:'
+      'r=${settings.framesPerSecond}:d=$totalSeconds,format=rgba[canvas]',
+    );
+    var currentVideoLabel = 'canvas';
+    void renderBase() {
+      final windows = segments
+          .where((segment) => !segment.isGap)
+          .map(
+            (segment) =>
+                'gte(t,${_seconds(segment.timelineStart)})*lt(t,${_seconds(segment.timelineEnd)})',
+          )
+          .join('+');
+      filters.add(
+        '[$currentVideoLabel][basev]overlay=0:0:'
+        "enable='$windows':eof_action=pass[composedbase]",
+      );
+      currentVideoLabel = 'composedbase';
+    }
+
     final videoOverlayInputStart =
         mediaSegmentInputCount + standaloneAudioSegments.length;
-    for (var index = 0; index < videoOverlays.length; index++) {
+    void renderVideo(int index) {
       final overlay = videoOverlays[index];
       final videoInputIndex = videoOverlayInputStart + index;
       final videoLabel = 'pipv$index';
@@ -1644,6 +1663,13 @@ class FfmpegService {
             outputWidth: outputWidth,
             outputHeight: outputHeight,
           ),
+          ..._videoFadeFilters(
+            alpha: true,
+            outputStart: overlay.outputStart,
+            fadeIn: overlay.fadeIn,
+            fadeOut: overlay.fadeOut,
+            duration: overlay.duration,
+          ),
           ..._opacityFilters(
             opacity: overlay.opacity,
             keyframes: overlay.keyframes,
@@ -1683,7 +1709,7 @@ class FfmpegService {
       currentVideoLabel = nextVideoLabel;
     }
 
-    for (var index = 0; index < overlays.length; index++) {
+    void renderImage(int index) {
       final overlay = overlays[index];
       final imageInputIndex =
           videoOverlayInputStart + videoOverlays.length + index;
@@ -1741,7 +1767,7 @@ class FfmpegService {
     }
 
     var transitionInputOffset = 0;
-    for (var index = 0; index < transitionOverlays.length; index++) {
+    void renderTransition(int index) {
       final transition = transitionOverlays[index];
       final transitionLabel = 'tr$index';
       final nextVideoLabel = 'vtr$index';
@@ -1787,7 +1813,7 @@ class FfmpegService {
       currentVideoLabel = nextVideoLabel;
     }
 
-    for (var index = 0; index < textOverlays.length; index++) {
+    void renderText(int index) {
       final overlay = textOverlays[index];
       final nextVideoLabel = 'vtxt$index';
       final start = _seconds(overlay.outputStart);
@@ -1851,6 +1877,47 @@ class FfmpegService {
         "enable='between(t,$start,$end)'[$nextVideoLabel]",
       );
       currentVideoLabel = nextVideoLabel;
+    }
+
+    final passes =
+        <({int order, int sequence, void Function() render})>[
+          (
+            order:
+                project.layerOrderByClipId[project.baseVideoTrack!.clips
+                    .firstWhere((clip) => clip.trackType == TrackType.video)
+                    .id] ??
+                0,
+            sequence: 0,
+            render: renderBase,
+          ),
+          for (var index = 0; index < videoOverlays.length; index++)
+            (
+              order: videoOverlays[index].zOrder,
+              sequence: index + 1,
+              render: () => renderVideo(index),
+            ),
+          for (var index = 0; index < overlays.length; index++)
+            (
+              order: overlays[index].zOrder,
+              sequence: index + 100000,
+              render: () => renderImage(index),
+            ),
+          for (var index = 0; index < textOverlays.length; index++)
+            (
+              order: textOverlays[index].zOrder,
+              sequence: index + 200000,
+              render: () => renderText(index),
+            ),
+        ]..sort((a, b) {
+          final layer = a.order.compareTo(b.order);
+          return layer != 0 ? layer : a.sequence.compareTo(b.sequence);
+        });
+    for (final pass in passes) {
+      pass.render();
+    }
+    // Existing timeline transitions are global effects, above visual layers.
+    for (var index = 0; index < transitionOverlays.length; index++) {
+      renderTransition(index);
     }
 
     currentVideoLabel = _appendWatermarkFilter(
@@ -1962,7 +2029,7 @@ class FfmpegService {
 
     final filters = <String>['[0:v]setsar=1[basev]'];
     var currentVideoLabel = 'basev';
-    for (var index = 0; index < overlays.length; index++) {
+    void renderImage(int index) {
       final overlay = overlays[index];
       final imageInputIndex = 1 + audioSegments.length + index;
       final imageLabel = 'ov$index';
@@ -2004,7 +2071,7 @@ class FfmpegService {
     }
 
     var transitionInputOffset = 0;
-    for (var index = 0; index < transitionOverlays.length; index++) {
+    void renderTransition(int index) {
       final transition = transitionOverlays[index];
       final transitionLabel = 'tr$index';
       final nextVideoLabel = 'vtr$index';
@@ -2049,7 +2116,7 @@ class FfmpegService {
       currentVideoLabel = nextVideoLabel;
     }
 
-    for (var index = 0; index < textOverlays.length; index++) {
+    void renderText(int index) {
       final overlay = textOverlays[index];
       final nextVideoLabel = 'vtxt$index';
       final start = _seconds(overlay.outputStart);
@@ -2113,6 +2180,32 @@ class FfmpegService {
         "enable='between(t,$start,$end)'[$nextVideoLabel]",
       );
       currentVideoLabel = nextVideoLabel;
+    }
+
+    final passes =
+        <({int order, int sequence, void Function() render})>[
+          for (var index = 0; index < overlays.length; index++)
+            (
+              order: overlays[index].zOrder,
+              sequence: index + 100000,
+              render: () => renderImage(index),
+            ),
+          for (var index = 0; index < textOverlays.length; index++)
+            (
+              order: textOverlays[index].zOrder,
+              sequence: index + 200000,
+              render: () => renderText(index),
+            ),
+        ]..sort((a, b) {
+          final layer = a.order.compareTo(b.order);
+          return layer != 0 ? layer : a.sequence.compareTo(b.sequence);
+        });
+    for (final pass in passes) {
+      pass.render();
+    }
+    // Existing timeline transitions are global effects, above visual layers.
+    for (var index = 0; index < transitionOverlays.length; index++) {
+      renderTransition(index);
     }
 
     currentVideoLabel = _appendWatermarkFilter(
@@ -2199,10 +2292,9 @@ class FfmpegService {
   ) async {
     final stabilizationTargets = <Clip>[];
     for (final track in project.tracks) {
-      if (track.type != TrackType.video || track.isHidden) {
-        continue;
-      }
+      if (track.isHidden) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.video) continue;
         if (clip.stabilizationEnabled && clip.duration > Duration.zero) {
           stabilizationTargets.add(clip);
         }
@@ -2273,9 +2365,6 @@ class FfmpegService {
       for (final clip in stabilizationTargets) clip.timelineGroupId,
     };
     final updatedTracks = project.tracks.map((track) {
-      if (track.type != TrackType.video && track.type != TrackType.audio) {
-        return track;
-      }
       final updatedClips = track.clips.map((clip) {
         if (!stabilizedGroups.contains(clip.timelineGroupId)) {
           return clip;
@@ -2385,8 +2474,9 @@ class FfmpegService {
       final renderPath = _join(exportDirectory.path, 'render.mp4');
       await EditorFontService.prepare(
         project.tracks
-            .where((track) => !track.isHidden && track.type == TrackType.text)
+            .where((track) => !track.isHidden)
             .expand((track) => track.clips)
+            .where((clip) => clip.trackType == TrackType.text)
             .map((clip) => clip.fontFamily),
       );
       final exportProject = await _preprocessStabilizedVideoClips(
@@ -2905,9 +2995,21 @@ class FfmpegService {
     final videoClips = mainVideoTrack == null
         ? <Clip>[]
         : mainVideoTrack.clips
-              .where((clip) => clip.duration > Duration.zero)
+              .where(
+                (clip) =>
+                    clip.trackType == TrackType.video &&
+                    clip.duration > Duration.zero,
+              )
               .toList();
     videoClips.sort(_compareClipsByTimeline);
+    for (var index = 1; index < videoClips.length; index++) {
+      if (videoClips[index].timelineStart < videoClips[index - 1].timelineEnd) {
+        throw FfmpegProcessException(
+          'Há vídeos sobrepostos na mesma pista (${mainVideoTrack!.name}). '
+          'Mova um dos clipes para outra camada visual antes de exportar.',
+        );
+      }
+    }
     if (videoClips.isEmpty) {
       return const [];
     }
@@ -3037,17 +3139,7 @@ class FfmpegService {
     return segments;
   }
 
-  Track? _mainVideoTrackForExport(TgiProject project) {
-    for (final track in project.tracks) {
-      if (track.type != TrackType.video || track.isHidden) {
-        continue;
-      }
-      if (track.clips.any((clip) => clip.duration > Duration.zero)) {
-        return track;
-      }
-    }
-    return null;
-  }
+  Track? _mainVideoTrackForExport(TgiProject project) => project.baseVideoTrack;
 
   Duration _videoExportDuration(TgiProject project) {
     final hasSoloAudioTrack = project.tracks.any(
@@ -3067,7 +3159,8 @@ class FfmpegService {
         if (clip.duration <= Duration.zero) {
           continue;
         }
-        if (track.type == TrackType.text && clip.textContent.trim().isEmpty) {
+        if (clip.trackType == TrackType.text &&
+            clip.textContent.trim().isEmpty) {
           continue;
         }
         if (clip.timelineEnd > duration) {
@@ -3089,14 +3182,20 @@ class FfmpegService {
     }
 
     final overlays = <_VideoOverlaySegment>[];
-    for (final track in project.tracks) {
-      if (track.type != TrackType.video ||
+    for (final track in project.tracks.reversed) {
+      if (track.kind != TrackKind.visual ||
           track.isHidden ||
           track.id == mainVideoTrack.id) {
         continue;
       }
       final trackVideoClips =
-          track.clips.where((clip) => clip.duration > Duration.zero).toList()
+          track.clips
+              .where(
+                (clip) =>
+                    clip.trackType == TrackType.video &&
+                    clip.duration > Duration.zero,
+              )
+              .toList()
             ..sort(_compareClipsByTimeline);
 
       for (final videoClip in trackVideoClips) {
@@ -3153,6 +3252,9 @@ class FfmpegService {
 
           overlays.add(
             _VideoOverlaySegment(
+              zOrder: project.layerOrderByClipId[videoClip.id] ?? 0,
+              fadeIn: videoClip.fadeIn,
+              fadeOut: videoClip.fadeOut,
               filePath: mediaItem.filePath,
               outputStart:
                   segment.outputStart + (overlapStart - segment.timelineStart),
@@ -3224,11 +3326,17 @@ class FfmpegService {
   ) {
     final imageClips = <Clip>[];
     for (final track in project.tracks.reversed) {
-      if (track.type != TrackType.image || track.isHidden) {
+      if (track.kind != TrackKind.visual || track.isHidden) {
         continue;
       }
       final trackImageClips =
-          track.clips.where((clip) => clip.duration > Duration.zero).toList()
+          track.clips
+              .where(
+                (clip) =>
+                    clip.trackType == TrackType.image &&
+                    clip.duration > Duration.zero,
+              )
+              .toList()
             ..sort(_compareClipsByTimeline);
       imageClips.addAll(trackImageClips);
     }
@@ -3262,6 +3370,7 @@ class FfmpegService {
 
         overlays.add(
           _ImageOverlaySegment(
+            zOrder: project.layerOrderByClipId[imageClip.id] ?? 0,
             filePath: mediaItem.filePath,
             outputStart:
                 segment.outputStart + (overlapStart - segment.timelineStart),
@@ -3303,13 +3412,14 @@ class FfmpegService {
   ) {
     final textClips = <Clip>[];
     for (final track in project.tracks.reversed) {
-      if (track.type != TrackType.text || track.isHidden) {
+      if (track.kind != TrackKind.visual || track.isHidden) {
         continue;
       }
       final trackTextClips =
           track.clips
               .where(
                 (clip) =>
+                    clip.trackType == TrackType.text &&
                     clip.duration > Duration.zero &&
                     clip.textContent.trim().isNotEmpty,
               )
@@ -3335,6 +3445,9 @@ class FfmpegService {
 
         overlays.add(
           _TextOverlaySegment(
+            zOrder: project.layerOrderByClipId[textClip.id] ?? 0,
+            fadeIn: textClip.fadeIn,
+            fadeOut: textClip.fadeOut,
             text: textClip.textContent.trim(),
             outputStart:
                 segment.outputStart + (overlapStart - segment.timelineStart),
@@ -3409,18 +3522,17 @@ class FfmpegService {
       if (track.isHidden) {
         continue;
       }
-      if (track.type == TrackType.video) {
-        continue;
-      }
       if (track.type == TrackType.audio &&
           (track.isMuted || (hasSoloAudioTrack && !track.isSolo))) {
         continue;
       }
       for (final clip in track.clips) {
-        if (clip.duration <= Duration.zero) {
+        if (clip.trackType == TrackType.video ||
+            clip.duration <= Duration.zero) {
           continue;
         }
-        if (track.type == TrackType.text && clip.textContent.trim().isEmpty) {
+        if (clip.trackType == TrackType.text &&
+            clip.textContent.trim().isEmpty) {
           continue;
         }
         if (clip.timelineEnd > duration) {
@@ -3443,10 +3555,9 @@ class FfmpegService {
     );
     final videoClipsByGroup = <String, Clip>{};
     for (final track in project.tracks) {
-      if (track.type != TrackType.video || track.isHidden) {
-        continue;
-      }
+      if (track.isHidden) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.video) continue;
         if (clip.duration > Duration.zero) {
           videoClipsByGroup.putIfAbsent(clip.timelineGroupId, () => clip);
         }
@@ -3521,10 +3632,9 @@ class FfmpegService {
     Clip audioClip,
   ) {
     for (final track in project.tracks) {
-      if (track.type != TrackType.video || track.isHidden) {
-        continue;
-      }
+      if (track.isHidden) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.video) continue;
         if (clip.timelineGroupId == audioClip.timelineGroupId &&
             clip.mediaItemId == audioClip.mediaItemId &&
             clip.duration == audioClip.duration &&
@@ -3645,7 +3755,15 @@ class FfmpegService {
         outputHeight: outputHeight,
         coverOutputFrame: coverOutputFrame,
       ),
+      'format=rgba',
+      ..._opacityFilters(
+        opacity: segment.opacity,
+        keyframes: segment.videoKeyframes,
+        outputStart: Duration.zero,
+        duration: segment.duration,
+      ),
       ..._videoFadeFilters(
+        alpha: true,
         fadeIn: segment.videoFadeIn,
         fadeOut: segment.videoFadeOut,
         duration: segment.duration,
@@ -5119,29 +5237,32 @@ class FfmpegService {
     _TextOverlaySegment overlay,
     String startSeconds,
   ) {
-    final animationExpression = switch (overlay.animation) {
-      TextClipAnimation.fade ||
-      TextClipAnimation.pop => _drawTextIntroProgress(startSeconds),
-      _ => null,
-    };
-    final hasOpacityKeyframes = _hasKeyframesFor(
-      overlay.keyframes,
-      ClipKeyframeProperty.opacity,
-    );
-    if (!hasOpacityKeyframes) {
-      return animationExpression;
+    final factors = <String>[
+      if (overlay.animation == TextClipAnimation.fade ||
+          overlay.animation == TextClipAnimation.pop)
+        _drawTextIntroProgress(startSeconds),
+      if (_hasKeyframesFor(overlay.keyframes, ClipKeyframeProperty.opacity))
+        _keyframedExpression(
+          keyframes: overlay.keyframes,
+          property: ClipKeyframeProperty.opacity,
+          outputStart: overlay.outputStart,
+          duration: overlay.duration,
+          fallback: overlay.opacity,
+        ),
+    ];
+    if (overlay.fadeIn > Duration.zero) {
+      factors.add(
+        'min(max((t-$startSeconds)/${_seconds(overlay.fadeIn)},0),1)',
+      );
     }
-    final opacityExpression = _keyframedExpression(
-      keyframes: overlay.keyframes,
-      property: ClipKeyframeProperty.opacity,
-      outputStart: overlay.outputStart,
-      duration: overlay.duration,
-      fallback: overlay.opacity,
-    );
-    if (animationExpression == null) {
-      return opacityExpression;
+    if (overlay.fadeOut > Duration.zero) {
+      factors.add(
+        'min(max((${_seconds(overlay.outputStart + overlay.duration)}-t)/${_seconds(overlay.fadeOut)},0),1)',
+      );
     }
-    return '($opacityExpression)*($animationExpression)';
+    return factors.isEmpty
+        ? null
+        : factors.map((factor) => '($factor)').join('*');
   }
 
   String _drawTextXExpression(
@@ -5358,6 +5479,8 @@ class FfmpegService {
   }
 
   List<String> _videoFadeFilters({
+    bool alpha = false,
+    Duration outputStart = Duration.zero,
     required Duration fadeIn,
     required Duration fadeOut,
     required Duration duration,
@@ -5365,13 +5488,17 @@ class FfmpegService {
     final filters = <String>[];
     final inSeconds = _fadeSeconds(fadeIn, duration);
     if (inSeconds > 0) {
-      filters.add('fade=t=in:st=0:d=${inSeconds.toStringAsFixed(3)}');
+      filters.add(
+        'fade=t=in:st=${_seconds(outputStart)}:d=${inSeconds.toStringAsFixed(3)}${alpha ? ':alpha=1' : ''}',
+      );
     }
     final outSeconds = _fadeSeconds(fadeOut, duration);
     if (outSeconds > 0) {
-      final start = math.max(0.0, _durationSeconds(duration) - outSeconds);
+      final start =
+          _durationSeconds(outputStart) +
+          math.max(0.0, _durationSeconds(duration) - outSeconds);
       filters.add(
-        'fade=t=out:st=${start.toStringAsFixed(3)}:d=${outSeconds.toStringAsFixed(3)}',
+        'fade=t=out:st=${start.toStringAsFixed(3)}:d=${outSeconds.toStringAsFixed(3)}${alpha ? ':alpha=1' : ''}',
       );
     }
     return filters;

@@ -85,6 +85,8 @@ class VideoPreviewPanel extends StatefulWidget {
     this.imageOverlayY = 0,
     this.imageOverlayScale = 1,
     this.videoOverlayEntries = const [],
+    this.visualLayerOrder = const {},
+    this.baseVideoClipId,
     this.imageOverlayEntries = const [],
     this.textOverlayEntries = const [],
     this.transitionPreviewEntries = const [],
@@ -144,6 +146,8 @@ class VideoPreviewPanel extends StatefulWidget {
   });
 
   final MediaItem? item;
+  final Map<String, int> visualLayerOrder;
+  final String? baseVideoClipId;
   final double? outputAspectRatio;
   final bool cropMainVideoToFill;
   final double videoOpacity;
@@ -2099,6 +2103,8 @@ class _VideoPreviewPanelState extends State<VideoPreviewPanel> {
                       _previewAspectRatio(item, _previewImage),
                   child: _PreviewFrame(
                     child: _PreviewViewport(
+                      visualLayerOrder: widget.visualLayerOrder,
+                      baseVideoClipId: widget.baseVideoClipId,
                       item: item,
                       cropMainVideoToFill: widget.cropMainVideoToFill,
                       player: player,

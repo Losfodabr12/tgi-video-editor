@@ -47,6 +47,10 @@ class TgiColors {
   static const Color timelineLane = Color(0xFF121212);
   static const Color timelineLaneAlt = Color(0xFF101010);
   static const Color timelineGrid = Color(0xFF2A2A2A);
+  static const Color clipVideo = Color(0xFF29455B);
+  static const Color clipAudio = Color(0xFF29483F);
+  static const Color clipImage = Color(0xFF3D4155);
+  static const Color clipText = Color(0xFF514535);
   static const Color waveformLow = Color(0xFF606067);
   static Color waveformHigh = accent;
   static Color playheadGlow = accent;
@@ -102,6 +106,13 @@ class TgiIconSizes {
 
 class TgiTextStyles {
   const TgiTextStyles._();
+
+  static const family = 'Segoe UI';
+  static const control = TextStyle(
+    fontFamily: family,
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+  );
 
   static TextStyle display({
     Color color = TgiColors.textPrimary,

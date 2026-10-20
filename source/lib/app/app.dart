@@ -27,7 +27,7 @@ class _VideoEditorAppState extends State<VideoEditorApp> {
       valueListenable: _preferences.visualStyleListenable,
       builder: (context, style, _) => MaterialApp(
         debugShowCheckedModeBanner: false,
-        title: 'Editor de Video',
+        title: 'TGI Video Editor',
         theme: TgiTheme.forStyle(style),
         home: FutureBuilder<ProjectRecoveryEntry?>(
           future: _startup,

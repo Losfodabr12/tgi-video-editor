@@ -9,13 +9,13 @@ import 'package:flutter/services.dart';
 import 'package:media_kit/media_kit.dart';
 
 import '../../../app/theme/design_tokens.dart';
-import '../../../app/theme/decorations.dart';
 import '../../../domain/models/clip.dart' as domain;
 import '../../../domain/models/media_item.dart';
 import '../../../domain/models/project.dart';
 import '../../../domain/models/timeline_transition.dart';
 import '../../../domain/models/track.dart';
 import '../../../services/app_preferences_service.dart';
+import '../../../services/app_component_paths.dart';
 import '../../../services/editor_debug_log.dart';
 import '../../../services/editor_font_service.dart';
 import '../../../services/project_history_service.dart';
@@ -52,6 +52,8 @@ import 'widgets/video_preview_panel.dart';
 import 'widgets/visual_media_library_panel.dart';
 
 part 'editor_workspace_layout.dart';
+part 'editor_desktop_workspace.dart';
+part 'editor_header.dart';
 part 'editor_screen_support.dart';
 part 'editor_clip_properties.dart';
 part 'editor_dialogs.dart';
@@ -81,18 +83,12 @@ enum _KenBurnsPickTarget { start, end }
 const _workspaceDividerExtent = 8.0;
 const _defaultLeftPanelFraction = 0.24;
 const _defaultPropertiesPanelFraction = 0.19;
-const _defaultPreviewPanelFraction = 0.44;
+const _defaultPreviewPanelFraction = 0.58;
 const _minLeftPanelFraction = 0.17;
 const _maxLeftPanelFraction = 0.36;
 const _minPropertiesPanelFraction = 0.14;
 const _maxPropertiesPanelFraction = 0.29;
 const _minCenterPanelFraction = 0.42;
-const _minDesktopSidePanelWidth = 230.0;
-const _maxDesktopLeftPanelWidth = 460.0;
-const _maxDesktopPropertiesPanelWidth = 380.0;
-const _minDesktopCenterPanelWidth = 520.0;
-const _minDesktopUpperPanelHeight = 240.0;
-const _minDesktopTimelinePanelHeight = 120.0;
 const _workspaceLayoutSaveDelay = Duration(milliseconds: 450);
 const _projectAutosaveDelay = Duration(seconds: 2);
 const _isFlutterTest = bool.fromEnvironment('FLUTTER_TEST');
@@ -102,20 +98,11 @@ TgiProject? _projectForStartPreset(EditorStartPreset preset) {
     case EditorStartPreset.standard:
       return null;
     case EditorStartPreset.quickCreator:
-      return TgiProject.empty(name: 'Shorts 9:16')
-          .addTimelineTrack(TrackType.video)
-          .addTimelineTrack(TrackType.image)
-          .addTimelineTrack(TrackType.text);
+      return TgiProject.empty(name: 'Shorts 9:16');
     case EditorStartPreset.square:
-      return TgiProject.empty(name: 'Quadrado 1:1')
-          .addTimelineTrack(TrackType.video)
-          .addTimelineTrack(TrackType.image)
-          .addTimelineTrack(TrackType.text);
+      return TgiProject.empty(name: 'Quadrado 1:1');
     case EditorStartPreset.feed45:
-      return TgiProject.empty(name: 'Feed 4:5')
-          .addTimelineTrack(TrackType.video)
-          .addTimelineTrack(TrackType.image)
-          .addTimelineTrack(TrackType.text);
+      return TgiProject.empty(name: 'Feed 4:5');
   }
 }
 
@@ -261,6 +248,10 @@ class _EditorScreenState extends State<EditorScreen> {
   double _propertiesPanelFraction = _defaultPropertiesPanelFraction;
   double _previewPanelFraction = _defaultPreviewPanelFraction;
   bool _timelineFocusMode = false;
+  bool _inspectorVisible = true;
+  bool _libraryVisible = true;
+  _EditorLibraryTab _libraryTab = _EditorLibraryTab.media;
+  String? _inspectedClipId;
   bool _kenBurnsToolActive = false;
   AnimationIntensity _animationIntensity = AnimationIntensity.normal;
   AnimationSpeed _animationSpeed = AnimationSpeed.normal;
@@ -741,6 +732,18 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   void _handleControllerChanged() {
+    final selectedId = _controller.selectedTimelineClip?.id;
+    if (selectedId != _inspectedClipId) {
+      _inspectedClipId = selectedId;
+      if (selectedId != null) {
+        _inspectorVisible = true;
+        final kind = _controller.selectedTimelineClip?.kind;
+        _leftPanelMode = kind == TrackType.video || kind == TrackType.image
+            ? _LeftPanelMode.transformCrop
+            : _LeftPanelMode.mediaPool;
+        _kenBurnsToolActive = false;
+      }
+    }
     if (EditorDebugLog.enabled) {
       final snapshot = _controllerDebugSnapshot();
       if (snapshot != _lastControllerDebugSnapshot) {
@@ -916,6 +919,8 @@ class _EditorScreenState extends State<EditorScreen> {
       _propertiesPanelFraction = layout.propertiesPanelFraction;
       _previewPanelFraction = layout.previewPanelFraction;
       _timelineFocusMode = layout.timelineFocusMode;
+      _inspectorVisible = layout.inspectorVisible;
+      _libraryVisible = layout.libraryVisible;
     });
   }
 
@@ -925,6 +930,8 @@ class _EditorScreenState extends State<EditorScreen> {
       propertiesPanelFraction: _propertiesPanelFraction,
       previewPanelFraction: _previewPanelFraction,
       timelineFocusMode: _timelineFocusMode,
+      inspectorVisible: _inspectorVisible,
+      libraryVisible: _libraryVisible,
     ).normalized();
   }
 
@@ -986,7 +993,23 @@ class _EditorScreenState extends State<EditorScreen> {
     if (event is! KeyDownEvent || !mounted) {
       return false;
     }
-    if (ModalRoute.of(context)?.isCurrent != true || !_canUseEditorShortcut()) {
+    if (ModalRoute.of(context)?.isCurrent != true) {
+      return false;
+    }
+    final keyboard = HardwareKeyboard.instance;
+    final command = keyboard.isControlPressed || keyboard.isMetaPressed;
+    final save =
+        command &&
+        !keyboard.isShiftPressed &&
+        event.logicalKey == LogicalKeyboardKey.keyS;
+    if (!_canUseEditorShortcut()) {
+      if (save &&
+          !_shortcutBindings.values.any(
+            (binding) => _eventMatchesShortcut(event, binding),
+          )) {
+        unawaited(_saveProject());
+        return true;
+      }
       return false;
     }
 
@@ -997,7 +1020,34 @@ class _EditorScreenState extends State<EditorScreen> {
       _shortcutCallbackFor(entry.key).call();
       return true;
     }
-    final keyboard = HardwareKeyboard.instance;
+    if (save) {
+      unawaited(_saveProject());
+      return true;
+    }
+    if (command &&
+        event.logicalKey == LogicalKeyboardKey.keyZ &&
+        keyboard.isShiftPressed) {
+      _handleRedoShortcut();
+      return true;
+    }
+    if (command && event.logicalKey == LogicalKeyboardKey.keyO) {
+      unawaited(_loadProject());
+      return true;
+    }
+    if (!command &&
+        !keyboard.isAltPressed &&
+        (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+            event.logicalKey == LogicalKeyboardKey.arrowRight)) {
+      final frame = Duration(
+        microseconds: (1000000 / _exportSettings.framesPerSecond).round(),
+      );
+      _controller.setTimelinePlaybackActive(false);
+      _controller.setPlayheadPosition(
+        _controller.playheadPosition +
+            (event.logicalKey == LogicalKeyboardKey.arrowLeft ? -frame : frame),
+      );
+      return true;
+    }
     if (!keyboard.isControlPressed &&
         !keyboard.isAltPressed &&
         !keyboard.isMetaPressed) {
@@ -1034,6 +1084,7 @@ class _EditorScreenState extends State<EditorScreen> {
       targetTrackId: targetTrackId,
       forceNewVideoTrack: forceNewVideoTrack,
       forceNewAudioTrack: forceNewAudioTrack,
+      insert: HardwareKeyboard.instance.isShiftPressed,
     );
     if (!mounted) {
       return;
@@ -2325,6 +2376,8 @@ class _EditorScreenState extends State<EditorScreen> {
       _propertiesPanelFraction = _defaultPropertiesPanelFraction;
       _previewPanelFraction = _defaultPreviewPanelFraction;
       _timelineFocusMode = false;
+      _inspectorVisible = true;
+      _libraryVisible = true;
     });
     _scheduleWorkspaceLayoutSave();
   }
@@ -2486,10 +2539,6 @@ class _EditorScreenState extends State<EditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedClip = _controller.selectedTimelineClip;
-    final selectedTextClip = selectedClip?.trackType == TrackType.text
-        ? selectedClip
-        : null;
     final kenBurnsToolClip = _kenBurnsToolClip;
     return Focus(
       focusNode: _editorFocusNode,
@@ -2514,6 +2563,14 @@ class _EditorScreenState extends State<EditorScreen> {
                   children: [
                     _EditorHeader(
                       projectName: _controller.project.name,
+                      onToggleLibrary: () => setState(() {
+                        _libraryVisible = !_libraryVisible;
+                        _scheduleWorkspaceLayoutSave();
+                      }),
+                      onToggleInspector: () => setState(() {
+                        _inspectorVisible = !_inspectorVisible;
+                        _scheduleWorkspaceLayoutSave();
+                      }),
                       isImporting: _controller.isImporting,
                       isExporting: _controller.isExporting,
                       exportProgress: _controller.exportProgress,
@@ -2546,8 +2603,7 @@ class _EditorScreenState extends State<EditorScreen> {
                       onCopy: _controller.copySelectedTimelineClips,
                       onPaste: _controller.pasteCopiedTimelineClips,
                       onDuplicate: _controller.duplicateSelectedTimelineClips,
-                      onImportVideo:
-                          _controller.importMediaAndAddToEmptyTimeline,
+                      onImportVideo: _controller.importVideo,
                       onOpenKeyboardSettings: _openKeyboardSettings,
                       onResetWorkspaceLayout: _resetWorkspaceLayout,
                       onWatermarkSettings: _openWatermarkSettings,
@@ -2559,75 +2615,16 @@ class _EditorScreenState extends State<EditorScreen> {
                           : _exportTimeline,
                       onCancelExport: _controller.cancelExport,
                     ),
-                    if (selectedTextClip != null) ...[
-                      const SizedBox(height: 8),
-                      _SelectedTextClipChip(
-                        clip: selectedTextClip,
-                        onEdit: () =>
-                            unawaited(_editTextClip(selectedTextClip)),
-                      ),
-                    ],
-                    const SizedBox(height: TgiSpacing.sm),
                     Expanded(
                       child: _ResponsiveEditorWorkspace(
-                        rail: _EditorToolRail(
-                          kenBurnsToolActive:
-                              _kenBurnsToolActive &&
-                              _leftPanelMode == _LeftPanelMode.animations,
-                          mediaPoolActive:
-                              _leftPanelMode == _LeftPanelMode.mediaPool,
-                          transformCropActive:
-                              _leftPanelMode == _LeftPanelMode.transformCrop,
-                          audioToolsActive:
-                              _leftPanelMode == _LeftPanelMode.audioTools,
-                          smartCutActive:
-                              _leftPanelMode == _LeftPanelMode.smartCut,
-                          professionalColorActive:
-                              _leftPanelMode ==
-                              _LeftPanelMode.professionalColor,
-                          advancedSpeedActive:
-                              _leftPanelMode == _LeftPanelMode.advancedSpeed,
-                          captionsActive:
-                              _leftPanelMode == _LeftPanelMode.captions,
-                          chromaKeyActive:
-                              _leftPanelMode == _LeftPanelMode.chromaKey,
-                          maskTrackingActive:
-                              _leftPanelMode == _LeftPanelMode.maskTracking,
-                          soundEffectsActive:
-                              _leftPanelMode == _LeftPanelMode.soundEffects,
-                          visualMediaActive:
-                              _leftPanelMode == _LeftPanelMode.visualMedia,
-                          transitionsActive:
-                              _leftPanelMode == _LeftPanelMode.transitions,
-                          enabled:
-                              !_controller.isExporting &&
-                              !_controller.isGeneratingCaptions,
-                          onMediaPoolSelected: _showMediaPool,
-                          onTransformCropToggle: _showTransformCropPanel,
-                          onAudioToolsToggle: _showAudioToolsPanel,
-                          onSmartCutToggle: _showSmartCutPanel,
-                          onProfessionalColorToggle:
-                              _showProfessionalColorPanel,
-                          onAdvancedSpeedToggle: _showAdvancedSpeedPanel,
-                          onKenBurnsToolToggle: _toggleKenBurnsTool,
-                          showQuickCaption: _isQuickCreator,
-                          onAddQuickCaption: _addQuickCaption,
-                          onCaptionsToggle: _showCaptionsPanel,
-                          onChromaKeyToggle: _showChromaKeyPanel,
-                          onMaskTrackingToggle: _showMaskTrackingPanel,
-                          onSoundEffectsToggle: _showSoundEffectsLibrary,
-                          onVisualMediaToggle: _showVisualMediaLibrary,
-                          onTransitionsToggle: _showTransitionLibrary,
-                        ),
                         workspace: LayoutBuilder(
                           builder: (context, constraints) {
-                            final compact = constraints.maxWidth < 1080;
-                            final phoneLayout =
-                                MediaQuery.sizeOf(context).width < 600;
                             final smartCutClip =
                                 _controller.selectedTimelineVideoClip ??
                                 _controller.activeTimelineClip;
-                            final leftPanel = switch (_leftPanelMode) {
+                            Widget panelForMode(
+                              _LeftPanelMode mode,
+                            ) => switch (mode) {
                               _LeftPanelMode.professionalColor => _Panel(
                                 title: 'Correção de cor',
                                 icon: Icons.gradient_outlined,
@@ -3188,7 +3185,57 @@ class _EditorScreenState extends State<EditorScreen> {
                               icon: Icons.smart_display_outlined,
                               glow: true,
                               accentColor: TgiColors.accent,
+                              trailing: PopupMenuButton<String>(
+                                tooltip: 'Qualidade da pr?via',
+                                onSelected: (value) {
+                                  if (value == 'prepare') {
+                                    unawaited(_controller.optimizePreview());
+                                  } else {
+                                    _controller.setUsePreviewProxies(
+                                      value == 'auto',
+                                    );
+                                  }
+                                },
+                                itemBuilder: (_) => [
+                                  const PopupMenuItem(
+                                    value: 'auto',
+                                    child: Text(
+                                      'Autom?tica ? usar proxy dispon?vel',
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'original',
+                                    child: Text('Qualidade original'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'prepare',
+                                    enabled: _controller.canOptimizePreview,
+                                    child: const Text(
+                                      'Preparar proxy de edi??o',
+                                    ),
+                                  ),
+                                ],
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      _controller.previewUsesProxy
+                                          ? 'Proxy'
+                                          : 'Original',
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: TgiColors.textMuted,
+                                      ),
+                                    ),
+                                    const Icon(Icons.arrow_drop_down, size: 16),
+                                  ],
+                                ),
+                              ),
                               child: VideoPreviewPanel(
+                                visualLayerOrder:
+                                    _controller.project.layerOrderByClipId,
+                                baseVideoClipId:
+                                    _controller.activeTimelineClip?.id,
                                 item: _controller.previewMediaItem,
                                 onImportRequested: _controller
                                     .importMediaAndAddToEmptyTimeline,
@@ -3558,9 +3605,35 @@ class _EditorScreenState extends State<EditorScreen> {
                                 onClipResized: _controller.resizeImageClip,
                                 onClipCut: _controller.cutTimelineClip,
                                 onClipSelected:
-                                    _controller.selectTimelineClipGroup,
+                                    (
+                                      group, {
+                                      bool additive = false,
+                                      bool toggle = false,
+                                      String? clipId,
+                                    }) {
+                                      _requestEditorShortcutFocus();
+                                      _controller.selectTimelineClipGroup(
+                                        group,
+                                        additive: additive,
+                                        toggle: toggle,
+                                        clipId: clipId,
+                                      );
+                                    },
                                 onBoxSelection:
-                                    _controller.selectTimelineClipGroups,
+                                    (
+                                      groups, {
+                                      bool additive = false,
+                                      bool toggle = false,
+                                      bool intersect = false,
+                                    }) {
+                                      _requestEditorShortcutFocus();
+                                      _controller.selectTimelineClipGroups(
+                                        groups,
+                                        additive: additive,
+                                        toggle: toggle,
+                                        intersect: intersect,
+                                      );
+                                    },
                                 onTextClipEdit: (clip) =>
                                     unawaited(_editTextClip(clip)),
                                 onTextInsertRequested: (position) => unawaited(
@@ -3570,8 +3643,10 @@ class _EditorScreenState extends State<EditorScreen> {
                                     unawaited(
                                       _addCaptionAtTimelinePosition(position),
                                     ),
-                                onPlayheadChanged:
-                                    _controller.setPlayheadPosition,
+                                onPlayheadChanged: (position) {
+                                  _requestEditorShortcutFocus();
+                                  _controller.setPlayheadPosition(position);
+                                },
                                 onClipVolumeChanged:
                                     _controller.updateClipVolume,
                                 onClipFadeChanged:
@@ -3587,6 +3662,15 @@ class _EditorScreenState extends State<EditorScreen> {
                                 onClipMovedToNewTrack:
                                     _controller.moveTimelineClipToNewTrack,
                                 onAddTrack: _controller.addTimelineTrack,
+                                onTrackDeleted: _controller.deleteTimelineTrack,
+                                onTrackReordered:
+                                    _controller.reorderTimelineTrack,
+                                onTrackHeightChanged:
+                                    _controller.resizeTimelineTrack,
+                                onTrackResizeStart:
+                                    _controller.beginInteractiveEdit,
+                                onTrackResizeEnd:
+                                    _controller.commitInteractiveEdit,
                                 onAudioInventoryOpen: _showSoundEffectsLibrary,
                                 onTrackRenamed: _controller.renameTimelineTrack,
                                 onTrackLockedChanged:
@@ -3628,7 +3712,12 @@ class _EditorScreenState extends State<EditorScreen> {
                                 audioClip:
                                     _controller.selectedTimelineAudioClip,
                                 videoClip:
-                                    _controller.selectedTimelineVideoClip,
+                                    _controller
+                                            .selectedTimelineClip
+                                            ?.trackType ==
+                                        TrackType.video
+                                    ? _controller.selectedTimelineVideoClip
+                                    : null,
                                 canUnlinkAudio:
                                     _controller.canUnlinkSelectedAudio,
                                 canRelinkAudio:
@@ -3640,6 +3729,8 @@ class _EditorScreenState extends State<EditorScreen> {
                                 onVolumeChanged: _updateSelectedClipVolume,
                                 onAudioNoiseReductionChanged:
                                     _updateSelectedAudioNoiseReduction,
+                                onAudioSpeedChanged: _controller
+                                    .updateSelectedAudioPlaybackSpeed,
                                 onUnlinkAudio:
                                     _controller.toggleSelectedAudioVideoLink,
                                 onFadeInChanged: _updateSelectedClipFadeIn,
@@ -3691,171 +3782,15 @@ class _EditorScreenState extends State<EditorScreen> {
                               ),
                             );
 
-                            if (compact) {
-                              if (_timelineFocusMode) {
-                                return SingleChildScrollView(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      SizedBox(height: 360, child: preview),
-                                      const SizedBox(height: 14),
-                                      SizedBox(height: 330, child: timeline),
-                                    ],
-                                  ),
-                                );
-                              }
-                              if (phoneLayout) {
-                                return SingleChildScrollView(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.stretch,
-                                    children: [
-                                      SizedBox(height: 300, child: preview),
-                                      const SizedBox(height: 14),
-                                      SizedBox(height: 330, child: timeline),
-                                      const SizedBox(height: 14),
-                                      SizedBox(height: 420, child: leftPanel),
-                                      const SizedBox(height: 14),
-                                      SizedBox(
-                                        height: 420,
-                                        child: clipProperties,
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-                              return SingleChildScrollView(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    SizedBox(height: 330, child: timeline),
-                                    const SizedBox(height: 14),
-                                    SizedBox(height: 420, child: leftPanel),
-                                    const SizedBox(height: 14),
-                                    SizedBox(height: 360, child: preview),
-                                    const SizedBox(height: 14),
-                                    SizedBox(
-                                      height: 420,
-                                      child: clipProperties,
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }
-
-                            if (_timelineFocusMode) {
-                              return timeline;
-                            }
-
-                            final fixedWidth = _workspaceDividerExtent * 2;
-                            final availableWidth = math.max(
-                              0.0,
-                              constraints.maxWidth - fixedWidth,
-                            );
-                            var leftPanelWidth =
-                                (availableWidth * _leftPanelFraction)
-                                    .clamp(
-                                      _minDesktopSidePanelWidth,
-                                      _maxDesktopLeftPanelWidth,
-                                    )
-                                    .toDouble();
-                            var propertiesPanelWidth =
-                                (availableWidth * _propertiesPanelFraction)
-                                    .clamp(
-                                      _minDesktopSidePanelWidth,
-                                      _maxDesktopPropertiesPanelWidth,
-                                    )
-                                    .toDouble();
-                            final centerWidth =
-                                availableWidth -
-                                leftPanelWidth -
-                                propertiesPanelWidth;
-                            if (centerWidth < _minDesktopCenterPanelWidth) {
-                              var deficit =
-                                  _minDesktopCenterPanelWidth - centerWidth;
-                              final leftReduction = math.min(
-                                deficit,
-                                leftPanelWidth - _minDesktopSidePanelWidth,
-                              );
-                              leftPanelWidth -= leftReduction;
-                              deficit -= leftReduction;
-                              final propertiesReduction = math.min(
-                                deficit,
-                                propertiesPanelWidth -
-                                    _minDesktopSidePanelWidth,
-                              );
-                              propertiesPanelWidth -= propertiesReduction;
-                            }
-
-                            final upperWorkspace = Row(
-                              children: [
-                                SizedBox(
-                                  width: leftPanelWidth,
-                                  child: leftPanel,
-                                ),
-                                _WorkspaceDivider(
-                                  axis: Axis.vertical,
-                                  onDragUpdate: (details) =>
-                                      _resizeLeftWorkspacePanel(
-                                        details,
-                                        constraints.maxWidth,
-                                      ),
-                                  onReset: _resetWorkspaceLayout,
-                                ),
-                                Expanded(child: preview),
-                                _WorkspaceDivider(
-                                  axis: Axis.vertical,
-                                  onDragUpdate: (details) =>
-                                      _resizePropertiesWorkspacePanel(
-                                        details,
-                                        constraints.maxWidth,
-                                      ),
-                                  onReset: _resetWorkspaceLayout,
-                                ),
-                                SizedBox(
-                                  width: propertiesPanelWidth,
-                                  child: clipProperties,
-                                ),
-                              ],
-                            );
-                            final availableHeight = math.max(
-                              0.0,
-                              constraints.maxHeight - _workspaceDividerExtent,
-                            );
-                            final minUpperHeight = math.min(
-                              _minDesktopUpperPanelHeight,
-                              availableHeight,
-                            );
-                            final minTimelineHeight = math.min(
-                              _minDesktopTimelinePanelHeight,
-                              math.max(0.0, availableHeight - minUpperHeight),
-                            );
-                            final upperHeight =
-                                (availableHeight * _previewPanelFraction)
-                                    .clamp(
-                                      minUpperHeight,
-                                      availableHeight - minTimelineHeight,
-                                    )
-                                    .toDouble();
-                            return Column(
-                              children: [
-                                SizedBox(
-                                  height: upperHeight,
-                                  child: upperWorkspace,
-                                ),
-                                _WorkspaceDivider(
-                                  axis: Axis.horizontal,
-                                  onDragUpdate: (details) =>
-                                      _resizePreviewWorkspacePanel(
-                                        details,
-                                        constraints.maxHeight,
-                                      ),
-                                  onReset: _resetWorkspaceLayout,
-                                ),
-                                Expanded(child: timeline),
-                              ],
+                            return _desktopLayout(
+                              constraints,
+                              library: _library(panelForMode),
+                              preview: preview,
+                              inspector: _inspector(
+                                clipProperties,
+                                panelForMode,
+                              ),
+                              timeline: timeline,
                             );
                           },
                         ),

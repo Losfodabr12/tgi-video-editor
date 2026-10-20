@@ -1,51 +1,5 @@
 part of 'editor_screen.dart';
 
-class _SelectedTextClipChip extends StatelessWidget {
-  const _SelectedTextClipChip({required this.clip, required this.onEdit});
-
-  final domain.Clip clip;
-  final VoidCallback onEdit;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: GestureDetector(
-        onDoubleTap: onEdit,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: TgiColors.surfaceAlt,
-            border: Border.all(color: TgiColors.border),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const TgiAccentIcon(Icons.title, size: 16),
-                const SizedBox(width: 8),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 360),
-                  child: Text(
-                    clip.textContent,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: TgiColors.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _TextClipDialogResult {
   const _TextClipDialogResult({
     required this.text,

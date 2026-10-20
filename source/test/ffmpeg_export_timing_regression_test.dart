@@ -174,13 +174,6 @@ void main() {
           final project = TgiProject.empty(name: 'Image fades').copyWith(
             mediaPool: [image, video],
             tracks: [
-              if (withVideo)
-                Track(
-                  id: 'v',
-                  name: 'Video',
-                  type: TrackType.video,
-                  clips: [_clip('v', video, TrackType.video, durationMs: 4000)],
-                ),
               Track(
                 id: 'image',
                 name: 'Image',
@@ -200,6 +193,13 @@ void main() {
                   ),
                 ],
               ),
+              if (withVideo)
+                Track(
+                  id: 'v',
+                  name: 'Video',
+                  type: TrackType.video,
+                  clips: [_clip('v', video, TrackType.video, durationMs: 4000)],
+                ),
             ],
           );
           final output = '${temporary.path}/fades.mp4';

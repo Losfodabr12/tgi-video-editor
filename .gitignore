@@ -25,3 +25,4 @@
 *.key
 *.keystore
 *.jks
+/.work/

@@ -6,6 +6,8 @@ import 'timeline_marker.dart';
 import 'timeline_transition.dart';
 import 'track.dart';
 
+part 'project_timeline.dart';
+
 const _defaultImageClipDuration = Duration(seconds: 5);
 const _defaultTextClipDuration = Duration(seconds: 5);
 const _defaultTimelineTransitionDuration = Duration(milliseconds: 900);
@@ -141,12 +143,32 @@ class TgiProject {
   final List<TimelineMarker> markers;
   final List<TimelineTransition> transitions;
   final ProjectWatermark watermark;
+  late final Map<String, MediaItem> _mediaById = {
+    for (final item in mediaPool) item.id: item,
+  };
+  late final Map<String, Track> _tracksById = {
+    for (final track in tracks) track.id: track,
+  };
+  late final Map<String, (Track, Clip)> _clipLocations = {
+    for (final track in tracks)
+      for (final clip in track.clips) clip.id: (track, clip),
+  };
+
+  Clip? clipById(String id) => _clipLocations[id]?.$2;
+  Track? clipTrackById(String id) => _clipLocations[id]?.$1;
+  late final Map<String, int> layerOrderByClipId = Map.unmodifiable({
+    for (var index = 0; index < tracks.length; index++)
+      for (final clip in tracks[index].clips)
+        clip.id: tracks.length - index - 1,
+  });
 
   bool get hasTimelineClips {
     return tracks.any((track) => track.clips.isNotEmpty);
   }
 
-  Duration get timelineDuration {
+  late final Duration timelineDuration = _calculateTimelineDuration();
+
+  Duration _calculateTimelineDuration() {
     var duration = Duration.zero;
     for (final track in tracks) {
       for (final clip in track.clips) {
@@ -274,21 +296,11 @@ class TgiProject {
   }
 
   MediaItem? mediaItemById(String id) {
-    for (final item in mediaPool) {
-      if (item.id == id) {
-        return item;
-      }
-    }
-    return null;
+    return _mediaById[id];
   }
 
   Track? trackById(String id) {
-    for (final track in tracks) {
-      if (track.id == id) {
-        return track;
-      }
-    }
-    return null;
+    return _tracksById[id];
   }
 
   bool mediaItemIsUsed(String id) {
@@ -309,10 +321,8 @@ class TgiProject {
       if (track.isHidden) {
         continue;
       }
-      if (trackType != null && track.type != trackType) {
-        continue;
-      }
       for (final clip in track.clips) {
+        if (trackType != null && clip.trackType != trackType) continue;
         if (clip.timelineStart <= position && position < clip.timelineEnd) {
           if (activeClip == null ||
               clip.timelineStart > activeClip.timelineStart) {
@@ -331,10 +341,8 @@ class TgiProject {
       if (track.isHidden) {
         continue;
       }
-      if (trackType != null && track.type != trackType) {
-        continue;
-      }
       for (final clip in track.clips) {
+        if (trackType != null && clip.trackType != trackType) continue;
         if (clip.timelineStart <= position && position < clip.timelineEnd) {
           result.add(clip);
         }
@@ -391,136 +399,17 @@ class TgiProject {
     double overlayY = 0,
     double overlayScale = 1,
     Duration? clipDurationOverride,
-  }) {
-    final start = _normalizeTimelineStart(timelineStart);
-    final groupId = 'group_${++_nextGroupId}';
-    final imageDuration =
-        clipDurationOverride == null || clipDurationOverride <= Duration.zero
-        ? _defaultImageClipDuration
-        : clipDurationOverride;
-    final clipDuration = item.type == MediaType.image
-        ? imageDuration
-        : item.duration;
-    var updated = List<Track>.from(tracks);
-    final targetTrack = _trackById(updated, targetTrackId);
-    if (item.type == MediaType.video) {
-      final trackPair = forceNewVideoTrack
-          ? _newVideoAudioTrackPair(updated)
-          : _videoAudioTrackPairForDrop(updated, targetTrack);
-      final videoClip = Clip(
-        id: 'clip_${++_nextClipId}_v',
-        mediaItemId: item.id,
-        timelineGroupId: groupId,
-        trackType: TrackType.video,
-        timelineStart: start,
-        sourceStart: Duration.zero,
-        duration: clipDuration,
-        sourceDuration: clipDuration,
-        overlayX: _clampUnit(overlayX),
-        overlayY: _clampUnit(overlayY),
-        overlayScale: _clampImageOverlayScale(overlayScale),
-      );
-      final audioClip = Clip(
-        id: 'clip_${++_nextClipId}_a',
-        mediaItemId: item.id,
-        timelineGroupId: groupId,
-        trackType: TrackType.audio,
-        timelineStart: start,
-        sourceStart: Duration.zero,
-        duration: clipDuration,
-        sourceDuration: clipDuration,
-        volume: 1,
-      );
-      updated = _upsertTrack(
-        updated,
-        trackPair.videoTrackId,
-        TrackType.video,
-        trackPair.videoTrackName,
-        videoClip,
-      );
-      updated = _upsertTrack(
-        updated,
-        trackPair.audioTrackId,
-        TrackType.audio,
-        trackPair.audioTrackName,
-        audioClip,
-      );
-    } else if (item.type == MediaType.image) {
-      final clip = Clip(
-        id: 'clip_${++_nextClipId}_img',
-        mediaItemId: item.id,
-        timelineGroupId: groupId,
-        trackType: TrackType.image,
-        timelineStart: start,
-        sourceStart: Duration.zero,
-        duration: clipDuration,
-        overlayX: _clampUnit(overlayX),
-        overlayY: _clampUnit(overlayY),
-        overlayScale: _clampImageOverlayScale(overlayScale),
-        imageFit: imageFit,
-      );
-      if (targetTrack?.type == TrackType.image) {
-        updated = _upsertTrack(
-          updated,
-          targetTrack!.id,
-          TrackType.image,
-          targetTrack.name,
-          clip,
-        );
-      } else {
-        final imageTrackCount = updated
-            .where((track) => track.type == TrackType.image)
-            .length;
-        updated = _insertImageTrack(
-          updated,
-          imageTrackCount == 0
-              ? TgiProject.defaultImageTrackId
-              : 'track_image_overlay_${++_nextImageTrackId}',
-          'Imagem ${imageTrackCount + 1}',
-          clip,
-        );
-      }
-    } else if (item.type == MediaType.audio) {
-      if (targetTrackId != null && targetTrack?.type != TrackType.audio) {
-        return this;
-      }
-      final clip = Clip(
-        id: 'clip_${++_nextClipId}_a',
-        mediaItemId: item.id,
-        timelineGroupId: groupId,
-        trackType: TrackType.audio,
-        timelineStart: start,
-        sourceStart: Duration.zero,
-        duration: clipDuration,
-        sourceDuration: clipDuration,
-        volume: 1,
-      );
-      final audioTrack = forceNewAudioTrack
-          ? null
-          : targetTrack?.type == TrackType.audio
-          ? targetTrack
-          : _firstTrackOfType(updated, TrackType.audio);
-      final audioTrackCount = _trackCount(updated, TrackType.audio);
-      final useDefaultId =
-          audioTrackCount == 0 &&
-          !updated.any((track) => track.id == TgiProject.defaultAudioTrackId);
-      final trackId =
-          audioTrack?.id ??
-          (useDefaultId
-              ? TgiProject.defaultAudioTrackId
-              : 'track_audio_manual_${++_nextManualAudioTrackId}');
-      final trackName =
-          audioTrack?.name ?? _audioTrackName(audioTrackCount + 1);
-      updated = _upsertTrack(
-        updated,
-        trackId,
-        TrackType.audio,
-        trackName,
-        clip,
-      );
-    }
-    return copyWith(tracks: updated, updatedAt: DateTime.now());
-  }
+  }) => placeMedia(
+    item,
+    timelineStart: timelineStart,
+    targetTrackId: targetTrackId,
+    newTrack: forceNewVideoTrack || forceNewAudioTrack,
+    imageFit: imageFit,
+    overlayX: overlayX,
+    overlayY: overlayY,
+    overlayScale: overlayScale,
+    clipDurationOverride: clipDurationOverride,
+  );
 
   TgiProject addTextClipToTimeline({
     required String text,
@@ -546,21 +435,6 @@ class TgiProject {
     final clipDuration = duration < _minimumTextClipDuration
         ? _minimumTextClipDuration
         : duration;
-    var updated = List<Track>.from(tracks);
-    final targetTrack = _trackById(updated, targetTrackId);
-    final textTrack = targetTrack?.type == TrackType.text
-        ? targetTrack
-        : _firstTrackOfType(updated, TrackType.text);
-    final textTrackCount = _trackCount(updated, TrackType.text);
-    final useDefaultId =
-        textTrackCount == 0 &&
-        !updated.any((track) => track.id == TgiProject.defaultTextTrackId);
-    final trackId =
-        textTrack?.id ??
-        (useDefaultId
-            ? TgiProject.defaultTextTrackId
-            : 'track_text_overlay_${++_nextTextTrackId}');
-    final trackName = textTrack?.name ?? _textTrackName(textTrackCount + 1);
     final clip = Clip(
       id: clipId,
       mediaItemId: clipId,
@@ -581,87 +455,10 @@ class TgiProject {
       textAnimation: textAnimation,
     );
 
-    updated = _upsertTrack(updated, trackId, TrackType.text, trackName, clip);
-    return copyWith(tracks: updated, updatedAt: DateTime.now());
+    return placeText(clip, targetTrackId: targetTrackId);
   }
 
-  TgiProject addTimelineTrack(TrackType type) {
-    final updated = List<Track>.from(tracks);
-    if (type == TrackType.video) {
-      final videoCount = _trackCount(updated, TrackType.video);
-      final audioCount = _trackCount(updated, TrackType.audio);
-      final useDefaultIds =
-          videoCount == 0 &&
-          !updated.any((track) => track.id == TgiProject.defaultVideoTrackId);
-      final trackIndex = videoCount + 1;
-      final videoTrackId = useDefaultIds
-          ? TgiProject.defaultVideoTrackId
-          : 'track_video_manual_${++_nextManualVideoTrackId}';
-      final audioTrackId = useDefaultIds
-          ? TgiProject.defaultAudioTrackId
-          : _pairedAudioTrackIdForVideoTrack(videoTrackId);
-
-      updated.add(
-        Track(
-          id: videoTrackId,
-          name: _videoTrackName(trackIndex),
-          type: TrackType.video,
-        ),
-      );
-      updated.add(
-        Track(
-          id: audioTrackId,
-          name: _audioTrackName(audioCount + 1),
-          type: TrackType.audio,
-        ),
-      );
-    } else if (type == TrackType.image) {
-      final imageCount = _trackCount(updated, TrackType.image);
-      final useDefaultId =
-          imageCount == 0 &&
-          !updated.any((track) => track.id == TgiProject.defaultImageTrackId);
-      updated.insert(
-        0,
-        Track(
-          id: useDefaultId
-              ? TgiProject.defaultImageTrackId
-              : 'track_image_overlay_${++_nextImageTrackId}',
-          name: 'Imagem ${imageCount + 1}',
-          type: TrackType.image,
-        ),
-      );
-    } else if (type == TrackType.text) {
-      final textCount = _trackCount(updated, TrackType.text);
-      final useDefaultId =
-          textCount == 0 &&
-          !updated.any((track) => track.id == TgiProject.defaultTextTrackId);
-      updated.insert(
-        0,
-        Track(
-          id: useDefaultId
-              ? TgiProject.defaultTextTrackId
-              : 'track_text_overlay_${++_nextTextTrackId}',
-          name: _textTrackName(textCount + 1),
-          type: TrackType.text,
-        ),
-      );
-    } else if (type == TrackType.audio) {
-      final audioCount = _trackCount(updated, TrackType.audio);
-      final useDefaultId =
-          audioCount == 0 &&
-          !updated.any((track) => track.id == TgiProject.defaultAudioTrackId);
-      updated.add(
-        Track(
-          id: useDefaultId
-              ? TgiProject.defaultAudioTrackId
-              : 'track_audio_manual_${++_nextManualAudioTrackId}',
-          name: _audioTrackName(audioCount + 1),
-          type: TrackType.audio,
-        ),
-      );
-    }
-    return copyWith(tracks: updated, updatedAt: DateTime.now());
-  }
+  TgiProject addTimelineTrack(TrackType type) => addDynamicTrack(type);
 
   TgiProject renameTimelineTrack(String trackId, String name) {
     final normalized = name.trim();
@@ -1000,45 +797,6 @@ class TgiProject {
     return copyWith(transitions: updated, updatedAt: DateTime.now());
   }
 
-  List<Track> _insertImageTrack(
-    List<Track> tracks,
-    String trackId,
-    String name,
-    Clip clip,
-  ) {
-    tracks.insert(
-      0,
-      Track(id: trackId, name: name, type: TrackType.image, clips: [clip]),
-    );
-    return tracks;
-  }
-
-  List<Track> _upsertTrack(
-    List<Track> tracks,
-    String trackId,
-    TrackType type,
-    String name,
-    Clip clip,
-  ) {
-    final index = tracks.indexWhere((t) => t.id == trackId);
-    if (index >= 0) {
-      final track = tracks[index];
-      tracks[index] = track.copyWith(clips: _sortClips([...track.clips, clip]));
-      return tracks;
-    }
-    if (type == TrackType.image || type == TrackType.text) {
-      tracks.insert(
-        0,
-        Track(id: trackId, name: name, type: type, clips: _sortClips([clip])),
-      );
-    } else {
-      tracks.add(
-        Track(id: trackId, name: name, type: type, clips: _sortClips([clip])),
-      );
-    }
-    return tracks;
-  }
-
   Clip? _findClipById(String clipId) {
     for (final track in tracks) {
       for (final clip in track.clips) {
@@ -1048,110 +806,12 @@ class TgiProject {
     return null;
   }
 
-  Track? _trackById(List<Track> tracks, String? trackId) {
-    if (trackId == null) {
-      return null;
-    }
-    for (final track in tracks) {
-      if (track.id == trackId) {
-        return track;
-      }
-    }
-    return null;
-  }
-
-  _VideoAudioTrackPair _videoAudioTrackPairForDrop(
-    List<Track> tracks,
-    Track? targetTrack,
-  ) {
-    var videoTrackId = TgiProject.defaultVideoTrackId;
-    var audioTrackId = TgiProject.defaultAudioTrackId;
-
-    if (targetTrack?.type == TrackType.video) {
-      videoTrackId = targetTrack!.id;
-      audioTrackId = _pairedAudioTrackIdForVideoTrack(videoTrackId);
-    } else if (targetTrack?.type == TrackType.audio) {
-      audioTrackId = targetTrack!.id;
-      videoTrackId = _pairedVideoTrackIdForAudioTrack(audioTrackId);
-    }
-
-    return _VideoAudioTrackPair(
-      videoTrackId: videoTrackId,
-      audioTrackId: audioTrackId,
-      videoTrackName:
-          _trackById(tracks, videoTrackId)?.name ??
-          _videoTrackName(_trackCount(tracks, TrackType.video) + 1),
-      audioTrackName:
-          _trackById(tracks, audioTrackId)?.name ??
-          _audioTrackName(_trackCount(tracks, TrackType.audio) + 1),
-    );
-  }
-
-  _VideoAudioTrackPair _newVideoAudioTrackPair(List<Track> tracks) {
-    final videoCount = _trackCount(tracks, TrackType.video);
-    final audioCount = _trackCount(tracks, TrackType.audio);
-    final useDefaultIds =
-        videoCount == 0 &&
-        !tracks.any((track) => track.id == TgiProject.defaultVideoTrackId);
-    final videoTrackId = useDefaultIds
-        ? TgiProject.defaultVideoTrackId
-        : 'track_video_manual_${++_nextManualVideoTrackId}';
-    final audioTrackId = useDefaultIds
-        ? TgiProject.defaultAudioTrackId
-        : _pairedAudioTrackIdForVideoTrack(videoTrackId);
-    return _VideoAudioTrackPair(
-      videoTrackId: videoTrackId,
-      audioTrackId: audioTrackId,
-      videoTrackName: _videoTrackName(videoCount + 1),
-      audioTrackName: _audioTrackName(audioCount + 1),
-    );
-  }
-
-  String _pairedAudioTrackIdForVideoTrack(String videoTrackId) {
-    if (videoTrackId == TgiProject.defaultVideoTrackId) {
-      return TgiProject.defaultAudioTrackId;
-    }
-    return videoTrackId.replaceFirst('track_video_', 'track_audio_');
-  }
-
-  String _pairedVideoTrackIdForAudioTrack(String audioTrackId) {
-    if (audioTrackId == TgiProject.defaultAudioTrackId) {
-      return TgiProject.defaultVideoTrackId;
-    }
-    return audioTrackId.replaceFirst('track_audio_', 'track_video_');
-  }
-
-  int _trackCount(List<Track> tracks, TrackType type) {
-    return tracks.where((track) => track.type == type).length;
-  }
-
-  String _videoTrackName(int index) {
-    return index <= 1 ? 'V\u00EDdeo' : 'V\u00EDdeo $index';
-  }
-
-  String _audioTrackName(int index) {
-    return index <= 1 ? '\u00C1udio/Volume' : '\u00C1udio/Volume $index';
-  }
-
-  String _textTrackName(int index) {
-    return index <= 1 ? 'Texto' : 'Texto $index';
-  }
-
-  Track? _firstTrackOfType(List<Track> tracks, TrackType type) {
-    for (final track in tracks) {
-      if (track.type == type) {
-        return track;
-      }
-    }
-    return null;
-  }
-
   bool _timelineGroupHasTrackType(String timelineGroupId, TrackType type) {
     for (final track in tracks) {
-      if (track.type != type) {
-        continue;
-      }
-      if (track.clips.any((clip) => clip.timelineGroupId == timelineGroupId)) {
+      if (track.clips.any(
+        (clip) =>
+            clip.trackType == type && clip.timelineGroupId == timelineGroupId,
+      )) {
         return true;
       }
     }
@@ -1162,26 +822,14 @@ class TgiProject {
     String timelineGroupId, {
     required Duration timelineStart,
   }) {
-    final start = _normalizeTimelineStart(timelineStart);
-    final updatedTracks = <Track>[];
     for (final track in tracks) {
-      final groupClips = track.clips
-          .where((c) => c.timelineGroupId == timelineGroupId)
-          .toList();
-      if (groupClips.isEmpty) {
-        updatedTracks.add(track);
-        continue;
-      }
-      final delta = start - groupClips.first.timelineStart;
-      final updatedClips = track.clips.map((c) {
-        if (c.timelineGroupId == timelineGroupId) {
-          return c.copyWith(timelineStart: c.timelineStart + delta);
+      for (final clip in track.clips) {
+        if (clip.timelineGroupId == timelineGroupId) {
+          return placeClipGroups(clip.id, timelineStart: timelineStart);
         }
-        return c;
-      }).toList();
-      updatedTracks.add(track.copyWith(clips: updatedClips));
+      }
     }
-    return copyWith(tracks: updatedTracks, updatedAt: DateTime.now());
+    return this;
   }
 
   TgiProject unlinkAudioFromTimelineGroup(String timelineGroupId) {
@@ -1260,192 +908,33 @@ class TgiProject {
     Set<String> timelineGroupIds, {
     required Duration delta,
   }) {
-    if (timelineGroupIds.isEmpty || delta == Duration.zero) {
-      return this;
-    }
-
-    Duration? earliestStart;
-    for (final track in tracks) {
-      for (final clip in track.clips) {
-        if (!timelineGroupIds.contains(clip.timelineGroupId)) {
-          continue;
-        }
-        if (earliestStart == null || clip.timelineStart < earliestStart) {
-          earliestStart = clip.timelineStart;
-        }
-      }
-    }
-    if (earliestStart == null) {
-      return this;
-    }
-
-    var adjustedDelta = delta;
-    if (earliestStart + adjustedDelta < Duration.zero) {
-      adjustedDelta = Duration(microseconds: -earliestStart.inMicroseconds);
-    }
-    if (adjustedDelta == Duration.zero) {
-      return this;
-    }
-
-    var changed = false;
-    final updatedTracks = <Track>[];
-    for (final track in tracks) {
-      var trackChanged = false;
-      final updatedClips = <Clip>[];
-      for (final clip in track.clips) {
-        if (!timelineGroupIds.contains(clip.timelineGroupId)) {
-          updatedClips.add(clip);
-          continue;
-        }
-        updatedClips.add(
-          clip.copyWith(timelineStart: clip.timelineStart + adjustedDelta),
-        );
-        trackChanged = true;
-        changed = true;
-      }
-      updatedTracks.add(
-        trackChanged ? track.copyWith(clips: _sortClips(updatedClips)) : track,
-      );
-    }
-
-    if (!changed) {
-      return this;
-    }
-    return copyWith(tracks: updatedTracks, updatedAt: DateTime.now());
+    final clips = [
+      for (final track in tracks)
+        for (final clip in track.clips)
+          if (timelineGroupIds.contains(clip.timelineGroupId)) clip,
+    ];
+    if (clips.isEmpty) return this;
+    return placeClipGroups(
+      clips.first.id,
+      timelineStart: clips.first.timelineStart + delta,
+      selectedGroups: timelineGroupIds,
+    );
   }
 
   TgiProject moveClipToTrack(
     String clipId, {
     required String targetTrackId,
     required Duration timelineStart,
-  }) {
-    final targetTrack = _trackById(tracks, targetTrackId);
-    if (targetTrack == null) {
-      return this;
-    }
-
-    Clip? sourceClip;
-    String? sourceTrackId;
-    for (final track in tracks) {
-      for (final clip in track.clips) {
-        if (clip.id == clipId) {
-          sourceClip = clip;
-          sourceTrackId = track.id;
-          break;
-        }
-      }
-      if (sourceClip != null) {
-        break;
-      }
-    }
-
-    final clip = sourceClip;
-    if (clip == null || sourceTrackId == null) {
-      return this;
-    }
-    if (targetTrack.type != clip.trackType ||
-        clip.trackType == TrackType.video ||
-        (clip.trackType == TrackType.audio &&
-            _timelineGroupHasTrackType(
-              clip.timelineGroupId,
-              TrackType.video,
-            ))) {
-      return this;
-    }
-
-    final movedClip = clip.copyWith(
-      timelineStart: _normalizeTimelineStart(timelineStart),
-    );
-    final updatedTracks = <Track>[];
-    for (final track in tracks) {
-      if (track.id == sourceTrackId && track.id == targetTrackId) {
-        updatedTracks.add(
-          track.copyWith(
-            clips: _sortClips(
-              track.clips
-                  .map(
-                    (candidate) =>
-                        candidate.id == clipId ? movedClip : candidate,
-                  )
-                  .toList(),
-            ),
-          ),
-        );
-      } else if (track.id == sourceTrackId) {
-        updatedTracks.add(
-          track.copyWith(
-            clips: track.clips
-                .where((candidate) => candidate.id != clipId)
-                .toList(),
-          ),
-        );
-      } else if (track.id == targetTrackId) {
-        updatedTracks.add(
-          track.copyWith(clips: _sortClips([...track.clips, movedClip])),
-        );
-      } else {
-        updatedTracks.add(track);
-      }
-    }
-
-    return copyWith(tracks: updatedTracks, updatedAt: DateTime.now());
-  }
+  }) => placeClipGroups(
+    clipId,
+    targetTrackId: targetTrackId,
+    timelineStart: timelineStart,
+  );
 
   TgiProject moveClipToNewTrack(
     String clipId, {
     required Duration timelineStart,
-  }) {
-    Clip? sourceClip;
-    String? sourceTrackId;
-    for (final track in tracks) {
-      for (final clip in track.clips) {
-        if (clip.id == clipId) {
-          sourceClip = clip;
-          sourceTrackId = track.id;
-          break;
-        }
-      }
-      if (sourceClip != null) {
-        break;
-      }
-    }
-
-    final clip = sourceClip;
-    if (clip == null || sourceTrackId == null) {
-      return this;
-    }
-    if (clip.trackType != TrackType.audio ||
-        _timelineGroupHasTrackType(clip.timelineGroupId, TrackType.video)) {
-      return this;
-    }
-
-    final audioTrackCount = _trackCount(tracks, TrackType.audio);
-    final newTrack = Track(
-      id: 'track_audio_manual_${++_nextManualAudioTrackId}',
-      name: _audioTrackName(audioTrackCount + 1),
-      type: TrackType.audio,
-      clips: [
-        clip.copyWith(timelineStart: _normalizeTimelineStart(timelineStart)),
-      ],
-    );
-    final updatedTracks = <Track>[];
-    for (final track in tracks) {
-      if (track.id == sourceTrackId) {
-        updatedTracks.add(
-          track.copyWith(
-            clips: track.clips
-                .where((candidate) => candidate.id != clipId)
-                .toList(),
-          ),
-        );
-      } else {
-        updatedTracks.add(track);
-      }
-    }
-    updatedTracks.add(newTrack);
-
-    return copyWith(tracks: updatedTracks, updatedAt: DateTime.now());
-  }
+  }) => placeClipOnNewTrack(clipId, timelineStart);
 
   TgiProject moveImageClipToTrack(
     String clipId, {
@@ -1645,7 +1134,10 @@ class TgiProject {
       );
       updatedTracks.add(track.copyWith(clips: updatedClips));
     }
-    return copyWith(tracks: updatedTracks, updatedAt: DateTime.now());
+    return copyWith(
+      tracks: updatedTracks,
+      updatedAt: DateTime.now(),
+    ).validatedAgainst(this);
   }
 
   TgiProject trimTimelineClipGroup(
@@ -1734,7 +1226,10 @@ class TgiProject {
     if (!changed) {
       return this;
     }
-    return copyWith(tracks: updatedTracks, updatedAt: DateTime.now());
+    return copyWith(
+      tracks: updatedTracks,
+      updatedAt: DateTime.now(),
+    ).validatedAgainst(this);
   }
 
   TgiProject updateClipVolume(String clipId, {required double volume}) {
@@ -2347,8 +1842,8 @@ class TgiProject {
     final speed = _clampPlaybackSpeed(playbackSpeed);
     Clip? referenceClip;
     for (final track in tracks) {
-      if (track.type != TrackType.video) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.video) continue;
         if (clip.timelineGroupId == timelineGroupId) {
           referenceClip = clip;
           break;
@@ -2387,7 +1882,8 @@ class TgiProject {
           continue;
         }
 
-        if (track.type != TrackType.video && track.type != TrackType.audio) {
+        if (clip.trackType != TrackType.video &&
+            clip.trackType != TrackType.audio) {
           updatedClips.add(clip);
           continue;
         }
@@ -2444,7 +1940,7 @@ class TgiProject {
       markers: _sortMarkers(updatedMarkers),
       transitions: _sortTransitions(updatedTransitions),
       updatedAt: DateTime.now(),
-    );
+    ).validatedAgainst(this);
   }
 
   TgiProject slipTimelineClipGroup(
@@ -2454,11 +1950,13 @@ class TgiProject {
     if (sourceDelta == Duration.zero) return this;
     final groupClips = <Clip>[];
     for (final track in tracks) {
-      if (track.type != TrackType.video && track.type != TrackType.audio) {
-        continue;
-      }
       groupClips.addAll(
-        track.clips.where((clip) => clip.timelineGroupId == timelineGroupId),
+        track.clips.where(
+          (clip) =>
+              clip.timelineGroupId == timelineGroupId &&
+              (clip.trackType == TrackType.video ||
+                  clip.trackType == TrackType.audio),
+        ),
       );
     }
     if (groupClips.isEmpty) return this;
@@ -2489,14 +1987,17 @@ class TgiProject {
           clips: [
             for (final clip in track.clips)
               clip.timelineGroupId == timelineGroupId &&
-                      (track.type == TrackType.video ||
-                          track.type == TrackType.audio)
+                      (clip.trackType == TrackType.video ||
+                          clip.trackType == TrackType.audio)
                   ? clip.copyWith(sourceStart: clip.sourceStart + delta)
                   : clip,
           ],
         ),
     ];
-    return copyWith(tracks: updatedTracks, updatedAt: DateTime.now());
+    return copyWith(
+      tracks: updatedTracks,
+      updatedAt: DateTime.now(),
+    ).validatedAgainst(this);
   }
 
   TgiProject slideTimelineClipGroup(
@@ -2507,8 +2008,8 @@ class TgiProject {
     Track? referenceTrack;
     Clip? selected;
     for (final track in tracks) {
-      if (track.type != TrackType.video) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.video) continue;
         if (clip.timelineGroupId == timelineGroupId) {
           referenceTrack = track;
           selected = clip;
@@ -2625,7 +2126,7 @@ class TgiProject {
       tracks: updatedTracks,
       transitions: _sortTransitions(updatedTransitions),
       updatedAt: DateTime.now(),
-    );
+    ).validatedAgainst(this);
   }
 
   TgiProject applyClipGroupSpeedRamp(
@@ -2637,8 +2138,8 @@ class TgiProject {
     }
     Clip? referenceClip;
     for (final track in tracks) {
-      if (track.type != TrackType.video) continue;
       for (final clip in track.clips) {
+        if (clip.trackType != TrackType.video) continue;
         if (clip.timelineGroupId == timelineGroupId) {
           referenceClip = clip;
           break;
@@ -2937,139 +2438,21 @@ class TgiProject {
     return copyWith(tracks: updatedTracks, updatedAt: DateTime.now());
   }
 
-  TgiProject rippleDeleteTimelineClipGroups(Set<String> timelineGroupIds) {
-    if (timelineGroupIds.isEmpty) {
-      return this;
-    }
-    Duration? gapStart;
-    Duration? gapEnd;
-    for (final track in tracks) {
-      for (final clip in track.clips) {
-        if (!timelineGroupIds.contains(clip.timelineGroupId)) continue;
-        if (gapStart == null || clip.timelineStart < gapStart) {
-          gapStart = clip.timelineStart;
-        }
-        if (gapEnd == null || clip.timelineEnd > gapEnd) {
-          gapEnd = clip.timelineEnd;
-        }
-      }
-    }
-    if (gapStart == null || gapEnd == null || gapEnd <= gapStart) {
-      return this;
-    }
-    final gapDuration = gapEnd - gapStart;
-    final updatedTracks = <Track>[];
-    for (final track in tracks) {
-      final updatedClips = <Clip>[];
-      for (final clip in track.clips) {
-        if (timelineGroupIds.contains(clip.timelineGroupId)) continue;
-        updatedClips.add(
-          clip.timelineStart >= gapEnd
-              ? clip.copyWith(timelineStart: clip.timelineStart - gapDuration)
-              : clip,
-        );
-      }
-      updatedTracks.add(track.copyWith(clips: _sortClips(updatedClips)));
-    }
-    final updatedMarkers = <TimelineMarker>[];
-    for (final marker in markers) {
-      if (marker.position >= gapStart && marker.position < gapEnd) continue;
-      updatedMarkers.add(
-        marker.position >= gapEnd
-            ? marker.copyWith(position: marker.position - gapDuration)
-            : marker,
-      );
-    }
-    final updatedTransitions = <TimelineTransition>[];
-    for (final transition in transitions) {
-      if (transition.timelinePosition >= gapStart &&
-          transition.timelinePosition < gapEnd) {
-        continue;
-      }
-      updatedTransitions.add(
-        transition.timelinePosition >= gapEnd
-            ? transition.copyWith(
-                timelinePosition: transition.timelinePosition - gapDuration,
-              )
-            : transition,
-      );
-    }
-    return copyWith(
-      tracks: updatedTracks,
-      markers: _sortMarkers(updatedMarkers),
-      transitions: _sortTransitions(updatedTransitions),
-      updatedAt: DateTime.now(),
-    );
-  }
+  TgiProject rippleDeleteTimelineClipGroups(Set<String> timelineGroupIds) =>
+      rippleRemoveGroups(timelineGroupIds);
 
   TgiProject duplicateTimelineClipGroups(
     Set<String> timelineGroupIds, {
     required Duration timelineStart,
-  }) {
-    if (timelineGroupIds.isEmpty) {
-      return this;
-    }
-
-    final sourceClips = <Clip>[];
-    for (final track in tracks) {
-      for (final clip in track.clips) {
-        if (timelineGroupIds.contains(clip.timelineGroupId)) {
-          sourceClips.add(clip);
-        }
-      }
-    }
-    if (sourceClips.isEmpty) {
-      return this;
-    }
-
-    sourceClips.sort((a, b) {
-      final timeCompare = a.timelineStart.compareTo(b.timelineStart);
-      if (timeCompare != 0) {
-        return timeCompare;
-      }
-      return a.id.compareTo(b.id);
-    });
-
-    final earliestStart = sourceClips.first.timelineStart;
-    final targetStart = _normalizeTimelineStart(timelineStart);
-    final groupIdMap = <String, String>{};
-    final updatedTracks = <Track>[];
-    var changed = false;
-
-    for (final track in tracks) {
-      final duplicates = <Clip>[];
-      for (final clip in track.clips) {
-        if (!timelineGroupIds.contains(clip.timelineGroupId)) {
-          continue;
-        }
-        final newGroupId = groupIdMap.putIfAbsent(
-          clip.timelineGroupId,
-          () => 'group_${++_nextGroupId}',
-        );
-        final offset = clip.timelineStart - earliestStart;
-        duplicates.add(
-          clip.copyWith(
-            id: 'clip_${++_nextClipId}_${_clipIdSuffix(clip.trackType)}',
-            timelineGroupId: newGroupId,
-            timelineStart: targetStart + offset,
-          ),
-        );
-      }
-      if (duplicates.isEmpty) {
-        updatedTracks.add(track);
-        continue;
-      }
-      changed = true;
-      updatedTracks.add(
-        track.copyWith(clips: _sortClips([...track.clips, ...duplicates])),
-      );
-    }
-
-    if (!changed) {
-      return this;
-    }
-    return copyWith(tracks: updatedTracks, updatedAt: DateTime.now());
-  }
+  }) => pasteClips({
+    for (final track in tracks)
+      if (track.clips.any(
+        (clip) => timelineGroupIds.contains(clip.timelineGroupId),
+      ))
+        track.id: track.clips
+            .where((clip) => timelineGroupIds.contains(clip.timelineGroupId))
+            .toList(),
+  }, timelineStart: timelineStart);
 
   List<Clip> _sortClips(List<Clip> clips) {
     return [...clips]
@@ -3554,18 +2937,4 @@ int _maxIdAfterPrefix(int current, String value, String prefix) {
     return current;
   }
   return parsed;
-}
-
-class _VideoAudioTrackPair {
-  const _VideoAudioTrackPair({
-    required this.videoTrackId,
-    required this.audioTrackId,
-    required this.videoTrackName,
-    required this.audioTrackName,
-  });
-
-  final String videoTrackId;
-  final String audioTrackId;
-  final String videoTrackName;
-  final String audioTrackName;
 }

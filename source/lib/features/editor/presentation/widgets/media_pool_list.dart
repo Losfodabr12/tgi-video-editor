@@ -33,6 +33,8 @@ class MediaPoolList extends StatefulWidget {
 }
 
 class _MediaPoolListState extends State<MediaPoolList> {
+  String _query = '';
+  MediaType? _typeFilter;
   final _dropKey = GlobalKey();
   StreamSubscription<DroppedFilesEvent>? _dropSubscription;
 
@@ -72,6 +74,13 @@ class _MediaPoolListState extends State<MediaPoolList> {
 
   @override
   Widget build(BuildContext context) {
+    final visible = widget.items
+        .where(
+          (item) =>
+              (_typeFilter == null || item.type == _typeFilter) &&
+              item.name.toLowerCase().contains(_query.toLowerCase()),
+        )
+        .toList();
     if (widget.items.isEmpty) {
       return KeyedSubtree(
         key: _dropKey,
@@ -83,6 +92,52 @@ class _MediaPoolListState extends State<MediaPoolList> {
       key: _dropKey,
       child: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 8, 4, 0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 30,
+                    child: TextField(
+                      key: const ValueKey('media-search'),
+                      style: const TextStyle(fontSize: 12),
+                      decoration: const InputDecoration(
+                        hintText: 'Buscar mídia',
+                        prefixIcon: Icon(Icons.search, size: 15),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      onChanged: (value) => setState(() => _query = value),
+                    ),
+                  ),
+                ),
+                PopupMenuButton<String>(
+                  tooltip: 'Filtrar mídias',
+                  icon: Icon(
+                    Icons.filter_list,
+                    size: 17,
+                    color: _typeFilter == null
+                        ? TgiColors.textMuted
+                        : TgiColors.accent,
+                  ),
+                  onSelected: (value) => setState(
+                    () => _typeFilter = switch (value) {
+                      'video' => MediaType.video,
+                      'image' => MediaType.image,
+                      'audio' => MediaType.audio,
+                      _ => null,
+                    },
+                  ),
+                  itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'all', child: Text('Todas as mídias')),
+                    PopupMenuItem(value: 'video', child: Text('Vídeos')),
+                    PopupMenuItem(value: 'image', child: Text('Imagens')),
+                    PopupMenuItem(value: 'audio', child: Text('Áudios')),
+                  ],
+                ),
+              ],
+            ),
+          ),
           if (widget.onImportRequested != null)
             Padding(
               padding: const EdgeInsets.all(TgiSpacing.sm),
@@ -99,10 +154,10 @@ class _MediaPoolListState extends State<MediaPoolList> {
           Expanded(
             child: ListView.separated(
               padding: const EdgeInsets.all(TgiSpacing.sm),
-              itemCount: widget.items.length,
+              itemCount: visible.length,
               separatorBuilder: (_, _) => const SizedBox(height: TgiSpacing.sm),
               itemBuilder: (context, index) {
-                final item = widget.items[index];
+                final item = visible[index];
                 final tile = _MediaPoolTile(
                   item: item,
                   selected: item.id == widget.selectedItemId,
@@ -137,105 +192,44 @@ class _MediaPoolListState extends State<MediaPoolList> {
 
 class _MediaPoolDropZone extends StatelessWidget {
   const _MediaPoolDropZone({required this.onImportRequested});
-
   final VoidCallback? onImportRequested;
-
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(TgiSpacing.md),
-        child: _MediaPoolDropCard(
-          title: 'Arraste midias aqui',
-          message:
-              'Nenhum arquivo importado. Solte videos, audios, imagens ou textos no Media Pool.',
-          onImportRequested: onImportRequested,
-          large: true,
-        ),
-      ),
-    );
-  }
-}
-
-class _MediaPoolDropCard extends StatelessWidget {
-  const _MediaPoolDropCard({
-    required this.title,
-    required this.message,
-    required this.onImportRequested,
-    required this.large,
-  });
-
-  final String title;
-  final String message;
-  final VoidCallback? onImportRequested;
-  final bool large;
-
-  @override
-  Widget build(BuildContext context) {
-    final windowSize = MediaQuery.sizeOf(context);
-    final dense = !large || windowSize.width < 520 || windowSize.height < 900;
-    return Material(
-      color: TgiColors.transparent,
+  Widget build(BuildContext context) => Center(
+    child: Material(
+      color: Colors.transparent,
       child: InkWell(
         onTap: onImportRequested,
-        borderRadius: BorderRadius.circular(TgiRadii.lg),
-        child: TgiFramedBox(
-          radius: TgiRadii.lg,
-          padding: EdgeInsets.all(dense ? TgiSpacing.sm : TgiSpacing.lg),
-          backgroundColor: TgiColors.surface.withValues(alpha: 0.78),
-          borderColor: TgiColors.borderStrong,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: dense
-                ? CrossAxisAlignment.center
-                : CrossAxisAlignment.start,
-            children: [
-              DecoratedBox(
-                decoration: BoxDecoration(
-                  color: TgiColors.accent.withValues(alpha: 0.10),
-                  border: Border.all(color: TgiColors.accentDim),
-                  borderRadius: BorderRadius.circular(TgiRadii.md),
+        borderRadius: BorderRadius.circular(TgiRadii.sm),
+        child: const Padding(
+          padding: EdgeInsets.all(20),
+          child: SizedBox(
+            width: 240,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.add_to_photos_outlined,
+                  size: 28,
+                  color: TgiColors.textMuted,
                 ),
-                child: SizedBox(
-                  width: dense ? 34 : 54,
-                  height: dense ? 34 : 54,
-                  child: Icon(
-                    Icons.file_upload_outlined,
-                    color: TgiColors.accent,
-                    size: dense ? TgiIconSizes.sm : TgiIconSizes.lg,
-                  ),
+                SizedBox(height: 12),
+                Text(
+                  'Importar mídia',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
                 ),
-              ),
-              SizedBox(height: dense ? TgiSpacing.sm : TgiSpacing.md),
-              Text(
-                title,
-                textAlign: dense ? TextAlign.center : TextAlign.start,
-                maxLines: dense ? 2 : null,
-                overflow: dense ? TextOverflow.ellipsis : null,
-                style: TextStyle(
-                  color: TgiColors.textPrimary,
-                  fontSize: dense ? 13 : 18,
-                  fontWeight: FontWeight.w900,
+                SizedBox(height: 6),
+                Text(
+                  'Clique ou arraste vídeos, imagens e áudio para a biblioteca.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 12, color: TgiColors.textMuted),
                 ),
-              ),
-              const SizedBox(height: TgiSpacing.xs),
-              Text(
-                message,
-                textAlign: dense ? TextAlign.center : TextAlign.start,
-                maxLines: dense ? 3 : null,
-                overflow: dense ? TextOverflow.ellipsis : null,
-                style: TextStyle(
-                  color: TgiColors.textSecondary,
-                  fontSize: dense ? 11 : 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
 class _MediaPoolTile extends StatelessWidget {

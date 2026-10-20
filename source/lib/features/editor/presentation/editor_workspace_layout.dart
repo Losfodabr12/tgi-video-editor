@@ -6,12 +6,15 @@ class _EditorWorkspaceLayout {
     required this.propertiesPanelFraction,
     required this.previewPanelFraction,
     required this.timelineFocusMode,
+    this.inspectorVisible = true,
+    this.libraryVisible = true,
   });
 
   final double leftPanelFraction;
   final double propertiesPanelFraction;
   final double previewPanelFraction;
   final bool timelineFocusMode;
+  final bool inspectorVisible, libraryVisible;
 
   factory _EditorWorkspaceLayout.fromJson(Map<String, dynamic> json) {
     return _EditorWorkspaceLayout(
@@ -33,7 +36,9 @@ class _EditorWorkspaceLayout {
       timelineFocusMode: json['timelineFocusMode'] is bool
           ? json['timelineFocusMode'] as bool
           : false,
-    ).normalized(resetVerticalSplit: json['layoutVersion'] != 2);
+      inspectorVisible: json['inspectorVisible'] != false,
+      libraryVisible: json['libraryVisible'] != false,
+    ).normalized(resetVerticalSplit: json['layoutVersion'] != 3);
   }
 
   static double _readDouble(
@@ -82,12 +87,16 @@ class _EditorWorkspaceLayout {
               .clamp(0.28, 0.68)
               .toDouble(),
       timelineFocusMode: timelineFocusMode,
+      inspectorVisible: inspectorVisible,
+      libraryVisible: libraryVisible,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
-      'layoutVersion': 2,
+      'layoutVersion': 3,
+      'inspectorVisible': inspectorVisible,
+      'libraryVisible': libraryVisible,
       'leftPanelFraction': leftPanelFraction,
       'propertiesPanelFraction': propertiesPanelFraction,
       'previewPanelFraction': previewPanelFraction,
@@ -129,10 +138,6 @@ class _EditorWorkspaceLayoutStore {
   }
 
   static String get _statePath {
-    final base =
-        Platform.environment['LOCALAPPDATA'] ??
-        Platform.environment['HOME'] ??
-        Directory.systemTemp.path;
-    return [base, 'TGIAPP', 'editor_layout.json'].join(Platform.pathSeparator);
+    return joinPlatformPath([tgiAppLocalDataRoot(), 'editor_layout.json']);
   }
 }

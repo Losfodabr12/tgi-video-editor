@@ -1,34 +1,33 @@
-PROJETO EDITOR DE VIDEO
+TGI VIDEO EDITOR - VERSAO LOCAL 0.2.0+2
 
-Copia independente do editor de video TGI 1.4.26+33, preparada em 18/10/2026.
+Abra INICIAR EDITOR.cmd ou aplicativo\VideoEditor.exe.
+Mantenha os arquivos da pasta aplicativo junto com o executavel.
+
+Timeline com pistas dinamicas: video, imagem e texto compartilham pistas visuais.
+Audio so cria pista quando necessario. Arraste para a regiao acima das pistas
+para criar outra camada. Menu da pista: nome, bloqueio, ordem, altura e exclusao.
+Alt + arraste da linha de volume ajusta audio; arraste normal move o clipe.
+Ctrl + roda ajusta o zoom. Shift + drop insere midia em uma emenda.
+
+Biblioteca a esquerda, preview ao centro, inspetor contextual a direita e
+timeline embaixo. Os divisores redimensionam as areas; Exibir oculta paineis.
+Ctrl+S salva, Ctrl+Z desfaz, Ctrl+Y/Ctrl+Shift+Z refazem e setas navegam por frame.
+
+source: projeto Flutter existente reformulado, sem dependencias novas.
+aplicativo: release Windows atualizada e runtimes locais.
+REFORMULACAO.md: arquivos, arquitetura, testes e limitacoes.
+VALIDACAO.txt: resultados executados desta versao.
+
+Dados proprios: %LOCALAPPDATA%\TGI_VIDEO_EDITOR.
 O projeto INICIAR PROJETO TGI APP permanece intacto.
+Projetos antigos continuam carregaveis; a migracao ocorre em memoria.
+A release publica v0.1.0 no GitHub ainda corresponde a base anterior.
 
-source: codigo Flutter do editor, dependencias compartilhadas, fontes, testes,
-        plataforma Windows, FFmpeg e Whisper Base locais.
-aplicativo: executavel Windows independente e seus arquivos de funcionamento.
-INICIAR EDITOR.cmd: abre o executavel desta copia.
-
-Para desenvolver, abra source no seu editor de codigo. No terminal dessa pasta:
+Desenvolver (terminal em source):
   flutter pub get
   powershell -ExecutionPolicy Bypass -File tool\build_editor.ps1 -Run
+Compilar novamente: o mesmo comando sem -Run.
 
-A entrada do novo aplicativo fica em source/lib/main.dart e lib/app/app.dart.
-Ele abre diretamente no editor e recupera automaticamente seu proprio rascunho.
-Configuracoes, rascunhos e projetos recentes ficam em:
-  %LOCALAPPDATA%\TGI_VIDEO_EDITOR
-
-A copia inclui apenas o editor e suas dependencias. Os estudios completos de
-audio/imagem, site, servidor, login inicial e atualizador do TGI nao fazem parte
-deste aplicativo. A marca visual e as regras de recursos gratuitos/pagos do
-editor foram preservadas para voce adaptar durante o desenvolvimento.
-O dialogo de downloads opcionais ainda contem integracoes com os servicos TGI.
-
-Para gerar novamente o aplicativo e seus runtimes:
-  powershell -ExecutionPolicy Bypass -File source\tool\build_editor.ps1
-
-ORIGEM_DA_COPIA.json registra os arquivos originais e seus hashes.
-VALIDACAO.txt registra os resultados da verificacao desta copia.
-
-O script de desenvolvimento/compilacao utiliza temporariamente uma letra de
-unidade livre para evitar o limite de caminhos dos plugins nativos no Windows.
-A unidade e liberada automaticamente quando o comando termina.
+A revisao visual da janela nativa ficou limitada: as capturas deste ambiente
+ficaram em branco nas versoes antiga e nova. Layout foi verificado por widgets
+reais; reproducao manual/GPU prolongada ainda precisa de sessao grafica funcional.
