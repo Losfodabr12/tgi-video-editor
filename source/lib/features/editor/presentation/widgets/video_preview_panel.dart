@@ -18,6 +18,8 @@ import '../../../../services/editor_debug_log.dart';
 import '../duration_formatter.dart';
 import 'preview_entries.dart';
 import 'chroma_key_preview.dart';
+import '../../../../domain/text_style_profile.dart';
+import 'styled_caption_text.dart';
 
 part 'video_preview_sessions.dart';
 part 'video_preview_stage.dart';

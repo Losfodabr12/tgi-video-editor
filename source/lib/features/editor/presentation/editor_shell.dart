@@ -140,8 +140,8 @@ class _PreviewOptimizeButton extends StatelessWidget {
     final label = isOptimizingPreview
         ? '${isAutomatic ? 'AUTO ' : ''}$percent%'
         : usesProxy
-        ? 'PROXY'
-        : 'ORIGINAL';
+        ? 'Proxy'
+        : 'Proxy · Original';
     return Tooltip(
       message: isOptimizingPreview
           ? 'Criando proxy $percent%$remainingLabel · clique para cancelar'
@@ -149,7 +149,7 @@ class _PreviewOptimizeButton extends StatelessWidget {
           ? 'Preview usando proxy leve · clique para recriar'
           : 'Preview usando arquivo original · clique para otimizar',
       child: SizedBox(
-        height: 32,
+        height: 36,
         child: OutlinedButton.icon(
           key: const Key('preview_proxy_control'),
           onPressed: isOptimizingPreview
@@ -158,13 +158,11 @@ class _PreviewOptimizeButton extends StatelessWidget {
               ? null
               : onPressed,
           style: OutlinedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             backgroundColor: isOptimizingPreview || usesProxy
                 ? TgiColors.surfaceHover
                 : TgiColors.surfaceRaised,
-            foregroundColor: isOptimizingPreview || usesProxy
-                ? TgiColors.accentSoft
-                : TgiColors.textSecondary,
+            foregroundColor: TgiColors.textPrimary,
             side: BorderSide(
               color: isOptimizingPreview || usesProxy
                   ? TgiColors.accentMuted
@@ -184,11 +182,11 @@ class _PreviewOptimizeButton extends StatelessWidget {
                 )
               : Icon(
                   usesProxy ? Icons.bolt_rounded : Icons.speed_outlined,
-                  size: 16,
+                  size: 18,
                 ),
           label: Text(
             label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
           ),
         ),
       ),

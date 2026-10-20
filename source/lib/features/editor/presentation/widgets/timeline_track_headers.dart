@@ -72,6 +72,7 @@ class _TrackLabels extends StatelessWidget {
         Expanded(
           child: ListView.builder(
             controller: scrollController,
+            padding: const EdgeInsets.only(bottom: 12),
             itemCount: tracks.length + 1,
             itemBuilder: (context, row) {
               if (row == 0) return const SizedBox(height: _newLaneExtent);

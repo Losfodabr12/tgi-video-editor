@@ -33,14 +33,14 @@ extension _DesktopWorkspace on _EditorScreenState {
             (
               'Título simples',
               'Seu título',
-              'Poppins',
+              NewTextStyle.fontFamily,
               48.0,
               domain.TextClipAnimation.none,
             ),
             (
               'Legenda',
               'Sua legenda',
-              'Lato',
+              NewTextStyle.fontFamily,
               36.0,
               domain.TextClipAnimation.fade,
             ),
@@ -160,7 +160,11 @@ extension _DesktopWorkspace on _EditorScreenState {
               children: [
                 for (final tab in _EditorLibraryTab.values)
                   Expanded(
-                    flex: tab == _EditorLibraryTab.transitions ? 13 : 10,
+                    flex: switch (tab) {
+                      _EditorLibraryTab.transitions => 18,
+                      _EditorLibraryTab.captions => 14,
+                      _ => 10,
+                    },
                     child: _LibraryTabButton(
                       tab: tab,
                       selected: _libraryTab == tab,
@@ -337,10 +341,12 @@ extension _DesktopWorkspace on _EditorScreenState {
         !_timelineFocusMode &&
         width >= 720 &&
         (width >= 1120 || !showInspector);
-    final libraryWidth = (width * _leftPanelFraction).clamp(230.0, 360.0);
-    final inspectorWidth = (width * _propertiesPanelFraction).clamp(
-      250.0,
-      340.0,
+    final libraryWidth = _sidePanelWidth(_leftPanelFraction, width, 200, 360);
+    final inspectorWidth = _sidePanelWidth(
+      _propertiesPanelFraction,
+      width,
+      220,
+      340,
     );
     final height = math.max(
       0.0,
@@ -524,3 +530,14 @@ class _ProjectProperties extends StatelessWidget {
     ],
   );
 }
+
+// Default widths stay at 280 px across desktop sizes. Saved/resized fractions
+// still scale with the window; pixel minima keep the controls usable.
+double _sidePanelWidth(
+  double fraction,
+  double width,
+  double minimum,
+  double maximum,
+) => (fraction == _defaultLeftPanelFraction ? 280.0 : width * fraction)
+    .clamp(minimum, maximum)
+    .toDouble();

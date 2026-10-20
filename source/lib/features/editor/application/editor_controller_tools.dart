@@ -6,10 +6,10 @@ extension EditorControllerTools on EditorController {
       final cues = SubtitleService.parseSrt(source);
       _addCaptionCuesToTimeline(
         cues,
-        fontFamily: 'Lato',
+        fontFamily: NewTextStyle.fontFamily,
         fontSize: 36,
         textColor: 0xFFFFFFFF,
-        backgroundColor: 0x99000000,
+        backgroundColor: NewTextStyle.backgroundColor,
         opacity: 1,
         textAnimation: domain.TextClipAnimation.none,
       );

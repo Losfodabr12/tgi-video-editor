@@ -117,3 +117,42 @@ O teste abre um projeto de 293 segundos e confere preview, contador e
 propriedades em 04:53. Não houve modificação dos tempos dos clipes ou do export.
 
 ![Régua ampliada e duração real](../source/test/goldens/editor_zoomed.png)
+
+## Legendas novas, quatro trilhas e painéis menores
+
+Textos novos, legendas rápidas/automáticas e importações SRT usam o preset
+`Lato Caption`: Lato Bold, branco, contorno preto de 2 px e sombra preta a
+45% com deslocamento curto. No preview, o contorno acompanha a escala do
+canvas e a sombra tem blur de 1 px na referência 720p; no FFmpeg, o contorno
+é de 2 px de saída e a sombra usa a suavização da fonte, sem blur adicional.
+Rasterização e escala do texto continuam aproximadas, como em PARIDADE.md.
+
+O preset é um novo nome no catálogo de fontes, guardado no campo `fontFamily`
+já existente do v14. Não foram adicionados campos nem alterados os defaults
+de desserialização. Famílias já salvas mantêm a renderização anterior;
+selecionar outro preset/fonte é uma alteração explícita do usuário. A prévia
+de estilo nos diálogos usa o mesmo widget que o preview do vídeo.
+
+![Texto novo sobre cenas clara e escura](../source/test/goldens/caption_contrast.png)
+
+Biblioteca e inspetor têm largura padrão de 280 px; os mínimos de resize são
+200 e 220 px, respectivamente. O espaço restante fica com o preview. As
+quatro trilhas padrão de 64 px cabem em 1440×900. Em janelas menores, a
+scrollbar vertical fica fixada à direita da área visível, independente do
+zoom/scroll horizontal. A margem inferior permite rolar até o áudio inteiro,
+mantendo seus cabeçalhos alinhados. Textos têm alças da mesma cor do clipe,
+clareadas somente no hover, com a área de arraste preservada.
+
+Layouts anteriores à versão 3, ou com menos de 45% reservados à timeline,
+restauram o padrão de 45% e são salvos novamente como preferências de layout
+v3. As alturas mínimas e o scroll continuam valendo em janelas baixas;
+essa migração não modifica o arquivo de projeto v14.
+
+A toolbar tem divisores entre edição, snapping, marcadores e navegação.
+Tooltips e tela de atalhos informam V/Y/U (edição), N (snapping), M
+(marcador), F (enquadrar), L (vínculo), A (áudio), Shift+Delete (ripple),
+I/O (trecho), setas (frame) e Ctrl + roda (zoom). Atalhos personalizados
+têm prioridade e campos de texto/diálogos não disparam as ações da timeline.
+O menu de qualidade/proxy usa texto de 14 px em superfície elevada.
+
+![Quatro trilhas e controles agrupados](../source/test/goldens/editor_four_tracks.png)

@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:flutter/services.dart';
 
 import 'app_component_paths.dart';
+import '../domain/text_style_profile.dart';
 
 /// A single catalog for the text inspector, captions and FFmpeg.
 class EditorFontService {
   static const bundled = <String, String>{
+    NewTextStyle.fontFamily: 'Lato-Bold.ttf',
     'Anton': 'Anton-Regular.ttf',
     'Bebas Neue': 'BebasNeue-Regular.ttf',
     'Poppins': 'Poppins-Bold.ttf',
@@ -49,6 +51,7 @@ class EditorFontService {
     'Caveat Brush',
     'Rajdhani',
     'Russo One',
+    NewTextStyle.fontFamily,
   ];
   static final _prepared = <String, Future<String>>{};
 

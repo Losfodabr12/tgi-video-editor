@@ -38,7 +38,16 @@ class _EditorWorkspaceLayout {
           : false,
       inspectorVisible: json['inspectorVisible'] != false,
       libraryVisible: json['libraryVisible'] != false,
-    ).normalized(resetVerticalSplit: json['layoutVersion'] != 3);
+    ).normalized(
+      resetVerticalSplit:
+          json['layoutVersion'] != 3 ||
+          _readDouble(
+                json,
+                'previewPanelFraction',
+                _defaultPreviewPanelFraction,
+              ) >
+              _defaultPreviewPanelFraction,
+    );
   }
 
   static double _readDouble(
@@ -86,7 +95,7 @@ class _EditorWorkspaceLayout {
                   : previewPanelFraction)
               .clamp(0.28, 0.68)
               .toDouble(),
-      timelineFocusMode: timelineFocusMode,
+      timelineFocusMode: resetVerticalSplit ? false : timelineFocusMode,
       inspectorVisible: inspectorVisible,
       libraryVisible: libraryVisible,
     );

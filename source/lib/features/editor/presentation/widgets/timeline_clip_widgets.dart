@@ -1,8 +1,9 @@
 part of 'timeline_panel.dart';
 
-class _ClipResizeHandle extends StatelessWidget {
+class _ClipResizeHandle extends StatefulWidget {
   const _ClipResizeHandle({
     required this.edge,
+    required this.color,
     required this.onDragStart,
     required this.onDragUpdate,
     required this.onDragCancel,
@@ -10,14 +11,21 @@ class _ClipResizeHandle extends StatelessWidget {
   });
 
   final _ClipResizeEdge edge;
+  final Color color;
   final VoidCallback onDragStart;
   final GestureDragUpdateCallback onDragUpdate;
   final VoidCallback onDragCancel;
   final VoidCallback onDragEnd;
 
   @override
+  State<_ClipResizeHandle> createState() => _ClipResizeHandleState();
+}
+
+class _ClipResizeHandleState extends State<_ClipResizeHandle> {
+  bool _hovering = false;
+  @override
   Widget build(BuildContext context) {
-    final isLeft = edge == _ClipResizeEdge.left;
+    final isLeft = widget.edge == _ClipResizeEdge.left;
     return Positioned(
       left: isLeft ? 0 : null,
       right: isLeft ? null : 0,
@@ -26,19 +34,24 @@ class _ClipResizeHandle extends StatelessWidget {
       width: 14,
       child: MouseRegion(
         cursor: SystemMouseCursors.resizeLeftRight,
+        onEnter: (_) => setState(() => _hovering = true),
+        onExit: (_) => setState(() => _hovering = false),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onHorizontalDragStart: (_) => onDragStart(),
-          onHorizontalDragUpdate: onDragUpdate,
-          onHorizontalDragCancel: onDragCancel,
-          onHorizontalDragEnd: (_) => onDragEnd(),
+          onHorizontalDragStart: (_) => widget.onDragStart(),
+          onHorizontalDragUpdate: widget.onDragUpdate,
+          onHorizontalDragCancel: widget.onDragCancel,
+          onHorizontalDragEnd: (_) => widget.onDragEnd(),
           child: Align(
             alignment: isLeft ? Alignment.centerLeft : Alignment.centerRight,
-            child: Container(
-              width: 3,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 110),
+              width: 2,
               margin: const EdgeInsets.symmetric(vertical: 8),
               decoration: BoxDecoration(
-                color: TgiColors.white.withValues(alpha: 0.72),
+                color: _hovering
+                    ? Color.lerp(widget.color, TgiColors.white, .45)
+                    : widget.color,
                 borderRadius: BorderRadius.circular(TgiRadii.xs),
               ),
             ),

@@ -127,7 +127,8 @@ class KeyboardShortcutsDialogState extends State<KeyboardShortcutsDialog> {
             children: [
               Text(
                 'Clique em Alterar e pressione a nova combinação de teclas.\n'
-                'Padrões adicionais: Ctrl+S salvar · Ctrl+O abrir · Ctrl+Shift+Z refazer · setas navegar por frame · I/O marcar trecho.',
+                'Padrões adicionais: Ctrl+S salvar · Ctrl+O abrir · Ctrl+Shift+Z refazer · setas navegar por frame · I/O marcar trecho.\n'
+                'Timeline: V/Y/U edição · N encaixe · M marcador · F enquadrar · L vincular · A áudio · Shift+Delete ripple.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: TgiSpacing.md),

@@ -31,6 +31,11 @@ jobs:
         run: ./tool/setup_tools.ps1
       - name: Pub get, analyze, tests and release build
         run: ./tool/test_editor.ps1 -Integration -Build
+      - name: Inspect working tree after build
+        if: always()
+        run: |
+          git status --porcelain
+          git diff --stat
       - name: Record executed remote checks
         run: ./tool/write_ci_report.ps1 -OutputPath .work/ci-RELATORIO_ALTERACOES.md
       - name: Package offline Windows build

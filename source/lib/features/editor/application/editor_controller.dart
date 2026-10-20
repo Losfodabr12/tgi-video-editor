@@ -1,3 +1,4 @@
+import '../../../domain/text_style_profile.dart';
 import '../../../services/subtitle_service.dart';
 import 'dart:async';
 import 'editor_caption_timing.dart';
@@ -1382,10 +1383,10 @@ class EditorController extends ChangeNotifier {
   void addTextToTimeline(
     String text, {
     Duration duration = const Duration(seconds: 5),
-    String fontFamily = 'Arial',
+    String fontFamily = NewTextStyle.fontFamily,
     double fontSize = 48,
     int textColor = 0xFFFFFFFF,
-    int backgroundColor = 0x99000000,
+    int backgroundColor = NewTextStyle.backgroundColor,
     double opacity = 1,
     domain.TextClipAnimation textAnimation = domain.TextClipAnimation.none,
     bool registerAsCaption = false,
@@ -1465,10 +1466,10 @@ class EditorController extends ChangeNotifier {
         isCaption: true,
         timelineStart: start + captionDuration * index,
         duration: captionDuration,
-        fontFamily: 'Impact',
+        fontFamily: NewTextStyle.fontFamily,
         fontSize: 68,
         textColor: 0xFFFFFFFF,
-        backgroundColor: 0xDD000000,
+        backgroundColor: NewTextStyle.backgroundColor,
         opacity: 1,
         textAnimation: domain.TextClipAnimation.pop,
       );
@@ -1501,10 +1502,10 @@ class EditorController extends ChangeNotifier {
     String? languageCode,
     String modelName = '',
     int maxCharsPerCue = 44,
-    String captionFontFamily = 'Arial',
+    String captionFontFamily = NewTextStyle.fontFamily,
     double captionFontSize = 52,
     int captionTextColor = 0xFFFFFFFF,
-    int captionBackgroundColor = 0xCC000000,
+    int captionBackgroundColor = NewTextStyle.backgroundColor,
     double captionOpacity = 1,
     domain.TextClipAnimation captionAnimation = domain.TextClipAnimation.fade,
   }) async {

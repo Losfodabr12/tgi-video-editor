@@ -222,13 +222,14 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
     _maxCharsPerCue = (initial?.maxCharsPerCue ?? 44).clamp(32, 52);
     _fontFamily = _fontFamilies.contains(initial?.fontFamily)
         ? initial!.fontFamily
-        : 'Arial';
+        : NewTextStyle.fontFamily;
     _fontSize = (initial?.fontSize ?? 52).clamp(24, 96);
     final initialTextColor = initial?.textColor ?? 0xFFFFFFFF;
     _textColor = _textColors.any((option) => option.value == initialTextColor)
         ? initialTextColor
         : 0xFFFFFFFF;
-    final initialBackgroundColor = initial?.backgroundColor ?? 0xCC000000;
+    final initialBackgroundColor =
+        initial?.backgroundColor ?? NewTextStyle.backgroundColor;
     _backgroundColor =
         _backgroundColors.any(
           (option) => option.value == initialBackgroundColor,
@@ -538,10 +539,10 @@ String _preferredWhisperModelName(List<_WhisperModelOption> modelOptions) {
 class _TextClipDialog extends StatefulWidget {
   const _TextClipDialog({
     this.initialText = 'Texto',
-    this.initialFontFamily = 'Arial',
+    this.initialFontFamily = NewTextStyle.fontFamily,
     this.initialFontSize = 48,
     this.initialTextColor = 0xFFFFFFFF,
-    this.initialBackgroundColor = 0x99000000,
+    this.initialBackgroundColor = NewTextStyle.backgroundColor,
     this.initialOpacity = 1,
     this.title = 'Adicionar texto',
     this.actionLabel = 'Adicionar',
@@ -703,21 +704,31 @@ class _TextClipDialogState extends State<_TextClipDialog> {
                         horizontal: 16,
                         vertical: 8,
                       ),
-                      child: Text(
-                        previewText,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontFamily: _fontFamily,
-                          color: Color(
-                            _textColor,
-                          ).withValues(alpha: textOpacity),
-                          fontSize: _fontSize,
-                          fontWeight: FontWeight.w800,
-                          height: 1.08,
-                        ),
-                      ),
+                      child: NewTextStyle.appliesTo(_fontFamily)
+                          ? StyledCaptionText(
+                              previewText,
+                              fontSize: _fontSize,
+                              color: Color(
+                                _textColor,
+                              ).withValues(alpha: textOpacity),
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : Text(
+                              previewText,
+                              maxLines: 3,
+                              overflow: TextOverflow.ellipsis,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontFamily: _fontFamily,
+                                color: Color(
+                                  _textColor,
+                                ).withValues(alpha: textOpacity),
+                                fontSize: _fontSize,
+                                fontWeight: FontWeight.w800,
+                                height: 1.08,
+                              ),
+                            ),
                     ),
                   ),
                 ),

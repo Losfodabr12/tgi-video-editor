@@ -16,6 +16,8 @@ import 'package:media_kit/media_kit.dart';
 
 import '../../../app/theme/design_tokens.dart';
 import '../../../domain/models/clip.dart' as domain;
+import '../../../domain/text_style_profile.dart';
+import 'widgets/styled_caption_text.dart';
 import '../../../domain/models/media_item.dart';
 import '../../../domain/models/project.dart';
 import '../../../domain/models/timeline_transition.dart';
@@ -88,12 +90,12 @@ enum EditorStartPreset { standard, quickCreator, square, feed45 }
 enum _KenBurnsPickTarget { start, end }
 
 const _workspaceDividerExtent = 8.0;
-const _defaultLeftPanelFraction = 0.24;
-const _defaultPropertiesPanelFraction = 0.19;
+const _defaultLeftPanelFraction = 280 / 1440;
+const _defaultPropertiesPanelFraction = _defaultLeftPanelFraction;
 const _defaultPreviewPanelFraction = 0.55;
-const _minLeftPanelFraction = 0.17;
+const _minLeftPanelFraction = 0.12;
 const _maxLeftPanelFraction = 0.36;
-const _minPropertiesPanelFraction = 0.14;
+const _minPropertiesPanelFraction = 0.12;
 const _maxPropertiesPanelFraction = 0.29;
 const _minCenterPanelFraction = 0.42;
 const _workspaceLayoutSaveDelay = Duration(milliseconds: 450);
@@ -256,6 +258,7 @@ class _EditorScreenState extends State<EditorScreen> {
   Duration _soundEffectPreviewPosition = Duration.zero;
   Duration _soundEffectPreviewDuration = Duration.zero;
   int _soundEffectPreviewRevision = 0;
+  final _timelineKey = GlobalKey<TimelinePanelState>();
   double _leftPanelFraction = _defaultLeftPanelFraction;
   double _propertiesPanelFraction = _defaultPropertiesPanelFraction;
   double _previewPanelFraction = _defaultPreviewPanelFraction;
@@ -941,6 +944,11 @@ class _EditorScreenState extends State<EditorScreen> {
       _inspectorVisible = layout.inspectorVisible;
       _libraryVisible = layout.libraryVisible;
     });
+    // Persist repaired layout preferences; project v14 is untouched.
+    await _EditorWorkspaceLayoutStore.save(
+      layout,
+      path: widget.workspaceLayoutPath,
+    );
   }
 
   _EditorWorkspaceLayout _currentWorkspaceLayout() {
@@ -1015,7 +1023,7 @@ class _EditorScreenState extends State<EditorScreen> {
 
   bool _handleEditorKeyEvent(KeyEvent event) {
     if (!mounted) return false;
-    return EditorKeyboardDispatcher(
+    final handled = EditorKeyboardDispatcher(
       context: context,
       controller: _controller,
       shortcutsAllowed: _canUseEditorShortcut(),
@@ -1028,6 +1036,23 @@ class _EditorScreenState extends State<EditorScreen> {
       markRange: _markExportRange,
       framesPerSecond: _exportSettings.framesPerSecond,
     ).handle(event);
+    if (handled) return true;
+    if (event is! KeyDownEvent ||
+        !_canUseEditorShortcut() ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return false;
+    }
+    final keyboard = HardwareKeyboard.instance;
+    if (keyboard.isControlPressed ||
+        keyboard.isMetaPressed ||
+        keyboard.isAltPressed) {
+      return false;
+    }
+    return _timelineKey.currentState?.handleShortcut(
+          event.logicalKey,
+          shift: keyboard.isShiftPressed,
+        ) ??
+        false;
   }
 
   void _addMediaItemToTimeline(
@@ -1191,10 +1216,10 @@ class _EditorScreenState extends State<EditorScreen> {
     }
     _controller.addTextToTimeline(
       caption.toUpperCase(),
-      fontFamily: 'Impact',
+      fontFamily: NewTextStyle.fontFamily,
       fontSize: 72,
       textColor: 0xFFFFFFFF,
-      backgroundColor: 0xDD000000,
+      backgroundColor: NewTextStyle.backgroundColor,
       opacity: 1,
       textAnimation: domain.TextClipAnimation.pop,
       registerAsCaption: true,
@@ -2208,9 +2233,12 @@ class _EditorScreenState extends State<EditorScreen> {
         _maxLeftPanelFraction,
         1 - _minCenterPanelFraction - _propertiesPanelFraction,
       );
-      _leftPanelFraction = (_leftPanelFraction + details.delta.dx / width)
-          .clamp(_minLeftPanelFraction, maxLeft)
-          .toDouble();
+      _leftPanelFraction =
+          ((_sidePanelWidth(_leftPanelFraction, width, 200, 360) +
+                      details.delta.dx) /
+                  width)
+              .clamp(_minLeftPanelFraction, maxLeft)
+              .toDouble();
     });
     _scheduleWorkspaceLayoutSave();
   }
@@ -2228,7 +2256,9 @@ class _EditorScreenState extends State<EditorScreen> {
         1 - _minCenterPanelFraction - _leftPanelFraction,
       );
       _propertiesPanelFraction =
-          (_propertiesPanelFraction - details.delta.dx / width)
+          ((_sidePanelWidth(_propertiesPanelFraction, width, 220, 340) -
+                      details.delta.dx) /
+                  width)
               .clamp(_minPropertiesPanelFraction, maxProperties)
               .toDouble();
     });
@@ -3067,7 +3097,8 @@ class _EditorScreenState extends State<EditorScreen> {
                               glow: true,
                               accentColor: TgiColors.textSecondary,
                               trailing: PopupMenuButton<String>(
-                                tooltip: 'Qualidade da pr?via',
+                                key: const ValueKey('preview-proxy-menu'),
+                                tooltip: 'Qualidade da prévia',
                                 onSelected: (value) {
                                   if (value == 'prepare') {
                                     unawaited(_controller.optimizePreview());
@@ -3081,7 +3112,7 @@ class _EditorScreenState extends State<EditorScreen> {
                                   const PopupMenuItem(
                                     value: 'auto',
                                     child: Text(
-                                      'Autom?tica ? usar proxy dispon?vel',
+                                      'Automática · usar proxy disponível',
                                     ),
                                   ),
                                   const PopupMenuItem(
@@ -3092,24 +3123,41 @@ class _EditorScreenState extends State<EditorScreen> {
                                     value: 'prepare',
                                     enabled: _controller.canOptimizePreview,
                                     child: const Text(
-                                      'Preparar proxy de edi??o',
+                                      'Preparar proxy de edição',
                                     ),
                                   ),
                                 ],
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      _controller.previewUsesProxy
-                                          ? 'Proxy'
-                                          : 'Original',
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: TgiColors.textMuted,
-                                      ),
+                                child: Container(
+                                  height: 28,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: TgiColors.surfaceRaised,
+                                    border: Border.all(color: TgiColors.border),
+                                    borderRadius: BorderRadius.circular(
+                                      TgiRadii.sm,
                                     ),
-                                    const Icon(Icons.arrow_drop_down, size: 16),
-                                  ],
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        _controller.previewUsesProxy
+                                            ? 'Proxy'
+                                            : 'Original',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w700,
+                                          color: TgiColors.textPrimary,
+                                        ),
+                                      ),
+                                      const Icon(
+                                        Icons.arrow_drop_down,
+                                        size: 20,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
                               child: VideoPreviewPanel(
@@ -3468,6 +3516,7 @@ class _EditorScreenState extends State<EditorScreen> {
                               accentColor: TgiColors.textSecondary,
                               showHeader: false,
                               child: TimelinePanel(
+                                key: _timelineKey,
                                 rangeStart: _exportSettings.rangeStart,
                                 rangeEnd: _exportSettings.rangeEnd,
                                 onMarkRangeStart: () => _markExportRange(true),

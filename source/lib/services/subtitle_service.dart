@@ -1,12 +1,13 @@
+import '../domain/text_style_profile.dart';
 import '../domain/models/clip.dart';
 import 'auto_caption_service.dart';
 
 class CaptionStyle {
   const CaptionStyle({
-    this.fontFamily = 'Lato',
+    this.fontFamily = NewTextStyle.fontFamily,
     this.fontSize = 36,
     this.textColor = 0xFFFFFFFF,
-    this.backgroundColor = 0x99000000,
+    this.backgroundColor = NewTextStyle.backgroundColor,
     this.opacity = 1,
     this.x = .5,
     this.y = .9,

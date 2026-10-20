@@ -81,47 +81,29 @@ class _TimelineHeader extends StatelessWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       _TimelineHeaderTool(
-                        tooltip: 'Mover clipe',
+                        tooltip: 'Mover clipe · V',
                         icon: Icons.open_with_rounded,
                         selected: editMode == TimelineEditMode.move,
                         onPressed: () =>
                             onEditModeChanged(TimelineEditMode.move),
                       ),
                       _TimelineHeaderTool(
-                        tooltip: 'Slip: mover o conteudo dentro do clipe',
+                        tooltip: 'Slip: mover o conteúdo dentro do clipe · Y',
                         icon: Icons.swap_horiz_rounded,
                         selected: editMode == TimelineEditMode.slip,
                         onPressed: () =>
                             onEditModeChanged(TimelineEditMode.slip),
                       ),
                       _TimelineHeaderTool(
-                        tooltip: 'Slide: mover ajustando os clipes vizinhos',
+                        tooltip: 'Slide: ajustar os clipes vizinhos · U',
                         icon: Icons.view_week_outlined,
                         selected: editMode == TimelineEditMode.slide,
                         onPressed: () =>
                             onEditModeChanged(TimelineEditMode.slide),
                       ),
-                      const SizedBox(width: 4),
                       _TimelineHeaderTool(
-                        tooltip: snappingEnabled
-                            ? 'Encaixe magnetico ligado: clipes grudam nas bordas'
-                            : 'Encaixe magnetico desligado',
-                        icon: Icons.join_inner_rounded,
-                        selected: snappingEnabled,
-                        onPressed: onSnappingChanged,
-                      ),
-                      _TimelineHeaderTool(
-                        key: const ValueKey('timeline-focus-selection'),
-                        tooltip: selectedCount > 0
-                            ? 'Enquadrar $selectedCount selecionado${selectedCount == 1 ? '' : 's'}'
-                            : 'Selecione um clipe para enquadrar',
-                        icon: Icons.center_focus_strong,
-                        onPressed: selectedCount > 0 ? onFocusSelection : null,
-                      ),
-                      _TimelineHeaderTool(
-                        tooltip: audioVideoLinked
-                            ? 'Separar audio do video'
-                            : 'Vincular audio ao video',
+                        tooltip:
+                            '${audioVideoLinked ? 'Separar áudio do vídeo' : 'Vincular áudio ao vídeo'} · L',
                         icon: audioVideoLinked
                             ? Icons.link_rounded
                             : Icons.link_off_rounded,
@@ -129,9 +111,29 @@ class _TimelineHeader extends StatelessWidget {
                         onPressed: onAudioVideoLinkToggle,
                       ),
                       _TimelineHeaderTool(
-                        tooltip: 'Ripple delete: apagar e fechar o espaco',
+                        tooltip:
+                            'Ripple delete: apagar e fechar o espaço · Shift+Delete',
                         icon: Icons.auto_delete_outlined,
                         onPressed: canRippleDelete ? onRippleDelete : null,
+                      ),
+                      _TimelineHeaderTool(
+                        tooltip: 'Inventário de áudio · A',
+                        icon: Icons.library_music_outlined,
+                        onPressed: onAudioInventoryOpen,
+                      ),
+                      const _TimelineToolDivider('editing-snapping'),
+                      _TimelineHeaderTool(
+                        tooltip:
+                            '${snappingEnabled ? 'Encaixe magnético ligado' : 'Encaixe magnético desligado'} · N',
+                        icon: Icons.join_inner_rounded,
+                        selected: snappingEnabled,
+                        onPressed: onSnappingChanged,
+                      ),
+                      const _TimelineToolDivider('snapping-markers'),
+                      _TimelineHeaderTool(
+                        tooltip: 'Adicionar marcador · M',
+                        icon: Icons.flag_outlined,
+                        onPressed: onMarkerAdd,
                       ),
                       if (onMarkRangeStart != null) ...[
                         _TimelineHeaderTool(
@@ -151,13 +153,19 @@ class _TimelineHeader extends StatelessWidget {
                             onPressed: onClearRange,
                           ),
                       ],
-                      const SizedBox(width: TgiSpacing.sm),
+                      const _TimelineToolDivider('markers-navigation'),
+                      _TimelineHeaderTool(
+                        key: const ValueKey('timeline-focus-selection'),
+                        tooltip: selectedCount > 0
+                            ? 'Enquadrar $selectedCount selecionado(s) · F'
+                            : 'Selecione um clipe para enquadrar · F',
+                        icon: Icons.center_focus_strong,
+                        onPressed: selectedCount > 0 ? onFocusSelection : null,
+                      ),
                       TimelineZoomControls(
                         zoom: zoom,
                         playheadPosition: playheadPosition,
                         duration: duration,
-                        onAudioInventoryOpen: onAudioInventoryOpen,
-                        onMarkerAdd: onMarkerAdd,
                         onZoomChanged: onZoomChanged,
                       ),
                     ],
@@ -242,4 +250,44 @@ Future<String?> _showRenameTrackDialog(
     return null;
   }
   return result.trim();
+}
+
+class _TimelineToolDivider extends StatelessWidget {
+  const _TimelineToolDivider(this.group);
+  final String group;
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    key: ValueKey('timeline-group-$group'),
+    height: 24,
+    child: const VerticalDivider(
+      width: 16,
+      thickness: 1,
+      color: TgiColors.border,
+    ),
+  );
+}
+
+class _TimelineVerticalScrollbar extends StatelessWidget {
+  const _TimelineVerticalScrollbar({
+    required this.controller,
+    required this.hasTracks,
+    required this.child,
+  });
+  final ScrollController controller;
+  final bool hasTracks;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => Scrollbar(
+    key: const ValueKey('timeline-vertical-scrollbar'),
+    controller: controller,
+    thumbVisibility: hasTracks,
+    trackVisibility: hasTracks,
+    interactive: hasTracks,
+    thickness: 10,
+    radius: const Radius.circular(2),
+    scrollbarOrientation: ScrollbarOrientation.right,
+    notificationPredicate: (notification) =>
+        notification.metrics.axis == Axis.vertical,
+    child: Padding(padding: const EdgeInsets.only(right: 12), child: child),
+  );
 }

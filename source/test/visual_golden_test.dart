@@ -1,3 +1,5 @@
+import 'support/four_track_project.dart';
+import 'package:tgi_video_editor/features/editor/presentation/widgets/styled_caption_text.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -335,6 +337,62 @@ void main() {
     await expectLater(
       find.byKey(const ValueKey('golden')),
       matchesGoldenFile('goldens/editor_zoomed.png'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('four complete tracks in the default editor golden', (
+    tester,
+  ) async {
+    await workspace(tester, project: fourTrackProject());
+    await expectLater(
+      find.byKey(const ValueKey('golden')),
+      matchesGoldenFile('goldens/editor_four_tracks.png'),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('new caption contrast on bright and dark footage golden', (
+    tester,
+  ) async {
+    await viewport(tester);
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: const ValueKey('caption-contrast'),
+        child: MaterialApp(
+          theme: TgiTheme.darkTheme,
+          debugShowCheckedModeBanner: false,
+          home: Material(
+            child: Row(
+              children: [
+                for (final background in [
+                  const Color(0xFFF5F5F5),
+                  const Color(0xFF121416),
+                ])
+                  Expanded(
+                    child: ColoredBox(
+                      color: background,
+                      child: const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24),
+                          child: StyledCaptionText(
+                            'Uma história\nem camadas',
+                            fontSize: 48,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await expectLater(
+      find.byKey(const ValueKey('caption-contrast')),
+      matchesGoldenFile('goldens/caption_contrast.png'),
     );
     expect(tester.takeException(), isNull);
   });

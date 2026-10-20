@@ -8,14 +8,11 @@ class TimelineZoomControls extends StatelessWidget {
     required this.zoom,
     required this.playheadPosition,
     required this.duration,
-    required this.onAudioInventoryOpen,
-    required this.onMarkerAdd,
     required this.onZoomChanged,
     super.key,
   });
   final double zoom;
   final Duration playheadPosition, duration;
-  final VoidCallback? onAudioInventoryOpen, onMarkerAdd;
   final ValueChanged<double> onZoomChanged;
   static const minZoom = 0.005;
   static const maxZoom = 32.0;
@@ -30,7 +27,7 @@ class TimelineZoomControls extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Tooltip(
-          message: 'Tempo atual / duração real do projeto',
+          message: 'Tempo atual / duração real · ←/→ navegar por frame',
           child: Container(
             key: const ValueKey('timeline-timecode'),
             height: 28,
@@ -53,16 +50,6 @@ class TimelineZoomControls extends StatelessWidget {
           ),
         ),
         const SizedBox(width: 8),
-        OutlinedButton.icon(
-          onPressed: onAudioInventoryOpen,
-          icon: const Icon(Icons.library_music_outlined, size: 16),
-          label: const Text('Áudio'),
-        ),
-        IconButton(
-          tooltip: 'Adicionar marcador',
-          onPressed: onMarkerAdd,
-          icon: const Icon(Icons.flag_outlined, size: 18),
-        ),
         const Icon(Icons.zoom_in, size: 18, color: TgiColors.textSecondary),
         Tooltip(
           message: 'Zoom da timeline · Ctrl + roda do mouse',

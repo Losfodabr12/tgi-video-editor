@@ -1,6 +1,6 @@
 # Relatório de alterações
 
-A revisão visual mais recente está em [Ajuste visual adicional](#ajuste-visual-adicional--20-de-outubro-de-2026),
+A revisão mais recente está em [Ajuste curto](#ajuste-curto--legendas-layout-e-diagnóstico-do-ci),
 com os comandos executados e as capturas antes/depois. Os resultados das etapas
 anteriores permanecem como histórico, vinculados aos respectivos commits.
 
@@ -451,9 +451,11 @@ da release v0.3.0 não foram substituídos. O aplicativo não foi aberto para
 teste manual.
 
 Os resultados remotos da release registrados acima pertencem ao commit
-`e407885`; não validam automaticamente esta revisão visual. O CI desta
-revisão será disparado pelo push e pode ser consultado em
-[GitHub Actions](https://github.com/Losfodabr12/tgi-video-editor/actions/workflows/ci.yml).
+`e407885`; não validam automaticamente esta revisão visual. O CI do ajuste
+`4cfb586` foi consultado posteriormente pela API e concluiu com
+**completed / success**:
+[run 39504938174](https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39504938174).
+Esse resultado pertence ao ajuste anterior; o novo ajuste curto tem outro run.
 
 Contagem atual, comando `wc -l` executado novamente:
 
@@ -472,3 +474,99 @@ playback/seek, tooltips I/O e a abertura com proporções de layout já salvas.
 O padrão 45% não sobrescreve proporções personalizadas existentes; duplo
 clique no divisor restaura o layout padrão. Goldens não validam drivers,
 GPU nem sincronismo audiovisual percebido.
+
+## Ajuste curto — legendas, layout e diagnóstico do CI
+
+Um único commit sobre `4cfb586`, mantendo o formato de projeto **v14**.
+
+- Textos novos, legendas rápidas/automáticas e importações SRT usam
+  **Lato Bold, branco, contorno preto de 2 px e sombra curta a 45%**.
+  No preview, o contorno acompanha o canvas e a sombra tem blur de 1 px
+  na referência 720p; no export, o contorno tem 2 px de saída e a sombra
+  usa o antialiasing da fonte, sem blur extra. O novo preset `Lato Caption`
+  usa o campo `fontFamily` já existente. Defaults de desserialização,
+  famílias antigas e seus estilos não foram alterados. A escolha explícita
+  de outra fonte/preset continua disponível. Preview e diálogos de estilo
+  usam o mesmo widget para esse preset.
+- Quatro trilhas de 64 px cabem inteiras no layout padrão em 1440×900.
+  Em 1280×720 há scroll vertical com scrollbar fixa na área visível,
+  independente do zoom horizontal. O teste rola até o fim, confere o áudio
+  inteiro e verifica alinhamento com seu cabeçalho. Há margem inferior de
+  12 px. Sem trilhas, a scrollbar não tenta usar um controlador desconectado.
+- Preferências de layout anteriores à versão 3, ou com menos de 45% para
+  a timeline, são normalizadas para 45% e gravadas como layout v3. Não se
+  trata de migração do arquivo de projeto. A altura mínima e a rolagem
+  continuam funcionando em janelas menores. Proporções válidas são preservadas.
+- Toolbar com divisores de edição / snapping / marcadores / navegação.
+  Tooltips e tela de atalhos indicam V/Y/U, N, M, F, L, A, Shift+Delete,
+  I/O, setas e Ctrl + roda. Os atalhos funcionam e respeitam campos de
+  texto, diálogos e bindings personalizados existentes.
+- Menu de qualidade/proxy com texto de 14 px, maior contraste e superfície
+  elevada. Alças de texto usam a cor do clipe, clareiam no hover e mantêm
+  a área de arraste. As alças de imagem mantêm sua cor anterior.
+- Painéis laterais com padrão de **280 px** e mínimos de resize de
+  200 px (biblioteca) / 220 px (inspetor), liberando espaço ao preview.
+- CI passa a executar `git status --porcelain` e `git diff --stat` em um
+  passo com `if: always()` logo após analyze/test/build. Isso permitirá
+  identificar os arquivos que causam `workingTreeDirty=true`; a causa
+  remota ainda não foi confirmada nesta revisão. Não se declara que o
+  novo passo já rodou no GitHub antes do push.
+
+### Capturas desta revisão
+
+Goldens reais, headless, 1440×900. A comparação histórica do ajuste anterior
+permanece acima; as imagens abaixo mostram os casos novos desta revisão.
+
+![Quatro trilhas, áudio inteiro e painéis de 280 px](source/test/goldens/editor_four_tracks.png)
+![Legenda nova sobre cena clara e escura](source/test/goldens/caption_contrast.png)
+
+### Comandos executados
+
+Windows, Flutter 3.44.4 / Dart 3.12.2, caminho curto `V:\source`:
+
+| Comando | Resultado real |
+| --- | --- |
+| `flutter test --no-pub test/visual_golden_test.dart --update-goldens` | **10 aprovados**, 8 s; oito goldens, incluindo os dois novos |
+| `flutter analyze --no-pub` | **Sem problemas**, exit 0, 3,8 s |
+| `flutter test --no-pub` | **187 aprovados / 13 opcionais ignorados**, exit 0, 29 s; goldens comparados sem atualização |
+| `flutter build windows --release --no-pub` | **Build Windows aprovado**, exit 0, 119,7 s |
+
+O teste novo de FFmpeg exportou frames sobre fundos branco e preto e contou
+pixels de contraste. O round-trip v14 preservou estilos antigos e o novo
+preset. A rodada de regressão de layout/transporte teve **23 aprovados**.
+Os testes anteriores permaneceram sem edição, exceto fixtures/referências
+visuais e os dois casos acrescentados ao arquivo de goldens.
+
+Houve falhas intermediárias: controlador de scrollbar sem trilhas e troca
+de árvore durante inserção/undo foram corrigidos; o teste novo também exigiu
+ajustes de timestamp e espera de I/O. Hooks nativos ficaram com um drive
+temporário antigo após interrupção da rodada; `flutter clean` e `flutter pub get`
+regeneraram os caches no mesmo caminho curto antes da repetição aprovada.
+Uma captura isolada recebeu o ancestral Material para remover os sublinhados
+de debug; os goldens e os dois comandos finais foram repetidos depois disso.
+
+Logs: `.work/ajuste-curto-regressions.log`, `.work/ajuste-curto-goldens.log`,
+`.work/ajuste-curto-analyze.log`, `.work/ajuste-curto-test.log`.
+Os 13 opcionais de integração não foram habilitados localmente nesta rodada.
+Os testes padrão de pixels FFmpeg foram executados.
+
+O build foi copiado para `aplicativo/`: **65 arquivos comparados por SHA-256,
+zero divergências**, ProductVersion **0.3.0+3**. O launcher local usa esse
+build atualizado. A tag e o ZIP histórico v0.3.0 não foram substituídos.
+Os avisos CMake CMP0175 do media_kit continuam presentes, sem impedir o build.
+Log: `.work/ajuste-curto-build.log`; conferência da cópia em
+`.work/ajuste-curto-local-build.json`. O executável não foi aberto para
+sessão manual. `git status --porcelain` e `git diff --stat` também foram
+executados localmente depois do build; logs em
+`.work/ajuste-curto-status-after-build.log` e `.work/ajuste-curto-diff-after-build.log`.
+O estado local incluía as alterações intencionais ainda não commitadas;
+isso não identifica a causa do estado sujo no checkout remoto histórico.
+
+`wc -l` foi executado novamente: FFmpeg service **2267**, controlador **6073**,
+tela **3747** linhas; **12087** no total. Formato e serviços de persistência
+do projeto não foram modificados.
+
+Continua pendente teste audiovisual na janela nativa, contraste em monitores
+e DPI diferentes, arraste contínuo de trim/scrollbar e uso com layout real
+previamente salvo. Os resultados antigos de CI/release permanecem associados
+aos SHAs identificados nas seções históricas.

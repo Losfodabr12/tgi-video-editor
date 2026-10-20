@@ -76,6 +76,7 @@ class _TimelineLanes extends StatelessWidget {
       builder: (context, _) => ListView.builder(
         key: viewportKey,
         controller: scrollController,
+        padding: const EdgeInsets.only(bottom: 12),
         itemCount: project.tracks.length + 1,
         itemBuilder: (context, row) {
           if (row == 0) {
@@ -1052,6 +1053,9 @@ class _PositionedClipState extends State<_PositionedClip> {
                 if (canResize) ...[
                   _ClipResizeHandle(
                     edge: _ClipResizeEdge.left,
+                    color: widget.clip.trackType == TrackType.text
+                        ? TgiColors.clipText
+                        : TgiColors.white.withValues(alpha: .72),
                     onDragStart: () => _startResize(_ClipResizeEdge.left),
                     onDragUpdate: _updateResize,
                     onDragCancel: _cancelResize,
@@ -1059,6 +1063,9 @@ class _PositionedClipState extends State<_PositionedClip> {
                   ),
                   _ClipResizeHandle(
                     edge: _ClipResizeEdge.right,
+                    color: widget.clip.trackType == TrackType.text
+                        ? TgiColors.clipText
+                        : TgiColors.white.withValues(alpha: .72),
                     onDragStart: () => _startResize(_ClipResizeEdge.right),
                     onDragUpdate: _updateResize,
                     onDragCancel: _cancelResize,

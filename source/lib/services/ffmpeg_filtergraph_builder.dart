@@ -3,6 +3,7 @@ import '../domain/models/cross_dissolve.dart';
 import 'cross_dissolve_graph.dart';
 import 'dart:math' as math;
 import '../domain/models/clip.dart';
+import '../domain/text_style_profile.dart';
 import '../domain/models/media_item.dart';
 import '../domain/models/project.dart';
 import '../domain/models/track.dart';
@@ -481,7 +482,8 @@ class FfmpegFiltergraphBuilder {
         'box=1:'
         'boxcolor=${_drawTextColor(overlay.backgroundColor, textOpacity)}:'
         'boxborderw=${_textBoxBorderPixels(outputWidth, outputHeight)}:'
-        'shadowcolor=${_drawTextColor(0xB3000000, textOpacity)}:'
+        '${NewTextStyle.appliesTo(overlay.fontFamily) ? 'borderw=${NewTextStyle.outlineWidth.toInt()}:bordercolor=${_drawTextColor(0xFF000000, textOpacity)}:' : ''}'
+        'shadowcolor=${_drawTextColor(NewTextStyle.appliesTo(overlay.fontFamily) ? NewTextStyle.shadowColor : 0xB3000000, textOpacity)}:'
         'shadowx=${_textShadowOffsetPixels(outputWidth, outputHeight)}:'
         'shadowy=${_textShadowOffsetPixels(outputWidth, outputHeight)}:'
         "${alphaExpression == null ? '' : "alpha='$alphaExpression':"}"
@@ -785,7 +787,8 @@ class FfmpegFiltergraphBuilder {
         'box=1:'
         'boxcolor=${_drawTextColor(overlay.backgroundColor, textOpacity)}:'
         'boxborderw=${_textBoxBorderPixels(outputWidth, outputHeight)}:'
-        'shadowcolor=${_drawTextColor(0xB3000000, textOpacity)}:'
+        '${NewTextStyle.appliesTo(overlay.fontFamily) ? 'borderw=${NewTextStyle.outlineWidth.toInt()}:bordercolor=${_drawTextColor(0xFF000000, textOpacity)}:' : ''}'
+        'shadowcolor=${_drawTextColor(NewTextStyle.appliesTo(overlay.fontFamily) ? NewTextStyle.shadowColor : 0xB3000000, textOpacity)}:'
         'shadowx=${_textShadowOffsetPixels(outputWidth, outputHeight)}:'
         'shadowy=${_textShadowOffsetPixels(outputWidth, outputHeight)}:'
         "${alphaExpression == null ? '' : "alpha='$alphaExpression':"}"

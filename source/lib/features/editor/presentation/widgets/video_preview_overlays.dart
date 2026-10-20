@@ -113,24 +113,31 @@ class _TextOverlayState extends State<_TextOverlay> {
                         ),
                         child: Padding(
                           padding: EdgeInsets.all(boxPadding),
-                          child: Text(
-                            content,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: entry.fontFamily,
-                              color: textColor,
-                              fontSize: fontSize,
-                              height: 1.08,
-                              fontWeight: FontWeight.w800,
-                              shadows: const [
-                                Shadow(
-                                  color: TgiColors.black,
-                                  blurRadius: 4,
-                                  offset: Offset(0, 1),
+                          child: NewTextStyle.appliesTo(entry.fontFamily)
+                              ? StyledCaptionText(
+                                  content,
+                                  fontSize: fontSize,
+                                  color: textColor,
+                                  scale: scale,
+                                )
+                              : Text(
+                                  content,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: entry.fontFamily,
+                                    color: textColor,
+                                    fontSize: fontSize,
+                                    height: 1.08,
+                                    fontWeight: FontWeight.w800,
+                                    shadows: const [
+                                      Shadow(
+                                        color: TgiColors.black,
+                                        blurRadius: 4,
+                                        offset: Offset(0, 1),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ),
-                          ),
                         ),
                       ),
                     ),

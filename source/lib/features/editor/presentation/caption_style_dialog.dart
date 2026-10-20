@@ -1,3 +1,5 @@
+import '../../../domain/text_style_profile.dart';
+import 'widgets/styled_caption_text.dart';
 import 'package:flutter/material.dart';
 
 import '../../../services/editor_font_service.dart';
@@ -78,14 +80,20 @@ class _CaptionStyleDialogState extends State<CaptionStyleDialog> {
               Container(
                 padding: const EdgeInsets.all(12),
                 color: Color(_background),
-                child: Text(
-                  'Prévia da legenda',
-                  style: TextStyle(
-                    fontFamily: _font,
-                    fontSize: _size.clamp(12, 48),
-                    color: Color(_color),
-                  ),
-                ),
+                child: NewTextStyle.appliesTo(_font)
+                    ? StyledCaptionText(
+                        'Prévia da legenda',
+                        fontSize: _size.clamp(12, 48),
+                        color: Color(_color),
+                      )
+                    : Text(
+                        'Prévia da legenda',
+                        style: TextStyle(
+                          fontFamily: _font,
+                          fontSize: _size.clamp(12, 48),
+                          color: Color(_color),
+                        ),
+                      ),
               ),
             ],
           ),
