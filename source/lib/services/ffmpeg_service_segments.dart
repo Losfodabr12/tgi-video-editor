@@ -1,7 +1,8 @@
-part of 'ffmpeg_service.dart';
+import '../domain/models/clip.dart';
+import '../domain/models/timeline_transition.dart';
 
-class _ExportWindow {
-  const _ExportWindow({
+class ExportWindow {
+  const ExportWindow({
     required this.timelineStart,
     required this.outputStart,
     required this.duration,
@@ -14,8 +15,8 @@ class _ExportWindow {
   Duration get timelineEnd => timelineStart + duration;
 }
 
-class _ExportSegment {
-  const _ExportSegment({
+class ExportSegment {
+  const ExportSegment({
     required this.filePath,
     required this.timelineGroupId,
     required this.timelineStart,
@@ -85,7 +86,7 @@ class _ExportSegment {
     required this.audioKeyframes,
   });
 
-  const _ExportSegment.gap({
+  const ExportSegment.gap({
     required this.timelineStart,
     required this.outputStart,
     required this.duration,
@@ -233,8 +234,8 @@ class _ExportSegment {
   Duration get timelineEnd => timelineStart + duration;
 }
 
-class _VideoOverlaySegment {
-  const _VideoOverlaySegment({
+class VideoOverlaySegment {
+  const VideoOverlaySegment({
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
     this.zOrder = 0,
@@ -355,8 +356,8 @@ class _VideoOverlaySegment {
   final List<ClipKeyframe> keyframes;
 }
 
-class _AudioMixSegment {
-  const _AudioMixSegment({
+class AudioMixSegment {
+  const AudioMixSegment({
     required this.filePath,
     required this.timelineStart,
     required this.sourceStart,
@@ -385,8 +386,8 @@ class _AudioMixSegment {
   final List<ClipKeyframe> keyframes;
 }
 
-class _TextOverlaySegment {
-  const _TextOverlaySegment({
+class TextOverlaySegment {
+  const TextOverlaySegment({
     this.fadeIn = Duration.zero,
     this.fadeOut = Duration.zero,
     this.zOrder = 0,
@@ -421,8 +422,8 @@ class _TextOverlaySegment {
   final List<ClipKeyframe> keyframes;
 }
 
-class _TransitionOverlaySegment {
-  const _TransitionOverlaySegment({
+class TransitionOverlaySegment {
+  const TransitionOverlaySegment({
     required this.filePath,
     required this.outputStart,
     required this.sourceStart,
@@ -447,8 +448,8 @@ class _TransitionOverlaySegment {
   final double intensity;
 }
 
-class _ImageOverlaySegment {
-  const _ImageOverlaySegment({
+class ImageOverlaySegment {
+  const ImageOverlaySegment({
     this.zOrder = 0,
     required this.filePath,
     required this.outputStart,

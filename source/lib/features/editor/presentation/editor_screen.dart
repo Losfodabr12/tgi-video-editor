@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'editor_keyboard.dart';
+import 'editor_preview_values.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math' as math;
@@ -270,8 +272,8 @@ class _EditorScreenState extends State<EditorScreen> {
   Timer? _errorAutoDismissTimer;
   String? _statusAutoDismissMessage;
   String? _errorAutoDismissMessage;
-  late Map<_EditorShortcutAction, SingleActivator> _shortcutBindings =
-      _defaultEditorShortcutBindings();
+  late Map<EditorShortcutAction, SingleActivator> _shortcutBindings =
+      defaultEditorShortcutBindings();
   String? _preferredOutputDirectory;
   _AutoCaptionsDialogResult? _lastAutoCaptionsSettings;
 
@@ -680,9 +682,9 @@ class _EditorScreenState extends State<EditorScreen> {
     if (!mounted) {
       return;
     }
-    final defaults = _defaultEditorShortcutBindings();
-    final bindings = <_EditorShortcutAction, SingleActivator>{};
-    for (final action in _EditorShortcutAction.values) {
+    final defaults = defaultEditorShortcutBindings();
+    final bindings = <EditorShortcutAction, SingleActivator>{};
+    for (final action in EditorShortcutAction.values) {
       bindings[action] =
           preferences.editorShortcuts[action.name]?.toActivator() ??
           defaults[action]!;
@@ -990,85 +992,20 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   bool _handleEditorKeyEvent(KeyEvent event) {
-    if (event is! KeyDownEvent || !mounted) {
-      return false;
-    }
-    if (ModalRoute.of(context)?.isCurrent != true) {
-      return false;
-    }
-    final keyboard = HardwareKeyboard.instance;
-    final command = keyboard.isControlPressed || keyboard.isMetaPressed;
-    final save =
-        command &&
-        !keyboard.isShiftPressed &&
-        event.logicalKey == LogicalKeyboardKey.keyS;
-    if (!_canUseEditorShortcut()) {
-      if (save &&
-          !_shortcutBindings.values.any(
-            (binding) => _eventMatchesShortcut(event, binding),
-          )) {
-        unawaited(_saveProject());
-        return true;
-      }
-      return false;
-    }
-
-    for (final entry in _shortcutBindings.entries) {
-      if (!_eventMatchesShortcut(event, entry.value)) {
-        continue;
-      }
-      _shortcutCallbackFor(entry.key).call();
-      return true;
-    }
-    if (save) {
-      unawaited(_saveProject());
-      return true;
-    }
-    if (command &&
-        event.logicalKey == LogicalKeyboardKey.keyZ &&
-        keyboard.isShiftPressed) {
-      _handleRedoShortcut();
-      return true;
-    }
-    if (command && event.logicalKey == LogicalKeyboardKey.keyO) {
-      unawaited(_loadProject());
-      return true;
-    }
-    if (!command &&
-        !keyboard.isAltPressed &&
-        (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
-            event.logicalKey == LogicalKeyboardKey.arrowRight)) {
-      final frame = Duration(
-        microseconds: (1000000 / _exportSettings.framesPerSecond).round(),
-      );
-      _controller.setTimelinePlaybackActive(false);
-      _controller.setPlayheadPosition(
-        _controller.playheadPosition +
-            (event.logicalKey == LogicalKeyboardKey.arrowLeft ? -frame : frame),
-      );
-      return true;
-    }
-    if (!keyboard.isControlPressed &&
-        !keyboard.isAltPressed &&
-        !keyboard.isMetaPressed) {
-      if (event.logicalKey == LogicalKeyboardKey.keyI) {
-        _markExportRange(true);
-        return true;
-      }
-      if (event.logicalKey == LogicalKeyboardKey.keyO) {
-        _markExportRange(false);
-        return true;
-      }
-    }
-    if (event.logicalKey == LogicalKeyboardKey.backspace) {
-      _handleDeleteShortcut();
-      return true;
-    }
-    if (event.logicalKey == LogicalKeyboardKey.escape) {
-      _controller.setCutMode(false);
-      return true;
-    }
-    return false;
+    if (!mounted) return false;
+    return EditorKeyboardDispatcher(
+      context: context,
+      controller: _controller,
+      shortcutsAllowed: _canUseEditorShortcut(),
+      bindings: _shortcutBindings,
+      callbackFor: _shortcutCallbackFor,
+      save: _saveProject,
+      load: _loadProject,
+      redo: _handleRedoShortcut,
+      delete: _handleDeleteShortcut,
+      markRange: _markExportRange,
+      framesPerSecond: _exportSettings.framesPerSecond,
+    ).handle(event);
   }
 
   void _addMediaItemToTimeline(
@@ -1921,143 +1858,22 @@ class _EditorScreenState extends State<EditorScreen> {
     ];
   }
 
-  VideoPreviewVisualAdjustments _visualAdjustmentsForClip(domain.Clip? clip) {
-    final base = VideoPreviewVisualAdjustments.fromClip(clip);
-    if (clip == null || !clip.hasKeyframes) {
-      return base;
-    }
-    final time = _previewClipTime(clip);
-    final hasCameraKeyframes =
-        clip.hasKeyframesFor(domain.ClipKeyframeProperty.overlayX) ||
-        clip.hasKeyframesFor(domain.ClipKeyframeProperty.overlayY) ||
-        clip.hasKeyframesFor(domain.ClipKeyframeProperty.overlayScale);
-    final cameraX = _previewKeyframedValue(
-      clip,
-      domain.ClipKeyframeProperty.overlayX,
-    );
-    final cameraY = _previewKeyframedValue(
-      clip,
-      domain.ClipKeyframeProperty.overlayY,
-    );
-    final cameraScale = _previewKeyframedValue(
-      clip,
-      domain.ClipKeyframeProperty.overlayScale,
-    );
-    return base.copyWith(
-      brightness: clip.keyframedValue(
-        domain.ClipKeyframeProperty.brightness,
-        time,
-      ),
-      contrast: clip.keyframedValue(domain.ClipKeyframeProperty.contrast, time),
-      saturation: clip.keyframedValue(
-        domain.ClipKeyframeProperty.saturation,
-        time,
-      ),
-      exposure: clip.keyframedValue(domain.ClipKeyframeProperty.exposure, time),
-      hue: clip.keyframedValue(domain.ClipKeyframeProperty.hue, time),
-      cropLeft: clip.keyframedValue(domain.ClipKeyframeProperty.cropLeft, time),
-      cropTop: clip.keyframedValue(domain.ClipKeyframeProperty.cropTop, time),
-      cropRight: clip.keyframedValue(
-        domain.ClipKeyframeProperty.cropRight,
-        time,
-      ),
-      cropBottom: clip.keyframedValue(
-        domain.ClipKeyframeProperty.cropBottom,
-        time,
-      ),
-      kenBurnsEnabled: base.kenBurnsEnabled || hasCameraKeyframes,
-      startOverlayX: hasCameraKeyframes ? cameraX : base.startOverlayX,
-      startOverlayY: hasCameraKeyframes ? cameraY : base.startOverlayY,
-      startOverlayScale: hasCameraKeyframes
-          ? cameraScale
-          : base.startOverlayScale,
-      endOverlayX: hasCameraKeyframes ? cameraX : base.endOverlayX,
-      endOverlayY: hasCameraKeyframes ? cameraY : base.endOverlayY,
-      endOverlayScale: hasCameraKeyframes ? cameraScale : base.endOverlayScale,
-    );
-  }
-
-  double _previewClipTime(domain.Clip clip) {
-    if (clip.duration <= Duration.zero) {
-      return 0;
-    }
-    final value =
-        (_controller.playheadPosition - clip.timelineStart).inMicroseconds /
-        clip.duration.inMicroseconds;
-    if (value.isNaN || value.isInfinite) {
-      return 0;
-    }
-    return value.clamp(0.0, 1.0).toDouble();
-  }
-
-  double _previewKeyframedValue(
-    domain.Clip clip,
-    domain.ClipKeyframeProperty property,
-  ) {
-    return clip.keyframedValue(property, _previewClipTime(clip));
-  }
-
-  double _previewOpacityForClip(domain.Clip clip) {
-    return _controller.previewOpacityForClip(clip) *
-        _previewKeyframedValue(clip, domain.ClipKeyframeProperty.opacity);
-  }
-
-  double _previewOverlayProgress(domain.Clip clip) {
-    if (!clip.kenBurnsEnabled || clip.duration <= Duration.zero) {
-      return 1;
-    }
-    final start =
-        clip.timelineStart +
-        Duration(
-          microseconds: (clip.duration.inMicroseconds * clip.kenBurnsStart)
-              .round(),
-        );
-    final end =
-        clip.timelineStart +
-        Duration(
-          microseconds: (clip.duration.inMicroseconds * clip.kenBurnsEnd)
-              .round(),
-        );
-    final span = end - start;
-    if (span <= Duration.zero) {
-      return 1;
-    }
-    final elapsed =
-        (_controller.playheadPosition - start).inMicroseconds /
-        span.inMicroseconds;
-    if (elapsed.isNaN || elapsed.isInfinite) {
-      return 1;
-    }
-    return elapsed.clamp(0.0, 1.0).toDouble();
-  }
-
-  double _previewOverlayX(domain.Clip clip) {
-    if (clip.hasKeyframesFor(domain.ClipKeyframeProperty.overlayX)) {
-      return _previewKeyframedValue(clip, domain.ClipKeyframeProperty.overlayX);
-    }
-    final progress = _previewOverlayProgress(clip);
-    return clip.startOverlayX + (clip.overlayX - clip.startOverlayX) * progress;
-  }
-
-  double _previewOverlayY(domain.Clip clip) {
-    if (clip.hasKeyframesFor(domain.ClipKeyframeProperty.overlayY)) {
-      return _previewKeyframedValue(clip, domain.ClipKeyframeProperty.overlayY);
-    }
-    final progress = _previewOverlayProgress(clip);
-    return clip.startOverlayY + (clip.overlayY - clip.startOverlayY) * progress;
-  }
-
-  double _previewOverlayScale(domain.Clip clip) {
-    if (clip.hasKeyframesFor(domain.ClipKeyframeProperty.overlayScale)) {
-      return _previewKeyframedValue(
-        clip,
-        domain.ClipKeyframeProperty.overlayScale,
-      );
-    }
-    final progress = _previewOverlayProgress(clip);
-    return clip.startOverlayScale +
-        (clip.overlayScale - clip.startOverlayScale) * progress;
-  }
+  EditorPreviewValues get _previewValues => EditorPreviewValues(
+    position: _controller.playheadPosition,
+    fadeOpacity: _controller.previewOpacityForClip,
+  );
+  VideoPreviewVisualAdjustments _visualAdjustmentsForClip(domain.Clip? clip) =>
+      _previewValues.visualAdjustmentsForClip(clip);
+  double _previewClipTime(domain.Clip clip) =>
+      _previewValues.previewClipTime(clip);
+  double _previewOpacityForClip(domain.Clip clip) =>
+      _previewValues.previewOpacityForClip(clip);
+  double _previewOverlayX(domain.Clip clip) =>
+      _previewValues.previewOverlayX(clip);
+  double _previewOverlayY(domain.Clip clip) =>
+      _previewValues.previewOverlayY(clip);
+  double _previewOverlayScale(domain.Clip clip) =>
+      _previewValues.previewOverlayScale(clip);
 
   void _handleUndoShortcut() {
     if (!_canUseEditorShortcut() || !_controller.canUndo) {
@@ -2116,12 +1932,11 @@ class _EditorScreenState extends State<EditorScreen> {
   }
 
   Future<void> _openKeyboardSettings() async {
-    final result =
-        await showDialog<Map<_EditorShortcutAction, SingleActivator>>(
-          context: context,
-          builder: (context) =>
-              _KeyboardShortcutsDialog(initialBindings: _shortcutBindings),
-        );
+    final result = await showDialog<Map<EditorShortcutAction, SingleActivator>>(
+      context: context,
+      builder: (context) =>
+          KeyboardShortcutsDialog(initialBindings: _shortcutBindings),
+    );
     _restoreEditorShortcutFocus();
     if (result == null || !mounted) {
       return;
@@ -2160,16 +1975,16 @@ class _EditorScreenState extends State<EditorScreen> {
     );
   }
 
-  VoidCallback _shortcutCallbackFor(_EditorShortcutAction action) {
+  VoidCallback _shortcutCallbackFor(EditorShortcutAction action) {
     return switch (action) {
-      _EditorShortcutAction.undo => _handleUndoShortcut,
-      _EditorShortcutAction.redo => _handleRedoShortcut,
-      _EditorShortcutAction.split => _handleSplitShortcut,
-      _EditorShortcutAction.copy => _handleCopyShortcut,
-      _EditorShortcutAction.paste => _handlePasteShortcut,
-      _EditorShortcutAction.duplicate => _handleDuplicateShortcut,
-      _EditorShortcutAction.playPause => _handlePlaybackShortcut,
-      _EditorShortcutAction.delete => _handleDeleteShortcut,
+      EditorShortcutAction.undo => _handleUndoShortcut,
+      EditorShortcutAction.redo => _handleRedoShortcut,
+      EditorShortcutAction.split => _handleSplitShortcut,
+      EditorShortcutAction.copy => _handleCopyShortcut,
+      EditorShortcutAction.paste => _handlePasteShortcut,
+      EditorShortcutAction.duplicate => _handleDuplicateShortcut,
+      EditorShortcutAction.playPause => _handlePlaybackShortcut,
+      EditorShortcutAction.delete => _handleDeleteShortcut,
     };
   }
 

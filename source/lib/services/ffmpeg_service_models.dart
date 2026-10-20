@@ -1,4 +1,10 @@
-part of 'ffmpeg_service.dart';
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_kit.dart';
+import 'package:ffmpeg_kit_flutter_new/ffmpeg_session.dart';
+import 'package:record/record.dart';
 
 class VideoMetadata {
   const VideoMetadata({
@@ -16,8 +22,8 @@ class VideoMetadata {
   final int? height;
 }
 
-class _VideoDimensions {
-  const _VideoDimensions({required this.width, required this.height});
+class VideoDimensions {
+  const VideoDimensions({required this.width, required this.height});
 
   final int width;
   final int height;
@@ -35,11 +41,13 @@ class FfmpegExportCommand {
     required this.arguments,
     required this.totalDuration,
     required this.clipCount,
+    this.textFiles = const {},
   });
 
   final List<String> arguments;
   final Duration totalDuration;
   final int clipCount;
+  final Map<String, String> textFiles;
 }
 
 class FfmpegPreviewProxyCommand {
@@ -169,7 +177,7 @@ class FfmpegExportCancelledException implements Exception {
 }
 
 class FfmpegRecordingSession {
-  FfmpegRecordingSession._desktop({
+  FfmpegRecordingSession.desktopdesktop({
     required this._process,
     required this.outputPath,
     required this._stdoutDone,
@@ -177,7 +185,7 @@ class FfmpegRecordingSession {
     required this._stderrBuffer,
   }) : _mobileRecorder = null;
 
-  FfmpegRecordingSession._mobile({
+  FfmpegRecordingSession.mobile({
     required AudioRecorder recorder,
     required this.outputPath,
   }) : _process = null,
@@ -262,9 +270,9 @@ class FfmpegRecordingSession {
 }
 
 class FfmpegCommandProcess {
-  const FfmpegCommandProcess._(this._handle);
+  const FfmpegCommandProcess(this._handle);
 
-  final _MediaProcessHandle _handle;
+  final MediaProcessHandle _handle;
 
   int get pid => _handle.pid;
   Stream<List<int>> get stdout => _handle.stdout;
@@ -274,7 +282,7 @@ class FfmpegCommandProcess {
   Future<bool> cancel() => _handle.cancel();
 }
 
-abstract class _MediaProcessHandle {
+abstract class MediaProcessHandle {
   int get pid;
   Stream<List<int>> get stdout;
   Stream<List<int>> get stderr;
@@ -283,8 +291,8 @@ abstract class _MediaProcessHandle {
   Future<bool> cancel();
 }
 
-class _DesktopMediaProcessHandle implements _MediaProcessHandle {
-  const _DesktopMediaProcessHandle(this.process);
+class DesktopMediaProcessHandle implements MediaProcessHandle {
+  const DesktopMediaProcessHandle(this.process);
 
   final Process process;
 
@@ -304,8 +312,8 @@ class _DesktopMediaProcessHandle implements _MediaProcessHandle {
   Future<bool> cancel() async => Process.killPid(process.pid);
 }
 
-class _MobileMediaProcessHandle implements _MediaProcessHandle {
-  _MobileMediaProcessHandle._({
+class MobileMediaProcessHandle implements MediaProcessHandle {
+  MobileMediaProcessHandle._({
     required this._session,
     required this._stdoutController,
     required this._stderrController,
@@ -317,7 +325,7 @@ class _MobileMediaProcessHandle implements _MediaProcessHandle {
   final StreamController<List<int>> _stderrController;
   final Completer<int> _exitCodeCompleter;
 
-  static Future<_MobileMediaProcessHandle> start(List<String> arguments) async {
+  static Future<MobileMediaProcessHandle> start(List<String> arguments) async {
     final stdoutController = StreamController<List<int>>();
     final stderrController = StreamController<List<int>>();
     final exitCodeCompleter = Completer<int>();
@@ -349,7 +357,7 @@ class _MobileMediaProcessHandle implements _MediaProcessHandle {
         );
       },
     );
-    return _MobileMediaProcessHandle._(
+    return MobileMediaProcessHandle._(
       session: session,
       stdoutController: stdoutController,
       stderrController: stderrController,

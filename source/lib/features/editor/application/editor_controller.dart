@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'editor_caption_timing.dart';
+import 'editor_history.dart';
 import 'dart:io';
 import 'dart:math' as math;
 
@@ -31,15 +33,6 @@ const _defaultAppliedTransitionDuration = Duration(milliseconds: 900);
 const _clipBoundaryTolerance = Duration(milliseconds: 120);
 const _captionMinDuration = Duration(milliseconds: 1200);
 const _captionDefaultDuration = Duration(milliseconds: 2200);
-const _captionMaxDuration = Duration(milliseconds: 3500);
-const _captionAudioSearchPadding = Duration(milliseconds: 900);
-const _captionAudioLead = Duration(milliseconds: 80);
-const _captionAudioTail = Duration(milliseconds: 260);
-const _captionAudioMinDuration = Duration(milliseconds: 600);
-const _captionAudioMaxDuration = Duration(milliseconds: 2600);
-const _captionTimelineGap = Duration(milliseconds: 80);
-const _captionAudioThresholdFloor = 0.08;
-const _captionAudioThresholdRatio = 0.24;
 const _defaultFreezeFrameDuration = Duration(seconds: 2);
 
 bool shouldAutomaticallyOptimizePreview(MediaItem item) {
@@ -198,8 +191,8 @@ class EditorController extends ChangeNotifier {
   bool _timelinePlaybackActive = false;
   Timer? _gapPlaybackTimer;
   DateTime? _lastGapPlaybackTickAt;
-  final List<TgiProject> _undoStack = [];
-  final List<TgiProject> _redoStack = [];
+  final _history = EditorHistory(limit: _historyLimit);
+  final _captionTiming = const EditorCaptionTiming();
   final List<_ClipboardClip> _clipClipboard = [];
   final Map<String, AudioWaveform> _audioWaveformsByMediaId = {};
   final Set<String> _audioWaveformLoadsInFlight = {};
@@ -287,8 +280,8 @@ class EditorController extends ChangeNotifier {
   Duration get playheadPosition => _playheadPosition;
   bool get isCutMode => _isCutMode;
   bool get timelinePlaybackActive => _timelinePlaybackActive;
-  bool get canUndo => _undoStack.isNotEmpty;
-  bool get canRedo => _redoStack.isNotEmpty;
+  bool get canUndo => _history.undoStack.isNotEmpty;
+  bool get canRedo => _history.redoStack.isNotEmpty;
   bool get canCopyClips => _selectedTimelineGroupIds.isNotEmpty;
   bool get canPasteClips => _clipClipboard.isNotEmpty;
   bool get canDuplicateClips => _selectedTimelineGroupIds.isNotEmpty;
@@ -434,18 +427,9 @@ class EditorController extends ChangeNotifier {
     if (!_disposed) super.notifyListeners();
   }
 
-  void _pushHistory([TgiProject? projectSnapshot]) {
-    _undoStack.add(projectSnapshot ?? _project);
-    if (_undoStack.length > _historyLimit) {
-      _undoStack.removeAt(0);
-    }
-    _redoStack.clear();
-  }
-
-  void _clearHistory() {
-    _undoStack.clear();
-    _redoStack.clear();
-  }
+  void _pushHistory([TgiProject? snapshot]) =>
+      _history.record(snapshot ?? _project);
+  void _clearHistory() => _history.clear();
 
   void beginInteractiveEdit() {
     _interactiveEditBaseProject ??= _project;
@@ -476,27 +460,27 @@ class EditorController extends ChangeNotifier {
 
   void undo() {
     _restoreTrimPreviewBase();
-    if (_undoStack.isEmpty) {
+    if (_history.undoStack.isEmpty) {
       return;
     }
 
-    _redoStack.add(_project);
-    _project = _undoStack.removeLast();
+    _history.redoStack.add(_project);
+    _project = _history.undoStack.removeLast();
     _resetTransientTimelineState();
     notifyListeners();
   }
 
   void redo() {
     _restoreTrimPreviewBase();
-    if (_redoStack.isEmpty) {
+    if (_history.redoStack.isEmpty) {
       return;
     }
 
-    _undoStack.add(_project);
-    if (_undoStack.length > _historyLimit) {
-      _undoStack.removeAt(0);
+    _history.undoStack.add(_project);
+    if (_history.undoStack.length > _historyLimit) {
+      _history.undoStack.removeAt(0);
     }
-    _project = _redoStack.removeLast();
+    _project = _history.redoStack.removeLast();
     _resetTransientTimelineState();
     notifyListeners();
   }
@@ -1452,7 +1436,7 @@ class EditorController extends ChangeNotifier {
     String transcript, {
     int wordsPerCaption = 5,
   }) {
-    final captions = _captionChunks(transcript, wordsPerCaption);
+    final captions = _captionTiming.captionChunks(transcript, wordsPerCaption);
     if (captions.isEmpty) {
       _errorMessage = 'Cole uma transcricao para gerar legendas.';
       notifyListeners();
@@ -1467,7 +1451,7 @@ class EditorController extends ChangeNotifier {
     final usableTotal = remainingTimeline >= _captionMinDuration
         ? remainingTimeline
         : preferredTotal;
-    final captionDuration = _clampCaptionDuration(
+    final captionDuration = _captionTiming.clampCaptionDuration(
       Duration(
         milliseconds: (usableTotal.inMilliseconds / captions.length).round(),
       ),
@@ -1609,7 +1593,7 @@ class EditorController extends ChangeNotifier {
           ),
         );
       }
-      final timelineCues = _resolveCaptionCueOverlaps(
+      final timelineCues = _captionTiming.resolveCaptionCueOverlaps(
         mappedTimelineCues,
         timelineLimit: _project.timelineDuration,
       );
@@ -5247,110 +5231,12 @@ class EditorController extends ChangeNotifier {
         return cues;
       }
       return [
-        for (final cue in cues) _alignCaptionCueToWaveform(cue, waveform),
+        for (final cue in cues)
+          _captionTiming.alignCaptionCueToWaveform(cue, waveform),
       ];
     } catch (_) {
       return cues;
     }
-  }
-
-  CaptionCue _alignCaptionCueToWaveform(
-    CaptionCue cue,
-    AudioWaveform waveform,
-  ) {
-    if (cue.end <= cue.start ||
-        waveform.samples.isEmpty ||
-        waveform.sampleInterval <= Duration.zero) {
-      return cue;
-    }
-
-    final intervalUs = waveform.sampleInterval.inMicroseconds;
-    final searchStart = _maxDuration(
-      Duration.zero,
-      cue.start - _captionAudioSearchPadding,
-    );
-    final searchEnd = cue.end + _captionAudioSearchPadding;
-    final startIndex = (searchStart.inMicroseconds ~/ intervalUs).clamp(
-      0,
-      waveform.samples.length,
-    );
-    final endIndex = ((searchEnd.inMicroseconds + intervalUs - 1) ~/ intervalUs)
-        .clamp(startIndex, waveform.samples.length);
-    if (endIndex <= startIndex) {
-      return cue;
-    }
-
-    var localPeak = 0.0;
-    for (var index = startIndex; index < endIndex; index++) {
-      final sample = waveform.samples[index];
-      if (sample > localPeak) {
-        localPeak = sample;
-      }
-    }
-    if (localPeak <= 0) {
-      return cue;
-    }
-
-    final threshold = _maxDouble(
-      _captionAudioThresholdFloor,
-      localPeak * _captionAudioThresholdRatio,
-    );
-    var firstAudible = -1;
-    for (var index = startIndex; index < endIndex; index++) {
-      if (_waveformHasActivityAt(waveform.samples, index, threshold)) {
-        firstAudible = index;
-        break;
-      }
-    }
-    if (firstAudible < 0) {
-      return cue;
-    }
-
-    var lastAudible = firstAudible;
-    for (var index = endIndex - 1; index >= firstAudible; index--) {
-      if (_waveformHasActivityAt(waveform.samples, index, threshold)) {
-        lastAudible = index;
-        break;
-      }
-    }
-
-    var start = Duration(microseconds: firstAudible * intervalUs);
-    start = _maxDuration(Duration.zero, start - _captionAudioLead);
-    var end = Duration(microseconds: (lastAudible + 1) * intervalUs);
-    end += _captionAudioTail;
-    final maxEnd = start + _captionAudioMaxDuration;
-    if (end > maxEnd) {
-      end = maxEnd;
-    }
-    final minEnd = start + _captionAudioMinDuration;
-    if (end < minEnd) {
-      end = minEnd;
-    }
-    if (end <= start) {
-      return cue;
-    }
-    return CaptionCue(start: start, end: end, text: cue.text);
-  }
-
-  bool _waveformHasActivityAt(
-    List<double> samples,
-    int index,
-    double threshold,
-  ) {
-    if (samples[index] >= threshold) {
-      return true;
-    }
-    var nearbyActive = 0;
-    for (var offset = -1; offset <= 1; offset++) {
-      final nearbyIndex = index + offset;
-      if (nearbyIndex < 0 || nearbyIndex >= samples.length) {
-        continue;
-      }
-      if (samples[nearbyIndex] >= threshold) {
-        nearbyActive++;
-      }
-    }
-    return nearbyActive >= 2;
   }
 
   List<CaptionCue> _timelineCaptionCuesForClip(
@@ -5388,58 +5274,10 @@ class EditorController extends ChangeNotifier {
       );
     }
     cues.sort((a, b) => a.start.compareTo(b.start));
-    return _resolveCaptionCueOverlaps(
+    return _captionTiming.resolveCaptionCueOverlaps(
       cues,
       timelineLimit: timingClip.timelineEnd,
     );
-  }
-
-  List<CaptionCue> _resolveCaptionCueOverlaps(
-    List<CaptionCue> cues, {
-    Duration? timelineLimit,
-  }) {
-    if (cues.isEmpty) {
-      return const [];
-    }
-
-    final sorted = [...cues]
-      ..sort((a, b) {
-        final startCompare = a.start.compareTo(b.start);
-        if (startCompare != 0) {
-          return startCompare;
-        }
-        return a.end.compareTo(b.end);
-      });
-    final normalized = <CaptionCue>[];
-    var previousEnd = Duration.zero;
-
-    for (final cue in sorted) {
-      var start = cue.start;
-      if (normalized.isNotEmpty && start < previousEnd + _captionTimelineGap) {
-        start = previousEnd + _captionTimelineGap;
-      }
-      final limit = timelineLimit;
-      if (limit != null && start >= limit) {
-        continue;
-      }
-
-      var end = cue.end;
-      final minimumEnd = start + _captionAudioMinDuration;
-      if (end < minimumEnd) {
-        end = minimumEnd;
-      }
-      if (limit != null && end > limit) {
-        end = limit;
-      }
-      if (end <= start || cue.text.trim().isEmpty) {
-        continue;
-      }
-
-      normalized.add(CaptionCue(start: start, end: end, text: cue.text));
-      previousEnd = end;
-    }
-
-    return normalized;
   }
 
   List<CaptionCue> _generatedCaptionCuesFromProject() {
@@ -5475,37 +5313,6 @@ class EditorController extends ChangeNotifier {
       return number(a.id).compareTo(number(b.id));
     });
     return clips;
-  }
-
-  List<String> _captionChunks(String transcript, int wordsPerCaption) {
-    final normalized = transcript.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (normalized.isEmpty) {
-      return const [];
-    }
-    final targetWords = wordsPerCaption.clamp(3, 8).toInt();
-    final sentences = normalized
-        .split(RegExp(r'(?<=[.!?])\s+'))
-        .map((sentence) => sentence.trim())
-        .where((sentence) => sentence.isNotEmpty);
-    final chunks = <String>[];
-    for (final sentence in sentences) {
-      final words = sentence.split(' ');
-      for (var index = 0; index < words.length; index += targetWords) {
-        final end = (index + targetWords).clamp(0, words.length);
-        chunks.add(words.sublist(index, end).join(' '));
-      }
-    }
-    return chunks;
-  }
-
-  Duration _clampCaptionDuration(Duration duration) {
-    if (duration < _captionMinDuration) {
-      return _captionMinDuration;
-    }
-    if (duration > _captionMaxDuration) {
-      return _captionMaxDuration;
-    }
-    return duration;
   }
 
   domain.Clip? _findClipById(String clipId) {
@@ -5967,10 +5774,6 @@ class EditorController extends ChangeNotifier {
   }
 
   Duration _maxDuration(Duration first, Duration second) {
-    return first >= second ? first : second;
-  }
-
-  double _maxDouble(double first, double second) {
     return first >= second ? first : second;
   }
 

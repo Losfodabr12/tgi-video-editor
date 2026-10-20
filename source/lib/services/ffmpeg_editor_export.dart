@@ -1,92 +1,12 @@
 part of 'ffmpeg_service.dart';
 
 extension _EditorExport on FfmpegService {
-  FfmpegExportCommand _applyEditorExportOptions(
-    FfmpegExportCommand command,
-    FfmpegExportSettings settings,
-  ) {
-    final duration = settings.exportDuration(command.totalDuration);
-    final arguments =
-        settings.encoder == FfmpegVideoEncoder.software ||
-            settings.encoder == FfmpegVideoEncoder.automatic
-        ? List<String>.of(command.arguments)
-        : _replaceVideoEncoder(
-            command.arguments,
-            settings.encoder,
-            settings.quality,
-          );
-    if (settings.hasRange) {
-      // Output seeking preserves the timeline clock used by fades, text,
-      // transitions and ducking, then resets the timestamps in the output.
-      arguments.insertAll(arguments.length - 1, [
-        '-ss',
-        _seconds(settings.rangeStart ?? Duration.zero),
-        '-t',
-        _seconds(duration),
-      ]);
-    }
-    return FfmpegExportCommand(
-      arguments: arguments,
-      totalDuration: duration,
-      clipCount: command.clipCount,
-    );
-  }
-
   List<String> _replaceVideoEncoder(
-    List<String> source,
+    List<String> arguments,
     FfmpegVideoEncoder encoder,
     FfmpegExportQuality quality,
-  ) {
-    final args = List<String>.of(source);
-    final codecIndex = args.indexOf('-c:v');
-    if (codecIndex < 0) return args;
-    args[codecIndex + 1] = encoder.codec;
-    const options = {
-      '-preset',
-      '-crf',
-      '-rc',
-      '-cq',
-      '-b:v',
-      '-global_quality',
-      '-quality',
-      '-qp_i',
-      '-qp_p',
-    };
-    for (var i = codecIndex + 2; i < args.length - 1;) {
-      if (options.contains(args[i])) {
-        args.removeRange(i, i + 2);
-      } else {
-        i++;
-      }
-    }
-    final q = quality.crf.toString();
-    final flags = switch (encoder) {
-      FfmpegVideoEncoder.nvidia => [
-        '-preset',
-        'p4',
-        '-rc',
-        'vbr',
-        '-cq',
-        q,
-        '-b:v',
-        '0',
-      ],
-      FfmpegVideoEncoder.intel => ['-preset', 'medium', '-global_quality', q],
-      FfmpegVideoEncoder.amd => [
-        '-quality',
-        'balanced',
-        '-rc',
-        'cqp',
-        '-qp_i',
-        q,
-        '-qp_p',
-        q,
-      ],
-      _ => ['-preset', quality.encoderPreset, '-crf', q],
-    };
-    args.insertAll(codecIndex + 2, flags);
-    return args;
-  }
+  ) =>
+      FfmpegFiltergraphBuilder.replaceVideoEncoder(arguments, encoder, quality);
 
   Future<FfmpegVideoEncoder> _resolveExportEncoder(
     FfmpegVideoEncoder requested,
