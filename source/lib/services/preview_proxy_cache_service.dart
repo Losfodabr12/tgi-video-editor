@@ -1,23 +1,23 @@
 import 'dart:io';
 
 import '../domain/models/media_item.dart';
+import 'app_component_paths.dart';
+import 'media_disk_cache.dart';
 
 class PreviewProxyCacheService {
   PreviewProxyCacheService({String? cacheDirectoryPath})
     : cacheDirectoryPath =
           cacheDirectoryPath ??
-          _join(Directory.systemTemp.path, 'tgi_video_editor_preview_proxies');
+          joinPlatformPath([tgiAppLocalDataRoot(), 'cache', 'proxies']);
 
   static final PreviewProxyCacheService instance = PreviewProxyCacheService();
 
   final String cacheDirectoryPath;
 
   Future<String> proxyPathFor(MediaItem item) async {
-    final source = File(item.filePath);
-    final stat = await source.stat();
-    final fingerprint = _stableHash(
-      '${source.absolute.path.toLowerCase()}|'
-      '${stat.size}|${stat.modified.microsecondsSinceEpoch}|v1',
+    final fingerprint = await MediaDiskCache.fingerprint(
+      item.filePath,
+      'proxy-v3-aspect960x540-30fps',
     );
     final stem = _sanitizeFileName(_fileStem(item.filePath));
     return _join(cacheDirectoryPath, '${fingerprint}_$stem.mp4');
@@ -68,15 +68,6 @@ class PreviewProxyCacheService {
       }
     }
     return removed;
-  }
-
-  static String _stableHash(String value) {
-    var hash = 0x811c9dc5;
-    for (final byte in value.codeUnits) {
-      hash ^= byte;
-      hash = (hash * 0x01000193) & 0xFFFFFFFF;
-    }
-    return hash.toRadixString(16).padLeft(8, '0');
   }
 
   static String _sanitizeFileName(String value) {

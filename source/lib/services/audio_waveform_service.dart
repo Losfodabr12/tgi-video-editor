@@ -1,21 +1,27 @@
 import 'dart:io';
+import 'dart:convert';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
 import '../domain/models/audio_waveform.dart';
 import '../domain/models/media_item.dart';
 import 'ffmpeg_service.dart';
+import 'media_disk_cache.dart';
 
 class AudioWaveformService {
   AudioWaveformService({
     required this.ffmpegService,
     this.sampleInterval = const Duration(milliseconds: 100),
     this.rawSampleRate = 100,
-  });
+    MediaDiskCache? diskCache,
+  }) : diskCache = diskCache ?? MediaDiskCache();
 
   final FfmpegService ffmpegService;
   final Duration sampleInterval;
   final int rawSampleRate;
+  final MediaDiskCache diskCache;
+  int diskCacheHits = 0;
+  int extractions = 0;
   final Map<String, Future<AudioWaveform>> _cache = {};
 
   Future<AudioWaveform> extractWaveform(MediaItem item) {
@@ -34,7 +40,7 @@ class AudioWaveformService {
     final stat = await file.stat();
     final key = [
       file.path,
-      stat.modified.millisecondsSinceEpoch,
+      stat.modified.microsecondsSinceEpoch,
       stat.size,
       sampleInterval.inMilliseconds,
       rawSampleRate,
@@ -45,12 +51,60 @@ class AudioWaveformService {
       return cached;
     }
 
-    final future = _extract(file.path).catchError((Object error) {
+    final future = _extractOrRead(file.path).catchError((Object error) {
       _cache.remove(key);
       throw error;
     });
     _cache[key] = future;
     return future;
+  }
+
+  Future<AudioWaveform> _extractOrRead(String path) async {
+    File? entry;
+    try {
+      entry = await diskCache.entry(
+        path,
+        'waveform-v1:${sampleInterval.inMicroseconds}:$rawSampleRate',
+        'json',
+      );
+      if (await entry.exists()) {
+        final data = jsonDecode(await entry.readAsString()) as Map;
+        final values = (data['samples'] as List)
+            .map((v) => (v as num).toDouble())
+            .toList();
+        if (data['version'] == 1 &&
+            data['intervalUs'] == sampleInterval.inMicroseconds &&
+            values.every((v) => v.isFinite && v >= 0 && v <= 1)) {
+          diskCacheHits++;
+          return AudioWaveform(samples: values, sampleInterval: sampleInterval);
+        }
+      }
+    } catch (_) {
+      // Corrupt/unwritable caches must not prevent media import.
+    }
+    extractions++;
+    final waveform = await _extract(path);
+    if (entry != null && waveform.samples.isNotEmpty) {
+      final temporary = File(
+        '${entry.path}.${DateTime.now().microsecondsSinceEpoch}.tmp',
+      );
+      try {
+        await temporary.writeAsString(
+          jsonEncode({
+            'version': 1,
+            'intervalUs': sampleInterval.inMicroseconds,
+            'samples': waveform.samples,
+          }),
+          flush: true,
+        );
+        await MediaDiskCache.publish(temporary, entry);
+      } on FileSystemException {
+        // The waveform remains usable when the cache is full or read-only.
+      } finally {
+        if (await temporary.exists()) await temporary.delete();
+      }
+    }
+    return waveform;
   }
 
   Future<AudioWaveform> _extract(String filePath) async {

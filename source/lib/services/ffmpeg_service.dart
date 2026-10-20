@@ -1,3 +1,5 @@
+import 'package:image/image.dart' as image;
+import 'media_disk_cache.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -23,10 +25,15 @@ import 'ffmpeg_progress_parser.dart';
 part 'ffmpeg_editor_export.dart';
 
 class FfmpegService {
-  FfmpegService({PreviewProxyCacheService? previewProxyCacheService})
-    : previewProxyCacheService =
-          previewProxyCacheService ?? PreviewProxyCacheService.instance;
+  FfmpegService({
+    PreviewProxyCacheService? previewProxyCacheService,
+    MediaDiskCache? thumbnailCache,
+  }) : previewProxyCacheService =
+           previewProxyCacheService ?? PreviewProxyCacheService.instance,
+       thumbnailCache = thumbnailCache ?? MediaDiskCache();
 
+  final MediaDiskCache thumbnailCache;
+  int thumbnailCacheHits = 0;
   final PreviewProxyCacheService previewProxyCacheService;
   final _executor = const FfmpegExecutor();
   final _progressParser = const FfmpegProgressParser();
@@ -134,8 +141,7 @@ class FfmpegService {
         '-map',
         '0:a?',
         '-vf',
-        'scale=960:540:force_original_aspect_ratio=decrease,'
-            'pad=960:540:(ow-iw)/2:(oh-ih)/2:color=black,'
+        'scale=960:540:force_original_aspect_ratio=decrease:force_divisible_by=2,'
             'fps=30,setsar=1',
         '-c:v',
         'libx264',
@@ -181,8 +187,10 @@ class FfmpegService {
       return outputPath;
     }
 
-    final command = buildPreviewProxyCommand(item, outputPath);
-    final outputFile = File(outputPath);
+    final temporaryPath =
+        '$outputPath.${DateTime.now().microsecondsSinceEpoch}.tmp.mp4';
+    final command = buildPreviewProxyCommand(item, temporaryPath);
+    final outputFile = File(temporaryPath);
     await outputFile.parent.create(recursive: true);
 
     final toolchain = await resolveToolchain();
@@ -237,9 +245,11 @@ class FfmpegService {
         );
       }
 
+      await MediaDiskCache.publish(outputFile, File(outputPath));
       onProgress?.call(1);
       return outputPath;
     } finally {
+      if (await outputFile.exists()) await outputFile.delete();
       if (identical(_activePreviewProxyProcess, process)) {
         _activePreviewProxyProcess = null;
       }
@@ -2078,14 +2088,26 @@ class FfmpegService {
     String filePath,
     Duration duration,
   ) async {
-    final root = Directory(
-      _join(Directory.systemTemp.path, 'tgi_editor_thumbnails'),
-    );
-    await root.create(recursive: true);
-
-    final sanitizedName = _sanitizeFileName(_fileName(filePath));
-    final stamp = DateTime.now().microsecondsSinceEpoch;
-    final outputPath = _join(root.path, '${stamp}_$sanitizedName.jpg');
+    File target;
+    try {
+      target = await thumbnailCache.entry(
+        filePath,
+        'thumbnail-v2-320:${duration > const Duration(seconds: 1) ? 1 : 0}',
+        'jpg',
+      );
+      if (await target.exists() &&
+          image.decodeJpg(await target.readAsBytes()) != null) {
+        thumbnailCacheHits++;
+        return target.path;
+      }
+    } catch (_) {
+      final directory = await Directory.systemTemp.createTemp(
+        'editor_thumbnail_',
+      );
+      target = File(_join(directory.path, 'thumbnail.jpg'));
+    }
+    final outputPath =
+        '${target.path}.${DateTime.now().microsecondsSinceEpoch}.tmp.jpg';
     final seekPositions = duration > const Duration(seconds: 1)
         ? const ['00:00:01', '00:00:00']
         : const ['00:00:00'];
@@ -2098,10 +2120,16 @@ class FfmpegService {
         seek,
       );
       if (ok) {
-        return outputPath;
+        try {
+          await MediaDiskCache.publish(File(outputPath), target);
+          return target.path;
+        } on FileSystemException {
+          return outputPath;
+        }
       }
     }
-
+    final partial = File(outputPath);
+    if (await partial.exists()) await partial.delete();
     return null;
   }
 
@@ -2198,9 +2226,8 @@ class FfmpegService {
     return name.substring(0, dot);
   }
 
-  String _sanitizeFileName(String value) {
-    return value.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
-  }
+  String _sanitizeFileName(String value) =>
+      value.replaceAll(RegExp(r'[^a-zA-Z0-9._-]+'), '_');
 
   String _seconds(Duration duration) {
     return (duration.inMicroseconds / Duration.microsecondsPerSecond)

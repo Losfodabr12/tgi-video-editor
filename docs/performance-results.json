@@ -1,0 +1,23 @@
+{
+  "timestampUtc": "2026-10-20T10:14:30.767124Z",
+  "os": "\"Windows 11 Pro\" 10.0 (Build 26200)",
+  "logicalProcessors": 12,
+  "source": "Synthetic testsrc2 + 440 Hz, 1920x1080, 30 fps, 5 s, H.264/AAC",
+  "runsPerOperation": 1,
+  "sourceBytes": 11360001,
+  "proxyBytes": 966192,
+  "measurementsMs": {
+    "metadata_thumbnail_cold_ms": 292.312,
+    "metadata_thumbnail_disk_ms": 183.263,
+    "waveform_cold_ms": 158.261,
+    "waveform_disk_ms": 9.332,
+    "proxy_build_ms": 435.509,
+    "proxy_disk_ms": 1.349,
+    "decode_original_ms": 279.571,
+    "decode_proxy_ms": 176.971,
+    "export_720p_cpu_ms": 1002.469
+  },
+  "thumbnailDiskHits": 1,
+  "waveformDiskHits": 1,
+  "encoder": "software"
+}

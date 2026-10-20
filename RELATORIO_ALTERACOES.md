@@ -12,6 +12,7 @@ executados nesta máquina; logs completos ficam em `.work/`, ignorada pelo Git.
 | 5 — Transições | exit 0, sem problemas | exit 0, 146 aprovados / 13 ignorados | xfade/acrossfade com pixels, duração e espectro de áudio; preview A/B aproximado |
 | 6 — Projetos antigos | exit 0, sem problemas | exit 0, 148 aprovados / 13 ignorados | Sobreposições migradas em memória; formatos 13/14 e round-trip testados |
 | 7 — Build e CI | exit 0, sem problemas | exit 0, 148 aprovados / 13 ignorados | Integração adicional: 161 aprovados; build release exit 0 (116,0 s) |
+| 8 — Desempenho | exit 0, sem problemas | exit 0, 151 aprovados / 13 ignorados | Caches persistentes e benchmark FFmpeg executado; dados em docs/DESEMPENHO.md |
 
 Os 13 testes históricos opcionais dependem de um dart-define e são ignorados
 pelo comando padrão pedido. Os seis novos testes de pixels rodam por padrão.
@@ -79,3 +80,12 @@ padrão, integração e build release. Houve avisos CMake CMP0175 do plugin
 media_kit, sem falha de build. Prova de limpeza após exceção também executada
 com o helper de caminho curto. Scripts PowerShell passaram pelo parser.
 O resultado remoto do workflow será registrado separadamente ao final.
+
+## Etapa 8
+
+Proxies existentes foram aprimorados: diretório persistente, chave SHA-256,
+publicação somente após conclusão e proporção vertical preservada. Miniaturas
+e waveform agora usam cache em disco, com testes de reabertura, invalidação e
+corrupção. Benchmark real de geração/decodificação/exportação de fonte sintética
+1080p/5 s executado: uma medição por operação, números brutos publicados.
+Não se mediram FPS nativo, consumo de GPU/RAM ou desempenho prolongado em 4K.
