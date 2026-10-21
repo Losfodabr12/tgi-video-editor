@@ -4,7 +4,10 @@ extension EditorTimelineOperations on EditorController {
   void updateSelectedAudioPlaybackSpeed(double speed) {
     final clip = selectedTimelineAudioClip;
     if (clip == null) return;
-    final next = _project.changeAudioSpeed(clip.timelineGroupId, speed);
+    final next = _commandProject('set_clip_speed', {
+      'clip_id': clip.id,
+      'speed': speed.clamp(0.25, 4).toDouble(),
+    });
     if (identical(next, _project) && clip.playbackSpeed != speed) {
       _errorMessage =
           'Não há espaço para alterar a duração ou uma pista vinculada está bloqueada.';

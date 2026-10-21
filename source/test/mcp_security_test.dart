@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tgi_video_editor/core/commands/editor_command.dart';
@@ -22,6 +23,19 @@ class _Tokens implements McpTokenStore {
   }
 }
 
+class _DelayedTokens extends _Tokens {
+  _DelayedTokens() {
+    token = 'existing-test-token-00000000000000000000000';
+  }
+  final started = Completer<void>(), release = Completer<void>();
+  @override
+  Future<void> write(String value) async {
+    started.complete();
+    await release.future;
+    await super.write(value);
+  }
+}
+
 void main() {
   late Directory temp;
   setUp(() async {
@@ -31,6 +45,44 @@ void main() {
   tearDown(() async {
     await temp.delete(recursive: true);
   });
+  test(
+    'emergency stop during token rotation prevents an automatic restart',
+    () async {
+      final tokens = _DelayedTokens();
+      final c = EditorController(
+        mediaImportService: MediaImportService(ffmpegService: FfmpegService()),
+        initialProject: commandFixture(),
+      );
+      final a = EditorAutomation(
+        c,
+        settingsStore: McpSettingsStore(path: '${temp.path}/settings.json'),
+        tokenStore: tokens,
+        audit: McpAudit(path: '${temp.path}/audit.jsonl'),
+      );
+      addTearDown(() async {
+        await a.shutdown();
+        a.dispose();
+        c.dispose();
+      });
+      final socket = await ServerSocket.bind(InternetAddress.loopbackIPv4, 0);
+      final port = socket.port;
+      await socket.close();
+      await a.configure(McpSettings(port: port));
+      await a.start();
+      expect(a.running, isTrue);
+      final rotation = a.rotateToken();
+      await tokens.started.future;
+      await a.stop();
+      tokens.release.complete();
+      await rotation;
+      expect(
+        a.running,
+        isFalse,
+        reason:
+            'A rotação pendente não pode reativar o servidor após uma parada de emergência.',
+      );
+    },
+  );
   test(
     'paths reject traversal, outside files, existing exports and network input',
     () async {

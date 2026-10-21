@@ -216,11 +216,12 @@ class EditorAutomation extends ChangeNotifier {
   Future<void> rotateToken() async {
     final restart = running;
     await stop();
+    final epoch = _epoch;
     final token = randomMcpToken();
     await tokenStore.write(token);
     _token = token;
     unawaited(audit.write({'event': 'token_rotated'}));
-    if (restart) {
+    if (restart && epoch == _epoch && !_disposed) {
       await start();
     }
     notifyListeners();

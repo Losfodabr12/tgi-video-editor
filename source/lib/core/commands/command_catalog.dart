@@ -96,6 +96,12 @@ final commandCatalog = <String, CommandDefinition>{
         'clip_id': clipIdSchema,
         'timeline_start': secondsSchema,
         'track_id': stringSchema(),
+        'group_ids': {
+          'type': 'array',
+          'minItems': 1,
+          'maxItems': 500,
+          'items': stringSchema(),
+        },
       },
       ['clip_id', 'timeline_start'],
     ),

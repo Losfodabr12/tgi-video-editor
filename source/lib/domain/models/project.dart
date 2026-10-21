@@ -2328,6 +2328,14 @@ class TgiProject {
     final referenceClip = _findClipById(clipId);
     if (referenceClip == null) return this;
     final groupId = referenceClip.timelineGroupId;
+    final reversedGroup = tracks
+        .expand((track) => track.clips)
+        .any(
+          (clip) =>
+              clip.timelineGroupId == groupId &&
+              clip.trackType == TrackType.video &&
+              clip.reverseVideo,
+        );
     if (position <= referenceClip.timelineStart ||
         position >= referenceClip.timelineEnd) {
       return this;
@@ -2392,6 +2400,9 @@ class TgiProject {
             : rightDuration;
         final leftClip = clip.copyWith(
           id: nextSplitClipId('L'),
+          sourceStart: keepsMediaSource && reversedGroup
+              ? clip.sourceEnd - leftSourceDuration
+              : clip.sourceStart,
           duration: leftDuration,
           sourceDuration: keepsMediaSource
               ? leftSourceDuration
@@ -2401,7 +2412,9 @@ class TgiProject {
           id: nextSplitClipId('R'),
           timelineGroupId: newGroupId,
           timelineStart: position,
-          sourceStart: clip.sourceStart + leftSourceDuration,
+          sourceStart: keepsMediaSource && reversedGroup
+              ? clip.sourceStart
+              : clip.sourceStart + leftSourceDuration,
           duration: rightTimelineDuration,
           sourceDuration: keepsMediaSource
               ? rightSourceDuration

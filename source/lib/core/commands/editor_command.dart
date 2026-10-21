@@ -85,6 +85,21 @@ void validateArguments(
 
 void validateValue(Object? value, Map<String, dynamic> field, String path) {
   if (field['oneOf'] is List) {
+    if (value is Map && value['command'] is String) {
+      final candidates = (field['oneOf'] as List)
+          .where(
+            (s) =>
+                ((s as Map)['properties'] as Map?)?['command'] is Map &&
+                ((((s['properties'] as Map)['command'] as Map)['enum'] as List?)
+                        ?.contains(value['command']) ??
+                    false),
+          )
+          .toList();
+      if (candidates.length == 1) {
+        validateValue(value, candidates.single as Map<String, dynamic>, path);
+        return;
+      }
+    }
     var matched = 0;
     for (final alternative in field['oneOf'] as List) {
       try {

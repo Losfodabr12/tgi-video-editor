@@ -1502,18 +1502,19 @@ class EditorController extends ChangeNotifier {
     final previousClipIds = _timelineClipIds(_project);
     var nextProject = _project;
     for (var index = 0; index < captions.length; index++) {
-      nextProject = nextProject.addTextClipToTimeline(
-        text: captions[index].toUpperCase(),
-        isCaption: true,
-        timelineStart: start + captionDuration * index,
-        duration: captionDuration,
-        fontFamily: NewTextStyle.fontFamily,
-        fontSize: 68,
-        textColor: 0xFFFFFFFF,
-        backgroundColor: NewTextStyle.backgroundColor,
-        opacity: 1,
-        textAnimation: domain.TextClipAnimation.pop,
-      );
+      nextProject = _commandProject('add_text', {
+        'text': captions[index].toUpperCase(),
+        'is_caption': true,
+        'timeline_start':
+            (start + captionDuration * index).inMicroseconds / 1e6,
+        'duration': math.max(1, (captionDuration).inMicroseconds / 1e6),
+        'font_family': NewTextStyle.fontFamily,
+        'font_size': 68,
+        'text_color': 0xFFFFFFFF,
+        'background_color': NewTextStyle.backgroundColor,
+        'opacity': 1,
+        'animation': (domain.TextClipAnimation.pop).name,
+      }, base: nextProject);
     }
     if (identical(nextProject, _project)) {
       return;
@@ -1718,14 +1719,12 @@ class EditorController extends ChangeNotifier {
     if (referenceClip == null) {
       return;
     }
-    final delta = start - referenceClip.timelineStart;
     final activeGroupId = activeTimelineClip?.timelineGroupId;
-    final nextProject = groupsToMove.length > 1
-        ? _project.moveTimelineClipGroupsByDelta(groupsToMove, delta: delta)
-        : _commandProject('move_clip', {
-            'clip_id': referenceClip.id,
-            'timeline_start': start.inMicroseconds / 1e6,
-          });
+    final nextProject = _commandProject('move_clip', {
+      'clip_id': referenceClip.id,
+      'timeline_start': start.inMicroseconds / 1e6,
+      'group_ids': groupsToMove.toList(),
+    });
     if (identical(nextProject, _project)) {
       return;
     }
@@ -1759,12 +1758,12 @@ class EditorController extends ChangeNotifier {
         )
         ? Set<String>.from(_selectedTimelineGroupIds)
         : null;
-    final nextProject = _project.placeClipGroups(
-      clipId,
-      targetTrackId: targetTrackId,
-      timelineStart: start,
-      selectedGroups: groups,
-    );
+    final nextProject = _commandProject('move_clip', {
+      'clip_id': clipId,
+      'track_id': targetTrackId,
+      'timeline_start': start.inMicroseconds / 1e6,
+      if (groups != null && groups.isNotEmpty) 'group_ids': groups.toList(),
+    });
     if (identical(nextProject, _project)) {
       return;
     }
@@ -2010,16 +2009,15 @@ class EditorController extends ChangeNotifier {
 
     var nextProject = _project;
     for (final clip in clips) {
-      nextProject = nextProject.updateTextClipProperties(
-        clip.id,
-        text: clip.textContent,
-        fontFamily: fontFamily,
-        fontSize: fontSize,
-        textColor: textColor,
-        backgroundColor: backgroundColor,
-        opacity: opacity,
-        textAnimation: textAnimation,
-      );
+      nextProject = _commandProject('set_caption_style', {
+        'clip_id': clip.id,
+        'font_family': ?fontFamily,
+        'font_size': ?fontSize,
+        'text_color': ?textColor,
+        'background_color': ?backgroundColor,
+        'opacity': ?opacity,
+        'animation': ?textAnimation?.name,
+      }, base: nextProject);
     }
     if (identical(nextProject, _project)) {
       return;
@@ -3025,13 +3023,13 @@ class EditorController extends ChangeNotifier {
       return;
     }
 
-    final nextProject = _project.updateClipCrop(
-      clip.id,
-      cropLeft: left,
-      cropTop: top,
-      cropRight: right,
-      cropBottom: bottom,
-    );
+    final nextProject = _commandProject('apply_effect', {
+      'clip_id': clip.id,
+      'crop_left': ?left,
+      'crop_top': ?top,
+      'crop_right': ?right,
+      'crop_bottom': ?bottom,
+    });
     if (identical(nextProject, _project)) {
       return;
     }
@@ -5243,18 +5241,18 @@ class EditorController extends ChangeNotifier {
       if (cue.end <= cue.start || cue.text.trim().isEmpty) {
         continue;
       }
-      nextProject = nextProject.addTextClipToTimeline(
-        text: cue.text,
-        isCaption: true,
-        timelineStart: cue.start,
-        duration: cue.duration,
-        fontFamily: fontFamily,
-        fontSize: fontSize,
-        textColor: textColor,
-        backgroundColor: backgroundColor,
-        opacity: opacity,
-        textAnimation: textAnimation,
-      );
+      nextProject = _commandProject('add_text', {
+        'text': cue.text,
+        'is_caption': true,
+        'timeline_start': (cue.start).inMicroseconds / 1e6,
+        'duration': math.max(1, (cue.duration).inMicroseconds / 1e6),
+        'font_family': fontFamily,
+        'font_size': fontSize,
+        'text_color': textColor,
+        'background_color': backgroundColor,
+        'opacity': opacity,
+        'animation': (textAnimation).name,
+      }, base: nextProject);
     }
     if (identical(nextProject, _project)) {
       return;

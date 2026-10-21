@@ -3,6 +3,46 @@ import '../domain/models/clip.dart';
 import '../domain/models/project.dart';
 
 double seconds(Duration value) => value.inMicroseconds / 1e6;
+Map<String, Object?> clipEditState(TgiProject project, Clip c) => {
+  ...clipSummary(project, c),
+  'opacity': c.opacity,
+  'fade_in': seconds(c.fadeIn),
+  'fade_out': seconds(c.fadeOut),
+  'keyframes': [
+    for (final k in c.keyframes)
+      {
+        'id': k.id,
+        'property': k.property.name,
+        'time': k.time,
+        'value': k.value,
+      },
+  ],
+  'effects': {
+    'brightness': c.brightness,
+    'contrast': c.contrast,
+    'saturation': c.saturation,
+    'exposure': c.exposure,
+    'hue': c.hue,
+    'temperature': c.temperature,
+    'tint': c.tint,
+    'shadows': c.shadows,
+    'highlights': c.highlights,
+    'curve_shadows': c.curveShadows,
+    'curve_midtones': c.curveMidtones,
+    'curve_highlights': c.curveHighlights,
+    'filter': c.filterPreset.name,
+    'reverse': c.reverseVideo,
+    'stabilization': c.stabilizationEnabled,
+    'chroma_key_enabled': c.chromaKeyEnabled,
+    'chroma_key_color': c.chromaKeyColor,
+    'chroma_key_similarity': c.chromaKeySimilarity,
+    'chroma_key_blend': c.chromaKeyBlend,
+    'crop_left': c.cropLeft,
+    'crop_right': c.cropRight,
+    'crop_top': c.cropTop,
+    'crop_bottom': c.cropBottom,
+  },
+};
 Map<String, Object?> clipSummary(TgiProject project, Clip c) => {
   'id': c.id,
   'media_id': c.mediaItemId,
@@ -17,6 +57,26 @@ Map<String, Object?> clipSummary(TgiProject project, Clip c) => {
   'volume': c.volume,
   if (c.textContent.isNotEmpty) 'text': c.textContent,
   'is_caption': c.isCaption,
+  if (c.trackType.name == 'text')
+    'style': {
+      'font_family': c.fontFamily,
+      'font_size': c.fontSize,
+      'text_color': c.textColor,
+      'background_color': c.backgroundColor,
+      'opacity': c.opacity,
+    },
+  if (c.trackType.name == 'video' || c.trackType.name == 'image')
+    'effects': {
+      'brightness': c.brightness,
+      'contrast': c.contrast,
+      'saturation': c.saturation,
+      'filter': c.filterPreset.name,
+      'crop_left': c.cropLeft,
+      'crop_right': c.cropRight,
+      'crop_top': c.cropTop,
+      'crop_bottom': c.cropBottom,
+    },
+  'keyframe_count': c.keyframes.length,
 };
 
 Map<String, Object?> projectSummary(
@@ -68,6 +128,20 @@ Map<String, Object?> projectSummary(
     ],
     'marker_count': p.markers.length,
     'transition_count': p.transitions.length,
+    'transitions': [
+      for (final t in p.transitions.take(100))
+        {
+          'id': t.id,
+          'name': t.name,
+          'at': seconds(t.timelinePosition),
+          'duration': seconds(t.duration),
+          'preset': t.preset?.name,
+          'placement': t.placement.name,
+          'direction': t.direction.name,
+          'color': t.color,
+          'intensity': t.intensity,
+        },
+    ],
     'offset': offset,
     'limit': limit,
     'next_cursor': offset + limit < clips.length

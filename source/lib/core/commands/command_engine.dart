@@ -102,6 +102,11 @@ class CommandEngine {
           sourceStart: start,
           sourceDuration: duration,
         );
+        if (identical(project, before) &&
+            (clip.sourceStart != start ||
+                clip.effectiveSourceDuration != duration)) {
+          _placementError(before);
+        }
       case 'delete_clip':
         project = a['ripple'] == true
             ? deleteGroups(project, {clip!.timelineGroupId}, ripple: true)
@@ -113,16 +118,29 @@ class CommandEngine {
             'valid_track_ids': project.tracks.map((t) => t.id).toList(),
           });
         }
-        project = trackId == null
-            ? project.moveTimelineClipGroup(
-                clip!.timelineGroupId,
-                timelineStart: time('timeline_start'),
-              )
-            : project.moveClipToTrack(
-                clip!.id,
-                targetTrackId: trackId,
-                timelineStart: time('timeline_start'),
-              );
+        final groups = (a['group_ids'] as List?)?.cast<String>().toSet();
+        final validGroups = project.tracks
+            .expand((t) => t.clips)
+            .map((c) => c.timelineGroupId)
+            .toSet();
+        if (groups != null &&
+            (!groups.contains(clip!.timelineGroupId) ||
+                !validGroups.containsAll(groups))) {
+          throw CommandError(
+            'invalid_groups',
+            'Inclua o grupo do clipe de referência e apenas grupos existentes.',
+            {'valid_group_ids': validGroups.toList()},
+          );
+        }
+        if (groups != null && project.groupsAreLocked(groups)) {
+          _placementError(project);
+        }
+        project = project.placeClipGroups(
+          clip!.id,
+          targetTrackId: trackId,
+          timelineStart: time('timeline_start'),
+          selectedGroups: groups,
+        );
         if (identical(project, before) &&
             (clip.timelineStart != time('timeline_start') ||
                 (trackId != null &&

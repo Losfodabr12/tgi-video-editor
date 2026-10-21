@@ -25,6 +25,40 @@ TgiProject commandFixture() {
 void main() {
   const engine = CommandEngine();
   test(
+    'split preserves reversed trimmed source spans for linked video and audio',
+    () {
+      var p = commandFixture();
+      final id = p.tracks
+          .expand((t) => t.clips)
+          .firstWhere((c) => c.trackType == TrackType.video)
+          .id;
+      p = engine.apply(
+        p,
+        EditorCommand('trim_clip', {
+          'clip_id': id,
+          'source_start': 1,
+          'source_duration': 8,
+        }),
+      );
+      p = engine.apply(
+        p,
+        EditorCommand('apply_effect', {'clip_id': id, 'reverse': true}),
+      );
+      p = engine.apply(
+        p,
+        EditorCommand('split_clip', {'clip_id': id, 'at': 3}),
+      );
+      for (final track in p.tracks.where((t) => t.clips.isNotEmpty)) {
+        final clips = [...track.clips]
+          ..sort((a, b) => a.timelineStart.compareTo(b.timelineStart));
+        expect(clips.first.sourceStart, const Duration(seconds: 6));
+        expect(clips.first.sourceEnd, const Duration(seconds: 9));
+        expect(clips.last.sourceStart, const Duration(seconds: 1));
+        expect(clips.last.sourceEnd, const Duration(seconds: 6));
+      }
+    },
+  );
+  test(
     'commands round-trip through JSON and reject invalid revision and IDs',
     () {
       final project = commandFixture();

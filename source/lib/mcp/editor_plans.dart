@@ -43,10 +43,10 @@ class EditorPlan {
         if (!identical(old[id], updated[id]))
           {
             'clip_id': id,
-            'before': old[id] == null ? null : clipSummary(before, old[id]!),
+            'before': old[id] == null ? null : clipEditState(before, old[id]!),
             'after': updated[id] == null
                 ? null
-                : clipSummary(after, updated[id]!),
+                : clipEditState(after, updated[id]!),
           },
     ];
     return {
@@ -174,6 +174,11 @@ class EditorPlans {
     String label, {
     FfmpegExportSettings? settings,
   }) {
+    if (identical(before, after) &&
+        settings != null &&
+        settings != controller.commandExportSettings) {
+      after = after.copyWith(updatedAt: DateTime.now());
+    }
     if (commands.length > 500) {
       throw const CommandError(
         'plan_limit',

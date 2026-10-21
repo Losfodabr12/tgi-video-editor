@@ -257,6 +257,10 @@ class EditorReadService {
       }
       final source = clip == null
           ? at
+          : clip.reverseVideo
+          ? seconds(clip.sourceEnd) -
+                0.000001 -
+                (at - seconds(clip.timelineStart)) * clip.playbackSpeed
           : seconds(clip.sourceStart) +
                 (at - seconds(clip.timelineStart)) * clip.playbackSpeed;
       if (source >= seconds(item.duration) && item.type != MediaType.image) {
