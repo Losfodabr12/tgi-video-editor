@@ -1,0 +1,34 @@
+{
+  "sdk": "1.32.1",
+  "inspector": "2.11.0",
+  "checks": [
+    "sdk tools/list",
+    "sdk get_project",
+    "sdk project resource",
+    "sdk preview/apply exact plan",
+    "sdk stale revision rejection",
+    "sdk undo",
+    "http invalid token 401",
+    "sdk outside export rejection",
+    "sdk source PNG thumbnails",
+    "sdk ebur128 loudness",
+    "sdk native analysis jobs",
+    "sdk real local Whisper transcription",
+    "sdk native export",
+    "MCP Inspector strict tools/list",
+    "MCP Inspector get_project"
+  ],
+  "tool_count": 33,
+  "whisper_cue_count": 3,
+  "inspector_tools": {
+    "exit": 0,
+    "output_bytes": 48838,
+    "warnings": ""
+  },
+  "inspector_read": {
+    "exit": 0,
+    "output_bytes": 2140,
+    "warnings": ""
+  },
+  "ok": true
+}

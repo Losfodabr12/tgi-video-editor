@@ -1,7 +1,7 @@
 # Relatório de alterações
 
-A revisão mais recente está em [Ajuste curto](#ajuste-curto--legendas-layout-e-diagnóstico-do-ci),
-com os comandos executados e as capturas antes/depois. Os resultados das etapas
+A revisão mais recente está em [MCP integrado](#mcp-integrado--21-de-outubro-de-2026),
+com comandos, testes e validação externa executados. Os resultados das etapas
 anteriores permanecem como histórico, vinculados aos respectivos commits.
 
 O texto completo, incluindo os resultados remotos da release 0.3.0, está
@@ -570,3 +570,129 @@ Continua pendente teste audiovisual na janela nativa, contraste em monitores
 e DPI diferentes, arraste contínuo de trim/scrollbar e uso com layout real
 previamente salvo. Os resultados antigos de CI/release permanecem associados
 aos SHAs identificados nas seções históricas.
+
+## MCP integrado — 21 de outubro de 2026
+
+Implementação local por etapas, com um commit por etapa. As etapas 1–8 foram
+validadas com `flutter analyze --no-pub` e
+`flutter test --no-pub --concurrency=1`. A concorrência 1 evita a corrida do
+teste histórico de proxy automático que espera apenas 10 ms: houve falha na
+rodada concorrente da etapa 1, seguida de aprovação isolada e da suíte inteira.
+Nenhum teste anterior foi editado, nem mesmo imports. O diff dos testes contra
+`88d60f0` contém somente arquivos adicionados.
+
+| Etapa | Commit | Analyze | Testes padrão aprovados / ignorados |
+| --- | --- | --- | --- |
+| 1 — Comandos JSON Dart puro e revisão | `011e05f` | exit 0 | 190 / 13 |
+| 2 — Transações e histórico compartilhado | `8e68b95` | exit 0 | 193 / 13 |
+| 3 — Leituras, análises e jobs canceláveis | `ce4c27e` | exit 0 | 195 / 13 |
+| 4 — Macros e preview/aplicação de planos | `d0f970b` | exit 0 | 198 / 13 |
+| 5 — MCP Streamable HTTP e resource | `fd29075` | exit 0 | 201 / 13 |
+| 6 — Segurança, credencial e auditoria | `897a0c9` | exit 0 | 203 / 13 |
+| 7 — Configurações e atividade da IA | `90f430b` | exit 0 | 204 / 13 |
+| 8 — Contratos, mídia e clientes externos | `965cc9d` | exit 0 | 215 / 13 |
+| 9 — Documentação e entrega local | este commit | exit 0 | 215 / 13 |
+
+O estado inicial foi verificado: análise limpa e **187 aprovados / 13 ignorados**.
+Os resultados finais de cada etapa estão em `.work/mcp-stepN-analyze.log` e
+`.work/mcp-stepN-test.log`, ignorados pelo Git. Resultados intermediários com
+falhas não são tratados como aprovação.
+
+`lib/core/commands` contém validação de schemas/IDs/limites, comandos
+serializáveis, transações e histórico Dart puro. Os caminhos correspondentes da
+UI usam esse núcleo, incluindo multisseleção, áudio e legendas. Uma transação
+da IA cria um snapshot com rótulo e é desfeita com Ctrl+Z. Os testes comparam o
+JSON v14 completo antes e depois do undo; lotes inválidos não deixam alterações.
+Revisões são de sessão, monotônicas também em undo/redo e edições da UI; não
+foram adicionadas ao arquivo de projeto. `ProjectIOService` e o formato v14
+permanecem sem alteração.
+
+Foram expostas **33 tools** e `editor://project/summary`. Leituras paginam clipes,
+mídias e transcrições. Análises/exportação usam FFmpeg e Whisper existentes,
+com fila de jobs e cancelamento. Macros geram snapshots exatos para revisão;
+aplicação usa a mesma revisão e um único histórico. Reenquadramento inclui a
+resolução na restauração do undo. Também foi corrigida a divisão de fonte em
+grupos reversos, verificada por spans de vídeo/áudio e pixels da exportação real.
+
+Servidor desligado ao iniciar, bind IPv4 loopback, bearer obrigatório, token
+persistente via `flutter_secure_storage`, validações de Host/Origin, limites de
+taxa/corpo/concorrência/sessões e auditoria de metadados sem segredo. A API aceita
+IDs de mídia e basenames de exportação, com validação canônica de autorização e
+sem sobrescrever destinos existentes. Testes rejeitam traversal, paths de rede,
+arquivo externo e junction que escapa do diretório do projeto.
+
+Uma revisão final encontrou uma corrida entre rotação de token e emergência:
+a rotação pendente podia religar o servidor. Um teste novo reproduziu o erro
+(`.work/mcp-emergency-race-before.log`); a correção foi incluída na etapa 8,
+seguida de análise limpa e suíte completa aprovada. O app mantém o servidor
+desligado nessa situação.
+
+Na UI: Arquivo → Configurações de IA (MCP), porta, liga/desliga, pasta de
+exportação, cópia de TOML/token, rotação, revisão/aprovação de planos, jobs,
+atividade e desfazer. O indicador de conexão e a parada de emergência aparecem
+quando ligado. Os goldens existentes passaram sem atualização de imagens.
+
+### Cliente externo e MCP Inspector executados
+
+Cliente independente **@modelcontextprotocol/sdk 1.32.1**, em processo Node,
+conectou por HTTP real ao host Flutter de teste que usa os mesmos módulos do
+app. Foram executados tools/list (33), get_project, resource, preview/apply/undo,
+rejeição de base_revision antiga, bearer inválido (HTTP 401), exportação fora da
+pasta autorizada, miniaturas PNG, LUFS, jobs de cenas/silêncio e exportação nativa.
+O host confirmou o JSON do projeto idêntico ao original após desfazer.
+
+Uma fala sintética foi produzida localmente pelo System.Speech para esse teste.
+**Whisper Base real** executou a transcrição via MCP, com **3 cues** retornados
+por get_transcript. O teste de mídia da suíte usa FFmpeg real e um transcritor
+injetado; a execução de Whisper real foi separada, pelo cliente externo.
+
+**MCP Inspector 2.11.0**, CLI, executou `tools/list --strict` e `get_project`:
+ambos **exit 0**, sem avisos. SDK, Inspector e host concluíram com exit 0.
+Resultado sem credenciais versionado em
+[docs/validation/MCP_CLIENT_RESULT.json](docs/validation/MCP_CLIENT_RESULT.json).
+Harness e cliente reproduzíveis:
+`source/tool/mcp_inspector_host_test.dart` e `tool/mcp_client_smoke.mjs`.
+Logs locais: `.work/mcp-external-host.log` e `.work/mcp-external-client.log`.
+
+Essa validação externa usou projeto sintético e bearer temporário de teste;
+não foi uma sessão interativa do Codex/Claude ou do editor Windows. A integração
+do armazenamento seguro nativo não foi exercitada pelo host de teste. As
+limitações de miniaturas, loudness, macros, paginação e protocolo estão em
+[docs/MCP.md](docs/MCP.md).
+
+### Build Windows local
+
+Build release final do código `965cc9d` executado com o caminho curto do helper
+`tool/editor_paths.ps1`: `flutter pub get` e
+`flutter build windows --release --no-pub`, **exit 0**, compilação em **44,6 s**.
+Os arquivos foram copiados para `aplicativo/`, usado por `INICIAR EDITOR.cmd`:
+**66 arquivos conferidos por SHA-256, zero divergências**, ProductVersion
+**0.3.0+3**. A revisão do fonte e o SHA-256 de `data/app.so` estão em
+[docs/validation/MCP_BUILD_RESULT.json](docs/validation/MCP_BUILD_RESULT.json).
+Logs: `.work/mcp-windows-build.log` e `.work/mcp-local-build.json`.
+`flutter pub get` foi repetido no caminho original para restaurar os caches
+absolutos depois de desmontar a unidade temporária. `pubspec.yaml` e o lock
+permaneceram sem alterações. Não houve publicação de release, push ou mudança
+nos pacotes históricos. A janela nativa não foi aberta para teste manual.
+
+### Documentação e validação final
+
+[docs/MCP.md](docs/MCP.md) documenta ativação, configuração do Codex por variável
+de ambiente, as 33 tools com exemplos, revisões, aprovação, histórico, segurança,
+jobs, protocolo, limitações e reprodução dos testes externos. Uma conferência
+comparou os nomes das 33 tools documentadas com o catálogo real; os JSONs de
+evidência foram parseados e `git diff --check` passou.
+
+Após restaurar os caminhos do build, foram executados:
+
+| Comando em `source/` | Resultado final |
+| --- | --- |
+| `flutter analyze --no-pub` | exit 0, sem problemas |
+| `flutter test --no-pub --concurrency=1` | exit 0, **215 aprovados / 13 ignorados** |
+| `flutter test --no-pub --concurrency=1 --dart-define=TGI_RUN_FFMPEG_INTEGRATION_TESTS=true` | exit 0, **228 aprovados / zero ignorados** |
+
+Portanto os 13 testes opcionais antigos também foram executados e aprovados na
+validação final. Nenhum teste existente foi editado. Logs da etapa 9:
+`.work/mcp-step9-analyze.log`, `.work/mcp-step9-test.log` e
+`.work/mcp-step9-integration.log`. Os commits permanecem locais; a implementação
+e o app recompilado estão disponíveis nesta pasta de trabalho.
