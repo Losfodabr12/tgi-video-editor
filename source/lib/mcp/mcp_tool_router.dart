@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../core/commands/command_engine.dart';
+import '../core/commands/timeline_time_map.dart';
 import '../domain/models/project.dart';
 import '../features/editor/application/editor_controller.dart';
 import 'editor_read_service.dart';
@@ -43,7 +44,7 @@ class McpToolRouter {
           'valid_tools': mcpToolCatalog.keys.toList(),
         });
       }
-      validateArguments(args, definition.schema);
+      validateValue(args, definition.schema, 'arguments');
       result = await _call(name, Map<String, Object?>.of(args));
     } on CommandError catch (e) {
       result = {'error': e.toJson()};
@@ -82,6 +83,49 @@ class McpToolRouter {
       'structuredContent': result,
       'isError': result.containsKey('error'),
     };
+  }
+
+  Map<String, Object?> _silencePreview(
+    Map<String, Object?> args,
+    int revision,
+  ) {
+    final c = reads.controller;
+    checkRevision(revision, c.projectRevision);
+    final clip = c.project.clipById(args['clip_id'] as String);
+    if (clip == null) {
+      throw CommandError(
+        'clip_not_found',
+        'Selecione um clipe do projeto aberto.',
+        {
+          'valid_clip_ids': c.project.tracks
+              .expand((t) => t.clips)
+              .map((c) => c.id)
+              .toList(),
+        },
+      );
+    }
+    const TimelineRemapper().preflight(
+      c.project,
+      clip,
+      scope: args['scope'] as String? ?? 'all_tracks',
+      lockedTracks: args['locked_tracks'] as String? ?? 'fail',
+    );
+    if (args['job_id'] == null) {
+      final job = reads.detectSilence(
+        clip.mediaItemId,
+        thresholdDb: (args['threshold_db'] as num?)?.toDouble() ?? -35,
+        minimum: (args['minimum'] as num?)?.toDouble() ?? 0.5,
+      );
+      return {
+        ...job.toJson(),
+        'analysis_pending': true,
+        'next_step':
+            'Aguarde get_job e repita a macro com este job_id e a mesma base_revision. Nenhuma edição foi aplicada.',
+      };
+    }
+    return plans
+        .previewMacro('remove_silences', args, baseRevision: revision)
+        .toJson();
   }
 
   Future<Map<String, Object?>> _call(
@@ -180,6 +224,12 @@ class McpToolRouter {
           label: 'IA: ${a['label'] ?? 'lote'}',
         );
       case 'preview_plan':
+        if (a.containsKey('macro')) {
+          return _silencePreview(
+            Map<String, Object?>.from(a['arguments'] as Map),
+            a['base_revision'] as int,
+          );
+        }
         return plans
             .previewCommands(
               commands(),
@@ -193,6 +243,8 @@ class McpToolRouter {
           baseRevision: a['base_revision'] as int,
         );
       case 'remove_silences':
+        final revision = a.remove('base_revision') as int;
+        return _silencePreview(a, revision);
       case 'cut_by_transcript':
       case 'auto_captions':
       case 'reframe_9x16':

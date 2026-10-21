@@ -363,7 +363,13 @@ class EditorReadService {
       if (start != null) {
         intervals.add({'start': start, 'end': seconds(item.duration)});
       }
-      return {'media_id': id, 'scope': 'source', 'intervals': intervals};
+      return {
+        'media_id': id,
+        'scope': 'source',
+        'threshold_db': thresholdDb,
+        'minimum': minimum,
+        'intervals': intervals,
+      };
     });
   }
 

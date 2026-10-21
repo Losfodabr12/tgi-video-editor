@@ -58,7 +58,38 @@ class CommandDefinition {
   final bool destructive;
 }
 
+final remapScopeFields = <String, dynamic>{
+  'scope': {
+    ...stringSchema(['all_tracks', 'main_track_only']),
+    'default': 'all_tracks',
+  },
+  'locked_tracks': {
+    ...stringSchema(['fail', 'skip', 'unlock']),
+    'default': 'fail',
+  },
+};
+
 final commandCatalog = <String, CommandDefinition>{
+  'remap_timeline': CommandDefinition(
+    'Remove intervalos absolutos da timeline em uma única transformação. Remapeia camadas, vínculos A/V, keyframes, marcadores e transições; all_tracks por padrão. Bloqueios falham antes de editar, salvo skip/unlock explícito.',
+    objectSchema(
+      {
+        'clip_id': clipIdSchema,
+        'removed_ranges': {
+          'type': 'array',
+          'minItems': 1,
+          'maxItems': 10000,
+          'items': objectSchema(
+            {'start': secondsSchema, 'end': secondsSchema},
+            ['start', 'end'],
+          ),
+        },
+        ...remapScopeFields,
+      },
+      ['clip_id', 'removed_ranges'],
+    ),
+    destructive: true,
+  ),
   'split_clip': CommandDefinition(
     'Divide o grupo vinculado em um tempo absoluto da timeline, estritamente dentro do clipe. IDs novos são retornados no projeto.',
     objectSchema(

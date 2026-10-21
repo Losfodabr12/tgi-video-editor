@@ -4,6 +4,7 @@ import '../../domain/models/project.dart';
 import '../../domain/models/track.dart';
 import '../../domain/models/timeline_transition.dart';
 import 'command_catalog.dart';
+import 'timeline_time_map.dart';
 import 'editor_command.dart';
 
 export 'command_catalog.dart';
@@ -41,7 +42,8 @@ class CommandEngine {
           },
         );
       }
-      if (project.groupsAreLocked({clip.timelineGroupId})) {
+      if (command.name != 'remap_timeline' &&
+          project.groupsAreLocked({clip.timelineGroupId})) {
         throw CommandError(
           'track_locked',
           'Destrave as pistas vinculadas antes de editar.',
@@ -58,6 +60,37 @@ class CommandEngine {
     }
     final before = project;
     switch (command.name) {
+      case 'remap_timeline':
+        final ranges = <(int, int)>[];
+        for (final raw in a['removed_ranges'] as List) {
+          final r = raw as Map;
+          final start = ((r['start'] as num) * 1e6).round(),
+              end = ((r['end'] as num) * 1e6).round();
+          if (end <= start || end > project.timelineDuration.inMicroseconds) {
+            throw CommandError(
+              'out_of_range',
+              'Intervalo de remoção deve ser positivo e estar dentro da timeline.',
+              {
+                'start': start / 1e6,
+                'end': end / 1e6,
+                'maximum': project.timelineDuration.inMicroseconds / 1e6,
+              },
+            );
+          }
+          ranges.add((start, end));
+        }
+        return const TimelineRemapper()
+            .apply(
+              project,
+              clip!,
+              TimelineTimeMap(
+                ranges,
+                end: project.timelineDuration.inMicroseconds,
+              ),
+              scope: a['scope'] as String? ?? 'all_tracks',
+              lockedTracks: a['locked_tracks'] as String? ?? 'fail',
+            )
+            .project;
       case 'split_clip':
         final at = time('at');
         if (at <= clip!.timelineStart || at >= clip.timelineEnd) {

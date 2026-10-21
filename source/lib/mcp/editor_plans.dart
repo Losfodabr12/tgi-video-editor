@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 import '../core/commands/command_engine.dart';
 import '../core/commands/command_transaction.dart';
+import '../core/commands/timeline_time_map.dart';
 import '../domain/models/clip.dart';
 import '../domain/models/project.dart';
 import '../domain/models/track.dart';
@@ -21,12 +22,14 @@ class EditorPlan {
     required this.after,
     required this.commands,
     this.exportSettings,
+    this.effects = const {},
   });
   final String id, label;
   final int revision;
   final TgiProject before, after;
   final List<EditorCommand> commands;
   final FfmpegExportSettings? exportSettings;
+  final Map<String, Object?> effects;
   final createdAt = DateTime.now();
   bool approved = false, applied = false;
   Map<String, Object?> toJson() {
@@ -51,6 +54,7 @@ class EditorPlan {
     ];
     return {
       'plan_id': id,
+      ...effects,
       'label': label,
       'base_revision': revision,
       'approved': approved,
@@ -173,6 +177,7 @@ class EditorPlans {
     int revision,
     String label, {
     FfmpegExportSettings? settings,
+    Map<String, Object?> effects = const {},
   }) {
     if (identical(before, after) &&
         settings != null &&
@@ -201,6 +206,7 @@ class EditorPlans {
       after: after,
       commands: List.unmodifiable(commands),
       exportSettings: settings,
+      effects: effects,
     );
     _plans[plan.id] = plan;
     onChanged?.call();
@@ -232,8 +238,15 @@ class EditorPlans {
     }
 
     FfmpegExportSettings? settings;
+    Map<String, Object?> effects = const {};
     switch (name) {
       case 'remove_silences':
+        const TimelineRemapper().preflight(
+          before,
+          clip,
+          scope: args['scope'] as String? ?? 'all_tracks',
+          lockedTracks: args['locked_tracks'] as String? ?? 'fail',
+        );
         final job = reads.jobs.get(args['job_id'] as String? ?? '');
         if (job.kind != 'detect_silence' ||
             job.status != 'completed' ||
@@ -251,6 +264,21 @@ class EditorPlans {
             'Job pertence a outra mídia.',
           );
         }
+        for (final key in ['threshold_db', 'minimum']) {
+          if (args.containsKey(key) && args[key] != result[key]) {
+            throw CommandError(
+              'analysis_mismatch',
+              'O job precisa usar os mesmos parâmetros da macro.',
+              {
+                'parameter': key,
+                'requested': args[key],
+                'analysis_value': result[key],
+                'suggestion':
+                    'Execute detect_silence com threshold_db e minimum desejados e use o novo job_id.',
+              },
+            );
+          }
+        }
         final padding = (args['padding'] as num?)?.toDouble() ?? 0.08;
         if (!padding.isFinite || padding < 0 || padding > 1) {
           throw const CommandError(
@@ -265,7 +293,19 @@ class EditorPlans {
               (interval['end'] as num).toDouble() - padding,
             ),
         ];
-        _removeRanges(clip, ranges, () => next, run);
+        final remap = _remapRanges(before, clip, ranges, args);
+        next = remap.project;
+        effects = remap.toJson();
+        if (remap.timeMap.removed.isNotEmpty) {
+          commands.add(
+            EditorCommand('remap_timeline', {
+              'clip_id': clip.id,
+              'removed_ranges': remap.timeMap.toJson()['removed_ranges'],
+              'scope': args['scope'] ?? 'all_tracks',
+              'locked_tracks': args['locked_tracks'] ?? 'fail',
+            }),
+          );
+        }
       case 'cut_by_transcript':
         final cues = reads.transcriptCues(clip.mediaItemId),
             indices = args['keep_cue_indices'];
@@ -396,6 +436,7 @@ class EditorPlans {
       baseRevision,
       'IA: $name',
       settings: settings,
+      effects: effects,
     );
   }
 
@@ -421,52 +462,48 @@ class EditorPlans {
     );
   }
 
+  TimelineRemapResult _remapRanges(
+    TgiProject before,
+    Clip clip,
+    List<(double, double)> source,
+    Map<String, Object?> args,
+  ) {
+    final reversed =
+        clip.reverseVideo ||
+        before.tracks
+            .expand((t) => t.clips)
+            .any(
+              (c) =>
+                  c.timelineGroupId == clip.timelineGroupId &&
+                  c.trackType == TrackType.video &&
+                  c.reverseVideo,
+            );
+    final reference = reversed ? clip.copyWith(reverseVideo: true) : clip;
+    final ranges = source
+        .map((r) => _timelineRange(reference, r.$1, r.$2))
+        .whereType<(double, double)>()
+        .map((r) => ((r.$1 * 1e6).round(), (r.$2 * 1e6).round()));
+    return const TimelineRemapper().apply(
+      before,
+      clip,
+      TimelineTimeMap(ranges, end: before.timelineDuration.inMicroseconds),
+      scope: args['scope'] as String? ?? 'all_tracks',
+      lockedTracks: args['locked_tracks'] as String? ?? 'fail',
+    );
+  }
+
   void _removeRanges(
     Clip clip,
     List<(double, double)> source,
     TgiProject Function() current,
     void Function(String, Map<String, Object?>) run,
   ) {
-    final trackId = current().clipTrackById(clip.id)!.id;
-    final ranges =
-        source
-            .map((r) => _timelineRange(clip, r.$1, r.$2))
-            .whereType<(double, double)>()
-            .toList()
-          ..sort((a, b) => a.$1.compareTo(b.$1));
-    final merged = <(double, double)>[];
-    for (final r in ranges) {
-      if (merged.isEmpty || merged.last.$2 < r.$1) {
-        merged.add(r);
-      } else {
-        merged[merged.length - 1] = (
-          merged.last.$1,
-          math.max(merged.last.$2, r.$2),
-        );
-      }
-    }
-    // Work backwards so ripple never changes the remaining cut positions.
-    for (final r in merged.reversed) {
-      Clip locate(double at) => current()
-          .trackById(trackId)!
-          .clips
-          .firstWhere(
-            (c) =>
-                c.mediaItemId == clip.mediaItemId &&
-                c.trackType == clip.trackType &&
-                seconds(c.timelineStart) <= at + 1e-6 &&
-                seconds(c.timelineEnd) > at + 1e-6,
-          );
-      var target = locate((r.$1 + r.$2) / 2);
-      if (r.$2 < seconds(target.timelineEnd) - 1e-6) {
-        run('split_clip', {'clip_id': target.id, 'at': r.$2});
-      }
-      target = locate((r.$1 + r.$2) / 2);
-      if (r.$1 > seconds(target.timelineStart) + 1e-6) {
-        run('split_clip', {'clip_id': target.id, 'at': r.$1});
-      }
-      target = locate((r.$1 + r.$2) / 2);
-      run('delete_clip', {'clip_id': target.id, 'ripple': true});
+    final remap = _remapRanges(current(), clip, source, const {});
+    if (remap.timeMap.removed.isNotEmpty) {
+      run('remap_timeline', {
+        'clip_id': clip.id,
+        'removed_ranges': remap.timeMap.toJson()['removed_ranges'],
+      });
     }
   }
 

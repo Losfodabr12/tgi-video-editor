@@ -1,0 +1,17 @@
+{
+  "fixture": "private real project copy; not committed",
+  "clip_count": 132,
+  "track_count": 5,
+  "analysis_interval_count": 45,
+  "padding": 0.12,
+  "format_version": 14,
+  "success": true,
+  "duration_before": 293.547,
+  "duration_after": 269.140312,
+  "plan": {
+    "change_count": 222,
+    "command_count": 1
+  },
+  "undo_exact": true,
+  "original_unchanged": true
+}

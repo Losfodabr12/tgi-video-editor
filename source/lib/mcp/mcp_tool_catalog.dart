@@ -55,8 +55,22 @@ class McpToolDefinition {
   };
 }
 
+final removeSilencesArguments = objectSchema(
+  {
+    'clip_id': clipIdSchema,
+    'job_id': stringSchema(),
+    'threshold_db': {...numberSchema(-80, 0), 'default': -35},
+    'minimum': {...numberSchema(0.1, 10), 'default': 0.5},
+    'padding': {...numberSchema(0, 1), 'default': 0.08},
+    ...remapScopeFields,
+  },
+  ['clip_id'],
+);
+
 final mcpToolCatalog = <String, McpToolDefinition>{
-  for (final e in commandCatalog.entries)
+  for (final e in commandCatalog.entries.where(
+    (e) => e.key != 'remap_timeline',
+  ))
     e.key: McpToolDefinition(
       e.key,
       '${e.value.description} Exige base_revision. Se aprovação estiver ativa, devolve plano pendente para aprovação dentro do app.',
@@ -184,15 +198,36 @@ final mcpToolCatalog = <String, McpToolDefinition>{
   ),
   'preview_plan': McpToolDefinition(
     'preview_plan',
-    'Dry-run de um lote: devolve plan_id, antes/depois e alterações sem editar projeto/histórico. Aplicar reutiliza o snapshot exato, válido por 15 minutos na mesma revisão.',
-    objectSchema(
-      {
+    'Prévia sem editar: lote commands ou macro="remove_silences" com arguments. Devolve antes/depois e plan_id, válido na mesma revisão por 15 minutos. Se faltar job_id, inicia análise assíncrona.',
+    {
+      'type': 'object',
+      'additionalProperties': false,
+      'properties': {
         'commands': commandListSchema,
+        'macro': stringSchema(['remove_silences']),
+        'arguments': removeSilencesArguments,
         'base_revision': revisionSchema,
         'label': stringSchema(),
       },
-      ['commands', 'base_revision'],
-    ),
+      'oneOf': [
+        objectSchema(
+          {
+            'commands': commandListSchema,
+            'base_revision': revisionSchema,
+            'label': stringSchema(),
+          },
+          ['commands', 'base_revision'],
+        ),
+        objectSchema(
+          {
+            'macro': stringSchema(['remove_silences']),
+            'arguments': removeSilencesArguments,
+            'base_revision': revisionSchema,
+          },
+          ['macro', 'arguments', 'base_revision'],
+        ),
+      ],
+    },
     readOnly: true,
   ),
   'apply_plan': McpToolDefinition(
@@ -209,12 +244,10 @@ final mcpToolCatalog = <String, McpToolDefinition>{
     'PREVIEW: plano de cortes ripple no clipe/grupo usando job detect_silence concluído na revisão atual. Padding preserva bordas da fala. Aplique com apply_plan.',
     objectSchema(
       {
-        'clip_id': clipIdSchema,
-        'job_id': stringSchema(),
-        'padding': numberSchema(0, 1),
+        ...removeSilencesArguments['properties'] as Map<String, dynamic>,
         'base_revision': revisionSchema,
       },
-      ['clip_id', 'job_id', 'base_revision'],
+      ['clip_id', 'base_revision'],
     ),
     readOnly: true,
   ),
