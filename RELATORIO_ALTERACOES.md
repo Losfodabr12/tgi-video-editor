@@ -856,3 +856,15 @@ Isso mede descontinuidade; não constitui avaliação auditiva.
 Validação da etapa 1: `flutter analyze --no-pub` sem problemas;
 `flutter test --no-pub --concurrency=1 --dart-define=TGI_RUN_FFMPEG_INTEGRATION_TESTS=true`:
 **254 aprovados, zero ignorados**. Testes anteriores e ProjectIOService intactos.
+
+Etapa 2: timestamps reais de palavras/subtokens do JSON completo do Whisper
+preservados em memória e expostos na leitura da transcrição. Cortes são
+subtraídos dos intervalos protegidos, com margem padrão de 0,05 s da fonte;
+`protect_words=false` desativa. Frases sem palavras temporizadas recebem
+proteção conservadora em `remove_silences`; no corte por transcrição, apenas
+palavras das frases escolhidas são protegidas adicionalmente. O plano informa
+precisão e ausência de proteção; não são estimados tempos de palavras pelo texto.
+Novos testes cobriram limites de silêncio, palavras que os atravessam,
+parse/offset/subtokens, opção desativada e corte por transcrição.
+`flutter analyze --no-pub`: sem problemas. Suíte completa padrão:
+**243 aprovados / 15 testes FFmpeg opcionais ignorados**, sem editar testes anteriores.

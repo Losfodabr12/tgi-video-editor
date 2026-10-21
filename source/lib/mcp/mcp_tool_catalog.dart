@@ -94,6 +94,16 @@ final removeSilencesArguments = objectSchema(
 );
 
 final cutJoinFields = <String, dynamic>{
+  'protect_words': {
+    'type': 'boolean',
+    'description':
+        'Padrão true se há transcrição. Preserva palavras e margens; sem tempos de palavras remove_silences protege frases inteiras.',
+  },
+  'word_margin': {
+    ...numberSchema(0, .5),
+    'default': .05,
+    'description': 'Margem em segundos da fonte ao redor de cada palavra.',
+  },
   'join_fade_ms': {
     'type': 'integer',
     'minimum': 0,

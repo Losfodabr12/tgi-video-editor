@@ -162,6 +162,11 @@ class EditorReadService {
     return cached;
   }
 
+  List<CaptionCue> availableTranscript(String mediaId) {
+    final p = controller.project, item = media(mediaId);
+    return _transcripts[_key(p, item)] ?? const [];
+  }
+
   Map<String, Object?> getTranscript({
     String? mediaId,
     int offset = 0,

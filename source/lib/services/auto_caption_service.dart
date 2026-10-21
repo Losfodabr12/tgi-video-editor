@@ -34,16 +34,33 @@ enum SubtitleExportFormat {
   final String extension;
 }
 
+class CaptionWord {
+  const CaptionWord({
+    required this.start,
+    required this.end,
+    required this.text,
+  });
+  final Duration start, end;
+  final String text;
+  Map<String, Object> toJson() => {
+    'start': _durationSeconds(start),
+    'end': _durationSeconds(end),
+    'text': text,
+  };
+}
+
 class CaptionCue {
   const CaptionCue({
     required this.start,
     required this.end,
     required this.text,
+    this.words = const [],
   });
 
   final Duration start;
   final Duration end;
   final String text;
+  final List<CaptionWord> words;
 
   Duration get duration => end - start;
 
@@ -51,6 +68,7 @@ class CaptionCue {
     'start': _durationSeconds(start),
     'end': _durationSeconds(end),
     'text': text,
+    if (words.isNotEmpty) 'words': words.map((w) => w.toJson()).toList(),
   };
 }
 
@@ -234,7 +252,7 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       config.modelPath,
       '-f',
       chunk.path,
-      '-oj',
+      '-ojf',
       '-of',
       outputPrefix,
       '-pp',
@@ -535,6 +553,9 @@ List<CaptionCue> segmentCaptionCues(
             start: cursor,
             end: cueEnd,
             text: _wrapCaptionText(chunk, safeMaxChars),
+            words: List.unmodifiable(
+              segment.words.where((w) => w.end > cursor && w.start < cueEnd),
+            ),
           ),
         );
       }
@@ -652,6 +673,14 @@ List<CaptionCue> _captionCuesFromWhisperJson(
   String body,
   FfmpegAudioChunk chunk,
 ) {
+  return parseWhisperCaptionCues(body, offset: chunk.offset);
+}
+
+/// Preserves actual word/token timestamps; never estimates word times from text.
+List<CaptionCue> parseWhisperCaptionCues(
+  String body, {
+  Duration offset = Duration.zero,
+}) {
   final decoded = jsonDecode(body);
   if (decoded is! Map<String, dynamic>) {
     throw const AutoCaptionException(
@@ -675,9 +704,10 @@ List<CaptionCue> _captionCuesFromWhisperJson(
       }
       cues.add(
         CaptionCue(
-          start: chunk.offset + start,
-          end: chunk.offset + end,
+          start: offset + start,
+          end: offset + end,
           text: text,
+          words: _whisperWords(entry, offset),
         ),
       );
     }
@@ -692,6 +722,61 @@ List<CaptionCue> _captionCuesFromWhisperJson(
     'O transcritor local nao retornou timestamps de fala.',
     'Gere novamente as legendas; se persistir, atualize o whisper.cpp local.',
   );
+}
+
+List<CaptionWord> _whisperWords(Map<String, dynamic> entry, Duration offset) {
+  final rawWords = entry['words'];
+  if (rawWords is List) {
+    return List.unmodifiable([
+      for (final raw in rawWords.whereType<Map<String, dynamic>>())
+        if (_whisperSegmentStart(raw) case final Duration start)
+          if (_whisperSegmentEnd(raw) case final Duration end)
+            if (end > start && (raw['word'] ?? raw['text']) is String)
+              CaptionWord(
+                start: offset + start,
+                end: offset + end,
+                text: (raw['word'] ?? raw['text']) as String,
+              ),
+    ]);
+  }
+  final tokens = entry['tokens'];
+  if (tokens is! List) return const [];
+  final words = <CaptionWord>[];
+  Duration? start, end;
+  var text = '';
+  void flush() {
+    if (start != null &&
+        end != null &&
+        end! > start! &&
+        text.trim().isNotEmpty) {
+      words.add(
+        CaptionWord(
+          start: offset + start!,
+          end: offset + end!,
+          text: text.trim(),
+        ),
+      );
+    }
+    text = '';
+    start = null;
+    end = null;
+  }
+
+  for (final raw in tokens.whereType<Map<String, dynamic>>()) {
+    final part = raw['text'];
+    if (part is! String || part.startsWith('[_') || part.startsWith('<|')) {
+      continue;
+    }
+    final a = _whisperSegmentStart(raw), b = _whisperSegmentEnd(raw);
+    // Incomplete timing must fall back to the cue envelope, not false word precision.
+    if (a == null || b == null || b < a) return const [];
+    if (part.startsWith(RegExp(r'\s')) && text.isNotEmpty) flush();
+    start ??= a;
+    end = b;
+    text += part;
+  }
+  flush();
+  return List.unmodifiable(words);
 }
 
 List<Map<String, dynamic>> _whisperSegmentEntries(Map<String, dynamic> json) {

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../core/commands/command_engine.dart';
 import '../core/commands/command_transaction.dart';
 import '../core/commands/timeline_time_map.dart';
+import '../core/commands/cut_range_policy.dart';
 import '../domain/models/clip.dart';
 import '../domain/models/project.dart';
 import '../domain/models/track.dart';
@@ -293,9 +294,10 @@ class EditorPlans {
               (interval['end'] as num).toDouble() - padding,
             ),
         ];
-        final remap = _remapRanges(before, clip, ranges, args);
+        final protected = _protectRanges(clip, ranges, args);
+        final remap = _remapRanges(before, clip, protected.$1, args);
         next = remap.project;
-        effects = remap.toJson();
+        effects = {...remap.toJson(), ...protected.$2};
         if (remap.timeMap.removed.isNotEmpty) {
           commands.add(
             EditorCommand('remap_timeline', {
@@ -336,7 +338,24 @@ class EditorPlans {
         if (cursor < seconds(clip.sourceEnd)) {
           remove.add((cursor, seconds(clip.sourceEnd)));
         }
-        _removeRanges(clip, remove, () => next, run, args);
+        final protected = _protectRanges(
+          clip,
+          remove,
+          args,
+          selectedCues: [for (final i in indices) cues[i as int]],
+        );
+        final remap = _remapRanges(before, clip, protected.$1, args);
+        next = remap.project;
+        effects = {...remap.toJson(), ...protected.$2};
+        if (remap.timeMap.removed.isNotEmpty) {
+          commands.add(
+            EditorCommand('remap_timeline', {
+              'clip_id': clip.id,
+              'removed_ranges': remap.timeMap.toJson()['removed_ranges'],
+              'join_fade_ms': args['join_fade_ms'] ?? 8,
+            }),
+          );
+        }
       case 'auto_captions':
         final source = reads.transcriptCues(clip.mediaItemId);
         final timeline = <CaptionCue>[];
@@ -424,7 +443,7 @@ class EditorPlans {
           ],
         });
     }
-    if (commands.isEmpty) {
+    if (commands.isEmpty && effects.isEmpty) {
       throw const CommandError(
         'empty_plan',
         'A macro não encontrou alterações para aplicar.',
@@ -494,21 +513,49 @@ class EditorPlans {
     );
   }
 
-  void _removeRanges(
+  (List<(double, double)>, Map<String, Object?>) _protectRanges(
     Clip clip,
-    List<(double, double)> source,
-    TgiProject Function() current,
-    void Function(String, Map<String, Object?>) run,
-    Map<String, Object?> args,
-  ) {
-    final remap = _remapRanges(current(), clip, source, args);
-    if (remap.timeMap.removed.isNotEmpty) {
-      run('remap_timeline', {
-        'clip_id': clip.id,
-        'removed_ranges': remap.timeMap.toJson()['removed_ranges'],
-        'join_fade_ms': args['join_fade_ms'] ?? 8,
-      });
+    List<(double, double)> ranges,
+    Map<String, Object?> args, {
+    List<CaptionCue>? selectedCues,
+  }) {
+    final cues = selectedCues ?? reads.availableTranscript(clip.mediaItemId);
+    final requested = args['protect_words'] as bool? ?? cues.isNotEmpty;
+    final margin = (args['word_margin'] as num?)?.toDouble() ?? .05;
+    if (!margin.isFinite || margin < 0 || margin > .5) {
+      throw const CommandError(
+        'out_of_range',
+        'word_margin deve ser 0..0.5 segundo.',
+      );
     }
+    final words = cues.expand((c) => c.words).toList();
+    final envelope = selectedCues == null && cues.any((c) => c.words.isEmpty);
+    final active = requested && (words.isNotEmpty || envelope);
+    final protected = <(double, double)>[
+      for (final w in words) (seconds(w.start), seconds(w.end)),
+      if (envelope)
+        for (final c in cues.where((c) => c.words.isEmpty))
+          (seconds(c.start), seconds(c.end)),
+    ];
+    return (
+      active ? protectCutRanges(ranges, protected, margin: margin) : ranges,
+      {
+        'word_protection': {
+          'active': active,
+          'requested': requested,
+          'margin_seconds': margin,
+          'precision': active ? (envelope ? 'cue_envelopes' : 'words') : 'none',
+        },
+        'warnings': [
+          if (cues.isEmpty)
+            'Proteção de palavras não aplicada: não há transcrição disponível. Padding preservado.',
+          if (envelope && active)
+            'Sem timestamps por palavra em parte da transcrição: frases inteiras protegidas de forma conservadora.',
+          if (requested && !active && cues.isNotEmpty)
+            'Sem timestamps por palavra: mantidos os limites das frases escolhidas, sem margem adicional.',
+        ],
+      },
+    );
   }
 
   @override
