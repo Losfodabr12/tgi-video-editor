@@ -84,6 +84,25 @@ void validateArguments(
 }
 
 void validateValue(Object? value, Map<String, dynamic> field, String path) {
+  if (field['oneOf'] is List) {
+    var matched = 0;
+    for (final alternative in field['oneOf'] as List) {
+      try {
+        validateValue(value, alternative as Map<String, dynamic>, path);
+        matched++;
+      } on CommandError {
+        /* Report the union rather than one arbitrary branch. */
+      }
+    }
+    if (matched != 1) {
+      throw CommandError(
+        'invalid_argument',
+        'Comando inválido em $path. Consulte tools/list para o schema exato.',
+        {'matching_schemas': matched},
+      );
+    }
+    return;
+  }
   final valid = switch (field['type']) {
     'string' => value is String,
     'integer' => value is int,

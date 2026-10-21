@@ -3,6 +3,14 @@ part of 'editor_controller.dart';
 extension EditorCommandDispatch on EditorController {
   String? get undoLabel => _history.undoLabel;
   String? get redoLabel => _history.redoLabel;
+  TgiProject previewHistoryCommand(String name) {
+    final stack = name == 'undo' ? _history.undoStack : _history.redoStack;
+    if (stack.isEmpty) {
+      throw const CommandError('empty_history', 'Histórico vazio.');
+    }
+    return stack.last;
+  }
+
   bool get isCommandEditBusy =>
       _disposed ||
       _trimPreviewBaseProject != null ||

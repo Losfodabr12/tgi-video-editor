@@ -120,13 +120,22 @@ class EditorPlans {
         {'plan_id': id},
       );
     }
-    final result = controller.commitCommandProject(
-      plan.after,
-      baseRevision: plan.revision,
-      label: plan.label,
-      commandCount: plan.commands.length,
-      exportSettings: plan.exportSettings,
-    );
+    final history =
+        plan.commands.length == 1 &&
+        ['undo', 'redo'].contains(plan.commands.single.name);
+    final result = history
+        ? controller.executeCommands(
+            plan.commands,
+            baseRevision: plan.revision,
+            label: plan.label,
+          )
+        : controller.commitCommandProject(
+            plan.after,
+            baseRevision: plan.revision,
+            label: plan.label,
+            commandCount: plan.commands.length,
+            exportSettings: plan.exportSettings,
+          );
     plan.applied = true;
     onChanged?.call();
     return {...result, 'plan_id': id};
@@ -139,11 +148,21 @@ class EditorPlans {
   }) {
     checkRevision(baseRevision, controller.projectRevision);
     final before = controller.project;
-    final after = const CommandTransaction().evaluate(
-      before,
-      commands,
-      revision: baseRevision,
-    );
+    final history =
+        commands.length == 1 && ['undo', 'redo'].contains(commands.single.name);
+    if (history) {
+      validateArguments(
+        commands.single.arguments,
+        commandCatalog[commands.single.name]!.schema,
+      );
+    }
+    final after = history
+        ? controller.previewHistoryCommand(commands.single.name)
+        : const CommandTransaction().evaluate(
+            before,
+            commands,
+            revision: baseRevision,
+          );
     return _save(before, after, commands, baseRevision, label);
   }
 
