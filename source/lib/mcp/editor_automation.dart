@@ -189,6 +189,11 @@ class EditorAutomation extends ChangeNotifier {
   }
 
   Future<void> stop() async {
+    final hadWork =
+        running ||
+        busy ||
+        plans.all.isNotEmpty ||
+        reads.jobs.all.any((j) => !j.finished);
     ++_epoch;
     busy = false;
     final server = _server;
@@ -197,12 +202,14 @@ class EditorAutomation extends ChangeNotifier {
     notifyListeners();
     await server?.stop();
     await reads.cancelAll();
-    unawaited(
-      audit.write({
-        'event': 'server_stopped',
-        'revision': controller.projectRevision,
-      }),
-    );
+    if (hadWork) {
+      unawaited(
+        audit.write({
+          'event': 'server_stopped',
+          'revision': controller.projectRevision,
+        }),
+      );
+    }
     notifyListeners();
   }
 

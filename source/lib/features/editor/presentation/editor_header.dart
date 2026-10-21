@@ -2,6 +2,10 @@ part of 'editor_screen.dart';
 
 class _EditorHeader extends StatelessWidget {
   const _EditorHeader({
+    this.onOpenMcpSettings,
+    this.onEmergencyStop,
+    this.aiRunning = false,
+    this.aiConnected = false,
     this.onToggleLibrary,
     this.onToggleInspector,
     required this.projectName,
@@ -41,6 +45,8 @@ class _EditorHeader extends StatelessWidget {
     required this.onCancelExport,
   });
 
+  final VoidCallback? onOpenMcpSettings, onEmergencyStop;
+  final bool aiRunning, aiConnected;
   final VoidCallback? onToggleLibrary, onToggleInspector;
   final String projectName;
   final bool isImporting;
@@ -178,6 +184,7 @@ class _EditorHeader extends StatelessWidget {
                       item('projects', 'Projeto, versões e modelos'),
                       item('watermark', 'Marca-d’água'),
                       item('shortcuts', 'Atalhos do teclado'),
+                      item('mcp', 'Configurações de IA (MCP)'),
                     ],
                     (value) {
                       switch (value) {
@@ -191,6 +198,8 @@ class _EditorHeader extends StatelessWidget {
                           onWatermarkSettings();
                         case 'shortcuts':
                           onOpenKeyboardSettings();
+                        case 'mcp':
+                          onOpenMcpSettings?.call();
                       }
                     },
                   ),
@@ -257,6 +266,29 @@ class _EditorHeader extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (aiRunning) ...[
+                    TextButton.icon(
+                      onPressed: onOpenMcpSettings,
+                      icon: Icon(
+                        Icons.smart_toy_outlined,
+                        size: 15,
+                        color: aiConnected ? Colors.green : null,
+                      ),
+                      label: Text(
+                        aiConnected ? 'IA conectada' : 'IA aguardando',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Desligar IA agora',
+                      onPressed: onEmergencyStop,
+                      icon: const Icon(
+                        Icons.stop_circle_outlined,
+                        size: 18,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                  ],
                   command(
                     'Desfazer · Ctrl+Z',
                     Icons.undo,

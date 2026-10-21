@@ -196,6 +196,7 @@ extension _EditorProjectActions on _EditorScreenState {
       _controller.loadProjectFromData(restored);
       _refreshEditor(() {
         _exportSettings = restored.exportSettings ?? _exportSettings;
+        _controller.synchronizeCommandExportSettings(_exportSettings);
         _recoveredDraftPending = true;
       });
       _scheduleProjectAutosave(force: true);

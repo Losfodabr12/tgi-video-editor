@@ -1,3 +1,5 @@
+import '../../../mcp/editor_automation.dart';
+import 'widgets/mcp_settings_dialog.dart';
 import '../../../services/subtitle_service.dart';
 import 'caption_style_dialog.dart';
 import '../../../domain/models/cross_dissolve.dart';
@@ -210,6 +212,7 @@ enum _UnsavedProjectChoice { save, discard, cancel }
 
 class _EditorScreenState extends State<EditorScreen> {
   late final EditorController _controller;
+  late final EditorAutomation _automation;
   final _editorFocusNode = FocusNode(debugLabel: 'TGI editor shortcuts');
   late final _projectHistoryService =
       widget.projectHistoryService ?? ProjectHistoryService();
@@ -414,6 +417,7 @@ class _EditorScreenState extends State<EditorScreen> {
             editorStartPresetForProject(result.project),
           );
       _projectSessionRevision++;
+      _controller.synchronizeCommandExportSettings(_exportSettings);
       _controller.loadProjectFromData(result);
       _markProjectAsSaved(path);
       await _clearOwnedRecoveryDraft();
@@ -641,7 +645,14 @@ class _EditorScreenState extends State<EditorScreen> {
       mediaImportService: MediaImportService(ffmpegService: FfmpegService()),
       initialProject:
           widget.initialProject ?? _projectForStartPreset(widget.startPreset),
-    )..addListener(_handleControllerChanged);
+    );
+    _controller.synchronizeCommandExportSettings(_exportSettings);
+    _controller.addListener(_handleControllerChanged);
+    _automation = EditorAutomation(_controller)
+      ..addListener(_handleAutomationChanged);
+    if (!_isFlutterTest) {
+      unawaited(_automation.load());
+    }
     _currentProjectPath = widget.initialProjectPath;
     _lastSavedProjectSnapshot = _controller.project;
     _lastAutosaveObservedProject = _controller.project;
@@ -745,13 +756,33 @@ class _EditorScreenState extends State<EditorScreen> {
         ),
       );
     }
+    _automation
+      ..removeListener(_handleAutomationChanged)
+      ..dispose();
     _controller
       ..removeListener(_handleControllerChanged)
       ..dispose();
     super.dispose();
   }
 
+  void _handleAutomationChanged() {
+    if (mounted && !_leavingEditor) {
+      setState(() {});
+    }
+  }
+
+  Future<void> _openMcpSettings() async {
+    _automation.policy.projectDirectory = _currentProjectPath == null
+        ? null
+        : File(_currentProjectPath!).parent.path;
+    await showDialog<void>(
+      context: context,
+      builder: (_) => McpSettingsDialog(automation: _automation),
+    );
+  }
+
   void _handleControllerChanged() {
+    _exportSettings = _controller.commandExportSettings;
     final selectedId = _controller.selectedTimelineClip?.id;
     if (selectedId != _inspectedClipId) {
       _inspectedClipId = selectedId;
@@ -1164,6 +1195,7 @@ class _EditorScreenState extends State<EditorScreen> {
       return;
     }
     setState(() => _exportSettings = settings);
+    _controller.synchronizeCommandExportSettings(settings);
     _scheduleProjectAutosave();
   }
 
@@ -2513,6 +2545,10 @@ class _EditorScreenState extends State<EditorScreen> {
                       onDuplicate: _controller.duplicateSelectedTimelineClips,
                       onImportVideo: _controller.importVideo,
                       onOpenKeyboardSettings: _openKeyboardSettings,
+                      onOpenMcpSettings: () => unawaited(_openMcpSettings()),
+                      aiRunning: _automation.running,
+                      aiConnected: _automation.connectedClients > 0,
+                      onEmergencyStop: () => unawaited(_automation.stop()),
                       onResetWorkspaceLayout: _resetWorkspaceLayout,
                       onWatermarkSettings: _openWatermarkSettings,
                       exportLabel: _isQuickCreator
