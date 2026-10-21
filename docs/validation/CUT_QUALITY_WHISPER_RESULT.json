@@ -1,0 +1,8 @@
+{
+  "runtime": "whisper.cpp b5454, base model, full JSON",
+  "media": "synthetic Portuguese speech fixture",
+  "cue_count": 2,
+  "timed_word_count": 16,
+  "valid_word_durations": true,
+  "estimated_word_times": false
+}

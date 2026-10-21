@@ -1,0 +1,64 @@
+{
+  "stages": [
+    {
+      "stage": 1,
+      "analyze": "no issues",
+      "tests_passed": 254,
+      "tests_skipped": 0,
+      "ffmpeg_integration_enabled": true
+    },
+    {
+      "stage": 2,
+      "analyze": "no issues",
+      "tests_passed": 243,
+      "tests_skipped": 15,
+      "ffmpeg_integration_enabled": false
+    },
+    {
+      "stage": 3,
+      "analyze": "no issues",
+      "tests_passed": 248,
+      "tests_skipped": 15,
+      "ffmpeg_integration_enabled": false
+    },
+    {
+      "stage": 4,
+      "analyze": "no issues",
+      "tests_passed": 250,
+      "tests_skipped": 15,
+      "ffmpeg_integration_enabled": false
+    },
+    {
+      "stage": 5,
+      "analyze": "no issues",
+      "tests_passed": 267,
+      "tests_skipped": 0,
+      "ffmpeg_integration_enabled": true
+    },
+    {
+      "stage": 6,
+      "analyze": "no issues",
+      "tests_passed": 267,
+      "tests_skipped": 0,
+      "ffmpeg_integration_enabled": true
+    },
+    {
+      "stage": 7,
+      "analyze": "no issues",
+      "tests_passed": 267,
+      "tests_skipped": 0,
+      "ffmpeg_integration_enabled": true
+    }
+  ],
+  "project_format_version": 14,
+  "preexisting_tests_modified": false,
+  "project_io_service_modified": false,
+  "ci": {
+    "workflow": "Windows editor",
+    "commit": "f14704bab22999d4d850cdef4a8bfc9be63a4e2c",
+    "run_id": 39584040870,
+    "url": "https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39584040870",
+    "conclusion": "success"
+  },
+  "auditory_quality_judged": false
+}

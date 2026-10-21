@@ -938,3 +938,25 @@ ignorados**. A tabela de tools da documentação foi comparada ao registro real:
 34 nomes na mesma ordem. Inspeção dos arquivos de `docs/validation` não encontrou
 caminhos absolutos locais ou credenciais; testes preexistentes e ProjectIOService
 permanecem sem alterações ([verificação](docs/validation/CUT_QUALITY_PRIVACY_RESULT.json)).
+
+Etapa 7 — publicação e rastreabilidade do CI: os seis commits anteriores foram
+enviados para `main`. O push do commit `f14704b` acionou o workflow Windows
+com analyze, testes FFmpeg, build release e empacotamento:
+[run 39584040870](https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39584040870).
+Esse commit contém todo o código validado na janela nativa; esta última etapa
+atualiza apenas documentação e evidências. **O run concluiu com sucesso**:
+analyze, testes nativos, release e pacote Windows aprovados. Evidência:
+[CUT_QUALITY_CI_RESULT.json](docs/validation/CUT_QUALITY_CI_RESULT.json).
+
+Na última etapa, `analyze` local permaneceu sem problemas e a suíte completa
+com FFmpeg passou novamente: **267 aprovados / zero ignorados**.
+[CUT_QUALITY_VALIDATION.json](docs/validation/CUT_QUALITY_VALIDATION.json)
+registra resultados por etapa. Checagem adicional com áudio sintético em
+português e Whisper real (b5454/base, JSON completo): **2 frases e 16 palavras
+com tempos reais preservados**, sem estimar tempos pelo texto
+([resultado](docs/validation/CUT_QUALITY_WHISPER_RESULT.json)). Essa checagem
+auxiliar passou com o runner Flutter; uma tentativa inicial no Dart puro
+falhou com `InvalidType is not a subtype of FunctionType`, por carregar
+dependências Flutter/FFI fora desse runner. Isso não ocorreu no app nem na
+suíte oficial. Arquivos de validação foram verificados novamente, sem caminhos
+absolutos locais ou credenciais.
