@@ -170,10 +170,28 @@ class EditorController extends ChangeNotifier {
   TgiProject _projectValue;
   int _projectRevision = 0;
   int get projectRevision => _projectRevision;
+  FfmpegExportSettings _commandExportSettings = FfmpegExportSettings.uiDefault;
+  final _snapshotExportSettings = Expando<FfmpegExportSettings>();
+  FfmpegExportSettings get commandExportSettings => _commandExportSettings;
+  void synchronizeCommandExportSettings(FfmpegExportSettings settings) {
+    if (settings == _commandExportSettings) {
+      return;
+    }
+    _commandExportSettings = settings;
+    _snapshotExportSettings[_project] = settings;
+    _projectRevision++;
+    notifyListeners();
+  }
+
   TgiProject get _project => _projectValue;
   set _project(TgiProject value) {
-    if (!identical(value, _projectValue)) _projectRevision++;
+    if (!identical(value, _projectValue)) {
+      _snapshotExportSettings[_projectValue] ??= _commandExportSettings;
+      _projectRevision++;
+    }
     _projectValue = value;
+    _commandExportSettings =
+        _snapshotExportSettings[value] ?? _commandExportSettings;
   }
 
   TgiProject _commandProject(

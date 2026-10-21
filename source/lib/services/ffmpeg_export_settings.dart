@@ -212,13 +212,14 @@ class FfmpegExportSettings {
   bool get hasRange => rangeStart != null || rangeEnd != null;
 
   FfmpegExportSettings copyWith({
+    FfmpegExportResolution? resolution,
     FfmpegVideoEncoder? encoder,
     Duration? rangeStart,
     Duration? rangeEnd,
     bool clearRange = false,
     bool? audioOnly,
   }) => FfmpegExportSettings(
-    resolution: resolution,
+    resolution: resolution ?? this.resolution,
     framesPerSecond: framesPerSecond,
     quality: quality,
     audioOnly: audioOnly ?? this.audioOnly,

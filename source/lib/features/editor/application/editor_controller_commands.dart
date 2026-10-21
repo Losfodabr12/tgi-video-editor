@@ -58,6 +58,7 @@ extension EditorCommandDispatch on EditorController {
     required int baseRevision,
     required String label,
     int commandCount = 1,
+    FfmpegExportSettings? exportSettings,
   }) {
     checkRevision(baseRevision, projectRevision);
     if (isCommandEditBusy) {
@@ -76,6 +77,10 @@ extension EditorCommandDispatch on EditorController {
     if (changed) {
       _history.record(_project, label: label);
       _project = next;
+      if (exportSettings != null) {
+        _commandExportSettings = exportSettings;
+        _snapshotExportSettings[next] = exportSettings;
+      }
       _resetTransientTimelineState();
       _statusMessage = label;
       notifyListeners();
