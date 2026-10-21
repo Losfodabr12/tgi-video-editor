@@ -1,0 +1,77 @@
+{
+    "tag_gate":  {
+                     "tag":  "v0.4.0",
+                     "commit":  "700a8ca82eba8b845c3b1336c17a2f1b70363472",
+                     "tag_pushed_after_ci_success":  true,
+                     "checked_at_utc":  "2026-10-21T21:33:43.3556636Z",
+                     "pretag_ci":  {
+                                       "run_id":  39678496619,
+                                       "url":  "https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39678496619",
+                                       "status":  "completed",
+                                       "conclusion":  "success",
+                                       "completed_at":  "2026-10-21T21:32:47Z"
+                                   }
+                 },
+    "ci_steps":  [
+                     {
+                         "name":  "Set up job",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Run actions/checkout@v7.0.1",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Run subosito/flutter-action@v2",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Run actions/cache@v6.1.0",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Install local runtimes",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Pub get, analyze, tests and release build",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Inspect working tree after build",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Record executed remote checks",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Package offline Windows build",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Upload Windows build",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Upload golden differences on failure",
+                         "conclusion":  "skipped"
+                     },
+                     {
+                         "name":  "Post Run actions/cache@v6.1.0",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Post Run subosito/flutter-action@v2",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Post Run actions/checkout@v7.0.1",
+                         "conclusion":  "success"
+                     },
+                     {
+                         "name":  "Complete job",
+                         "conclusion":  "success"
+                     }
+                 ]
+}

@@ -1,0 +1,20 @@
+{
+  "ci_working_tree_dirty": true,
+  "files_listed_as_modified_after_build": [
+    {
+      "source_file": "source/assets/branding/editor_icon.svg",
+      "packaged": true,
+      "tag_content_matches_after_newline_bom_normalization": true
+    },
+    {
+      "source_file": "source/tools/ffmpeg/LICENSE",
+      "packaged": true,
+      "tag_content_matches_after_newline_bom_normalization": true
+    },
+    {
+      "source_file": "source/tools/whisper/LICENSE",
+      "packaged": true,
+      "tag_content_matches_after_newline_bom_normalization": true
+    }
+  ]
+}

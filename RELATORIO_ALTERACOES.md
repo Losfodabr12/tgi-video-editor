@@ -997,3 +997,40 @@ listados no manifesto tiveram SHA-256 conferido, com zero divergências;
 [Resultado do pacote local](docs/validation/RELEASE_0.4.0_LOCAL_PACKAGE_RESULT.json).
 Esse pacote foi gerado durante a preparação: registra o commit base `9ccde88`
 e `workingTreeDirty=true`, refletindo as alterações da versão ainda não commitadas.
+
+O commit de preparação **`700a8ca82eba8b845c3b1336c17a2f1b70363472`** foi
+enviado para `main`. O [CI pré-tag 39678496619](https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39678496619)
+concluiu com **sucesso**, incluindo analyze, testes, integração FFmpeg, build
+release, empacotamento e upload. **Só após essa aprovação**, foi criada e
+enviada a tag anotada **`v0.4.0`**, apontando para esse mesmo commit.
+A criação revalidou o SHA aprovado, `main` remoto e a pasta limpa; nenhuma tag
+anterior foi substituída. A conclusão do CI ocorreu em **21/10/2026 21:32:47 UTC**;
+a confirmação do envio da tag foi registrada em **21:33:43 UTC**.
+
+O [workflow de release 39679790675](https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39679790675)
+concluiu com **sucesso** nos jobs `build / windows` e `publish`.
+A [release v0.4.0](https://github.com/Losfodabr12/tgi-video-editor/releases/tag/v0.4.0)
+foi publicada pelo `github-actions[bot]` em **21/10/2026 21:43:42 UTC**, com:
+
+- `FrameStudio-0.4.0-windows-x64.zip`: **299.365.286 bytes**.
+- `SHA256SUMS.txt` e `RELATORIO_ALTERACOES.md`, anexados pelo workflow.
+
+O ZIP e o checksum foram baixados da release publicada. SHA-256 conferido
+contra `SHA256SUMS.txt` **e** o digest da API do GitHub:
+`04e5e5fcf0eb0f16e4ec00f9a4f253f7a66d5c32564881d2cc8cfc1818e4399f`.
+**122 arquivos** conferidos contra `BUILD_INFO.json`, com **zero divergências**.
+O EXE extraído possui **ProductVersion e FileVersion 0.4.0+4**; o manifesto
+registra versão **0.4.0**, build **4**, ambas as versões completas **0.4.0+4**
+e o commit **`700a8ca82eba8b845c3b1336c17a2f1b70363472`**, igual à tag aprovada.
+`CHANGELOG.md` e `docs/MCP.md` estão no pacote. Evidências:
+[publicação](docs/validation/RELEASE_0.4.0_PUBLICATION_RESULT.json) e
+[verificação do ZIP publicado](docs/validation/RELEASE_0.4.0_PUBLISHED_PACKAGE_RESULT.json).
+
+O manifesto preserva `workingTreeDirty=true`. O log do runner listou
+`source/assets/branding/editor_icon.svg` e as licenças de FFmpeg/Whisper como
+modificados após geração/setup. Os três arquivos publicados foram comparados
+com o conteúdo da tag e coincidem após normalizar quebras de linha e BOM;
+o resultado está em
+[RELEASE_0.4.0_GENERATED_FILES_RESULT.json](docs/validation/RELEASE_0.4.0_GENERATED_FILES_RESULT.json).
+A tag e os assets publicados foram preservados durante o registro posterior
+destas evidências; este registro documental identifica o commit de release acima.

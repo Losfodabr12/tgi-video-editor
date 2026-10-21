@@ -1,0 +1,57 @@
+{
+  "tag": "v0.4.0",
+  "application_version": "0.4.0+4",
+  "release_commit": "700a8ca82eba8b845c3b1336c17a2f1b70363472",
+  "tag_created_after_green_ci": true,
+  "pretag_ci": {
+    "run_id": 39678496619,
+    "url": "https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39678496619",
+    "status": "completed",
+    "conclusion": "success",
+    "completed_at": "2026-10-21T21:32:47Z"
+  },
+  "release_workflow": {
+    "run_id": 39679790675,
+    "url": "https://github.com/Losfodabr12/tgi-video-editor/actions/runs/39679790675",
+    "conclusion": "success",
+    "jobs": [
+      {
+        "name": "build / windows",
+        "conclusion": "success"
+      },
+      {
+        "name": "publish",
+        "conclusion": "success"
+      }
+    ]
+  },
+  "release_url": "https://github.com/Losfodabr12/tgi-video-editor/releases/tag/v0.4.0",
+  "published_at": "2026-10-21T21:43:42Z",
+  "publisher": "github-actions[bot]",
+  "assets": [
+    {
+      "name": "FrameStudio-0.4.0-windows-x64.zip",
+      "bytes": 299365286,
+      "url": "https://github.com/Losfodabr12/tgi-video-editor/releases/download/v0.4.0/FrameStudio-0.4.0-windows-x64.zip",
+      "digest": "sha256:04e5e5fcf0eb0f16e4ec00f9a4f253f7a66d5c32564881d2cc8cfc1818e4399f"
+    },
+    {
+      "name": "RELATORIO_ALTERACOES.md",
+      "bytes": 58590,
+      "url": "https://github.com/Losfodabr12/tgi-video-editor/releases/download/v0.4.0/RELATORIO_ALTERACOES.md",
+      "digest": "sha256:aeefdc4b87863d1e8cfb6717bbe4f880c362b2c470ab92d1a0ca503feb02d65c"
+    },
+    {
+      "name": "SHA256SUMS.txt",
+      "bytes": 101,
+      "url": "https://github.com/Losfodabr12/tgi-video-editor/releases/download/v0.4.0/SHA256SUMS.txt",
+      "digest": "sha256:17fdbed2c0a4c34caa51e24c5ae22766301da8d8dac4f7b54c536e7cb2c14e08"
+    }
+  ],
+  "downloaded_zip_sha256_verified": true,
+  "downloaded_manifest_hashes_verified": true,
+  "downloaded_exe_version_verified": "0.4.0+4",
+  "downloaded_build_info_version_verified": "0.4.0+4",
+  "project_format_version": 14,
+  "private_paths_or_credentials_in_report": false
+}

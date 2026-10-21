@@ -1,7 +1,8 @@
 {
   "scope": "all tracked and nonignored text files in repository; includes validation docs, reports and scripts",
-  "text_files_scanned": 339,
+  "text_files_scanned": 343,
   "personal_windows_paths_found": 0,
+  "personal_home_paths_found": 0,
   "credentials_found": 0,
   "absolute_paths_in_docs_reports_scripts": 0,
   "secret_values_logged": false,
