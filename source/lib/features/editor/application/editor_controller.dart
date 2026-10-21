@@ -8,6 +8,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import '../../../core/commands/command_engine.dart';
+import '../../../core/commands/command_transaction.dart';
 
 import '../../../domain/models/audio_waveform.dart';
 import '../../../domain/models/clip.dart' as domain;
@@ -29,6 +30,7 @@ part 'editor_controller_preview_models.dart';
 part 'editor_controller_internal_models.dart';
 part 'editor_controller_tools.dart';
 part 'editor_controller_timeline.dart';
+part 'editor_controller_commands.dart';
 
 const _gapPlaybackInterval = Duration(milliseconds: 100);
 const _historyLimit = 50;
@@ -492,8 +494,7 @@ class EditorController extends ChangeNotifier {
       return;
     }
 
-    _history.redoStack.add(_project);
-    _project = _history.undoStack.removeLast();
+    _project = _history.undo(_project);
     _resetTransientTimelineState();
     notifyListeners();
   }
@@ -504,11 +505,7 @@ class EditorController extends ChangeNotifier {
       return;
     }
 
-    _history.undoStack.add(_project);
-    if (_history.undoStack.length > _historyLimit) {
-      _history.undoStack.removeAt(0);
-    }
-    _project = _history.redoStack.removeLast();
+    _project = _history.redo(_project);
     _resetTransientTimelineState();
     notifyListeners();
   }
