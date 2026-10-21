@@ -89,6 +89,12 @@ final commandCatalog = <String, CommandDefinition>{
           ),
         },
         ...remapScopeFields,
+        'join_fade_ms': {
+          'type': 'integer',
+          'minimum': 0,
+          'maximum': 100,
+          'default': 0,
+        },
       },
       ['clip_id', 'removed_ranges'],
     ),

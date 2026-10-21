@@ -303,6 +303,7 @@ class EditorPlans {
               'removed_ranges': remap.timeMap.toJson()['removed_ranges'],
               'scope': args['scope'] ?? 'all_tracks',
               'locked_tracks': args['locked_tracks'] ?? 'fail',
+              'join_fade_ms': args['join_fade_ms'] ?? 8,
             }),
           );
         }
@@ -335,7 +336,7 @@ class EditorPlans {
         if (cursor < seconds(clip.sourceEnd)) {
           remove.add((cursor, seconds(clip.sourceEnd)));
         }
-        _removeRanges(clip, remove, () => next, run);
+        _removeRanges(clip, remove, () => next, run, args);
       case 'auto_captions':
         final source = reads.transcriptCues(clip.mediaItemId);
         final timeline = <CaptionCue>[];
@@ -489,6 +490,7 @@ class EditorPlans {
       TimelineTimeMap(ranges, end: before.timelineDuration.inMicroseconds),
       scope: args['scope'] as String? ?? 'all_tracks',
       lockedTracks: args['locked_tracks'] as String? ?? 'fail',
+      joinFadeMs: args['join_fade_ms'] as int? ?? 8,
     );
   }
 
@@ -497,12 +499,14 @@ class EditorPlans {
     List<(double, double)> source,
     TgiProject Function() current,
     void Function(String, Map<String, Object?>) run,
+    Map<String, Object?> args,
   ) {
-    final remap = _remapRanges(current(), clip, source, const {});
+    final remap = _remapRanges(current(), clip, source, args);
     if (remap.timeMap.removed.isNotEmpty) {
       run('remap_timeline', {
         'clip_id': clip.id,
         'removed_ranges': remap.timeMap.toJson()['removed_ranges'],
+        'join_fade_ms': args['join_fade_ms'] ?? 8,
       });
     }
   }

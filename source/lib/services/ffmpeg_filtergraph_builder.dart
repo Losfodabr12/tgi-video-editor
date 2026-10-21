@@ -3306,13 +3306,13 @@ class FfmpegFiltergraphBuilder {
     final filters = <String>[];
     final inSeconds = _fadeSeconds(fadeIn, duration);
     if (inSeconds > 0) {
-      filters.add('afade=t=in:st=0:d=${inSeconds.toStringAsFixed(3)}');
+      filters.add('afade=t=in:st=0:d=${inSeconds.toStringAsFixed(6)}');
     }
     final outSeconds = _fadeSeconds(fadeOut, duration);
     if (outSeconds > 0) {
       final start = math.max(0.0, _durationSeconds(duration) - outSeconds);
       filters.add(
-        'afade=t=out:st=${start.toStringAsFixed(3)}:d=${outSeconds.toStringAsFixed(3)}',
+        'afade=t=out:st=${start.toStringAsFixed(6)}:d=${outSeconds.toStringAsFixed(6)}',
       );
     }
     return filters;

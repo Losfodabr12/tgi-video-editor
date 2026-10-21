@@ -840,3 +840,19 @@ As contagens por etapa, confirmação de testes anteriores preservados e a
 ausência de mudanças em ProjectIOService foram registradas em
 [REMOVE_SILENCES_VALIDATION.json](docs/validation/REMOVE_SILENCES_VALIDATION.json).
 O commit final desta etapa reúne documentação e resultados executados.
+
+## Melhorias de cortes por silêncio e transcrição — 21/10/2026
+
+Etapa 1: micro-fades de áudio nas emendas de `remove_silences` e
+`cut_by_transcript`, usando os campos existentes de fade do v14.
+`join_fade_ms=8` por padrão; `0` desativa. Fades externos existentes são
+preservados; vídeo não recebe fade visual adicional. O export usa `afade` com
+precisão de microssegundos. No tom contínuo exportado em WAV/48 kHz, o maior
+salto entre amostras numa janela de ±5 ms caiu de **0,43430269 para 0,02378026**
+(redução de **94,52%**). Medição em
+[CUT_QUALITY_FADE_RESULT.json](docs/validation/CUT_QUALITY_FADE_RESULT.json).
+Isso mede descontinuidade; não constitui avaliação auditiva.
+
+Validação da etapa 1: `flutter analyze --no-pub` sem problemas;
+`flutter test --no-pub --concurrency=1 --dart-define=TGI_RUN_FFMPEG_INTEGRATION_TESTS=true`:
+**254 aprovados, zero ignorados**. Testes anteriores e ProjectIOService intactos.

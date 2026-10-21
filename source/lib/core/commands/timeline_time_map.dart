@@ -195,7 +195,11 @@ class TimelineRemapper {
     TimelineTimeMap map, {
     String scope = 'all_tracks',
     String lockedTracks = 'fail',
+    int joinFadeMs = 0,
   }) {
+    if (joinFadeMs < 0 || joinFadeMs > 100) {
+      throw const CommandError('out_of_range', 'join_fade_ms deve ser 0..100.');
+    }
     final selection = preflight(
       original,
       anchor,
@@ -340,7 +344,29 @@ class TimelineRemapper {
                             .toInt(),
                   ),
                 );
-          output.add(next);
+          // Only audio: v14 shares fade fields with visual opacity fades.
+          // An edge is a new join only when audio survives on both sides.
+          final joinIn = map.removed.any((r) => r.$2 == a && r.$1 > 0);
+          final joinOut = map.removed.any((r) => r.$1 == b && r.$2 < map.end);
+          final fade = math.min(joinFadeMs * 1000, duration ~/ 2);
+          output.add(
+            clip.trackType == TrackType.audio && fade > 0
+                ? next.copyWith(
+                    fadeIn: Duration(
+                      microseconds: math.max(
+                        next.fadeIn.inMicroseconds,
+                        joinIn ? fade : 0,
+                      ),
+                    ),
+                    fadeOut: Duration(
+                      microseconds: math.max(
+                        next.fadeOut.inMicroseconds,
+                        joinOut ? fade : 0,
+                      ),
+                    ),
+                  )
+                : next,
+          );
           lineage[id] = clip.id;
         }
       }

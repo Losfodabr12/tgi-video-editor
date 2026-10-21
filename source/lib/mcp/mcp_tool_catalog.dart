@@ -88,9 +88,21 @@ final removeSilencesArguments = objectSchema(
       'default': 0.08,
     },
     ...remapScopeFields,
+    ...cutJoinFields,
   },
   ['clip_id'],
 );
+
+final cutJoinFields = <String, dynamic>{
+  'join_fade_ms': {
+    'type': 'integer',
+    'minimum': 0,
+    'maximum': 100,
+    'default': 8,
+    'description':
+        'Micro-fade de áudio em cada emenda, em ms da timeline; 0 desativa.',
+  },
+};
 
 final _mcpToolDefinitions = <String, McpToolDefinition>{
   for (final e in commandCatalog.entries.where(
@@ -288,6 +300,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
           'maxItems': 500,
           'items': {'type': 'integer', 'minimum': 0},
         },
+        ...cutJoinFields,
         'base_revision': revisionSchema,
       },
       ['clip_id', 'keep_cue_indices', 'base_revision'],

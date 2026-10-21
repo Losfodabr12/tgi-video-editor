@@ -89,6 +89,7 @@ class CommandEngine {
               ),
               scope: a['scope'] as String? ?? 'all_tracks',
               lockedTracks: a['locked_tracks'] as String? ?? 'fail',
+              joinFadeMs: a['join_fade_ms'] as int? ?? 0,
             )
             .project;
       case 'split_clip':

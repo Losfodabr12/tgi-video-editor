@@ -1,0 +1,9 @@
+{
+  "sample_rate": 48000,
+  "window_ms_each_side": 5,
+  "maximum_adjacent_sample_jump": {
+    "0ms": 0.4343026876449585,
+    "8ms": 0.02378026396036148
+  },
+  "ratio": 0.05475504673782216
+}
