@@ -1,0 +1,58 @@
+{
+  "code_commit": "02919b694096666b08cfa46c03c25d25a0f9621b",
+  "stages": [
+    {
+      "stage": 1,
+      "analyze": "no issues",
+      "tests_passed": 220,
+      "tests_skipped": 13,
+      "native_tests_enabled": false,
+      "test_log": ".work/manual-mcp/stage1-test.log"
+    },
+    {
+      "stage": 2,
+      "analyze": "no issues",
+      "tests_passed": 222,
+      "tests_skipped": 13,
+      "native_tests_enabled": false,
+      "test_log": ".work/manual-mcp/stage2-test.log"
+    },
+    {
+      "stage": 3,
+      "analyze": "no issues",
+      "tests_passed": 250,
+      "tests_skipped": 0,
+      "native_tests_enabled": true,
+      "test_log": ".work/manual-mcp/stage3-test-final.log"
+    },
+    {
+      "stage": 4,
+      "analyze": "no issues",
+      "tests_passed": 238,
+      "tests_skipped": 14,
+      "native_tests_enabled": false,
+      "test_log": ".work/manual-mcp/stage4-test.log"
+    },
+    {
+      "stage": 5,
+      "analyze": "no issues",
+      "tests_passed": 252,
+      "tests_skipped": 0,
+      "native_tests_enabled": true,
+      "test_log": ".work/manual-mcp/stage5-test.log"
+    }
+  ],
+  "existing_tests_edited": false,
+  "project_io_service_changed": false,
+  "format_version": 14,
+  "private_real_fixture_clips": 132,
+  "native_ui_exact_ctrl_z": true,
+  "evidence_files": [
+    "REMOVE_SILENCES_DIAGNOSIS.json",
+    "REMOVE_SILENCES_REAL_RESULT.json",
+    "REMOVE_SILENCES_FFMPEG_RESULT.json",
+    "REMOVE_SILENCES_INSPECTOR_RESULT.json",
+    "REMOVE_SILENCES_BUILD_RESULT.json",
+    "REMOVE_SILENCES_NATIVE_APP_RESULT.json"
+  ]
+}

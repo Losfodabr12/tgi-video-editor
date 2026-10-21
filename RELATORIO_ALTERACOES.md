@@ -696,3 +696,147 @@ validação final. Nenhum teste existente foi editado. Logs da etapa 9:
 `.work/mcp-step9-analyze.log`, `.work/mcp-step9-test.log` e
 `.work/mcp-step9-integration.log`. Os commits permanecem locais; a implementação
 e o app recompilado estão disponíveis nesta pasta de trabalho.
+
+## Correção de remove_silences em projeto com camadas — 21/10/2026
+
+### 1. Diagnóstico reproduzido
+
+Commit `cccf96b`. A falha foi reproduzida sobre uma cópia privada do projeto
+real: 132 clipes, cinco camadas e os 45 intervalos de silêncio capturados na
+execução anterior, com padding 0,12 s. Nenhuma alteração foi publicada nessa
+reprodução. A causa foi **overlap**, entre `clip_124_txt` e `clip_123_txt` na
+camada `track_video_manual_2`, de **278,300522 s a 278,58 s**. O ripple antigo
+deslocava o início das legendas sem aparar as que cruzavam os intervalos
+removidos, criando a colisão na mesma camada.
+
+Os diagnósticos de posicionamento agora carregam causa, IDs de clipes, camadas
+e grupos, intervalo em segundos e sugestão de correção. O contrato distingue
+`overlap`, `incompatible_track`, `locked_track`, `locked_clip` e `linked_group`;
+o v14 atual guarda bloqueios por camada, sem novo campo individual de clipe.
+As APIs de modelo mantêm o comportamento anterior da UI quando não recebem o
+callback de diagnóstico. Registro:
+[REMOVE_SILENCES_DIAGNOSIS.json](docs/validation/REMOVE_SILENCES_DIAGNOSIS.json).
+
+### 2. Remapeamento atômico
+
+Commit `08c51c7`. Foi substituído o encadeamento split/delete/ripple pela função
+contínua, monotônica não decrescente `F(t) = t − Σ clamp(t − início, 0, duração)`.
+Intervalos são limitados ao trecho da mídia, recebem padding e são unidos.
+Vídeo/áudio preservam fonte, speed, reverso e vínculos nos trechos mantidos.
+Legendas/textos/overlays estáticos dentro de silêncios são removidos; cruzamentos
+são aparados e clipes que atravessam vários cortes são encurtados sem se
+fragmentar. Keyframes interpolados, marcadores e transições usam o mesmo mapa.
+
+O padrão é `scope=all_tracks`. `main_track_only` inclui companheiros vinculados
+e informa o efeito de manter as demais camadas nos tempos originais.
+`locked_tracks=fail` lista os bloqueios antes da análise/transformação; `skip`
+preserva também companheiros das camadas bloqueadas e `unlock` inclui o
+desbloqueio no mesmo undo. Camadas ignoradas podem manter a duração global maior.
+
+`remove_silences` aceita limiar, duração mínima e padding; sem job inicia análise
+assíncrona. Reutilização de job valida mídia, projeto, revisão e parâmetros
+explicitamente informados. `preview_plan` aceita a macro, e `remap_timeline`
+é serializável dentro de lotes para combinar cortes e estilo em uma transação.
+O corte por transcrição também reutiliza a transformação para manter as camadas.
+Nenhuma mudança foi feita em `ProjectIOService` nem no formato v14.
+
+### 3. Contratos, invariantes e mídia real
+
+Commit `4b855a7`. Foram acrescentados testes de vídeo isolado, legendas em
+limites de cortes, legendas totalmente removidas, overlays com vários cortes,
+camadas bloqueadas, skip/unlock, grupos A/V, fontes aparadas/reversas com speed,
+keyframes normalizados e valores interpolados, marcadores e transições.
+A fixture pública é sintética: um vídeo, áudio vinculado, 129 legendas e um
+título, totalizando 132 clipes. Os testes verificam ausência de sobreposições
+novas, duração original menos os intervalos removidos, e alinhamento de
+legendas/palavras com a fonte dentro de um frame. O v14 também foi relido após
+serializar. Nenhum teste anterior foi editado; apenas arquivos novos de teste
+e suporte foram adicionados.
+
+O cliente MCP de teste executou **preview_plan → apply_plan → undo**, por HTTP
+real, na fixture e na cópia privada. O JSON completo foi restaurado exatamente.
+Na cópia real, a duração passou de **293,547 s para 269,140312 s**, removendo
+**24,406688 s** em um único comando/transação. FFmpeg exportou cinco segundos
+da mídia real remapeada; FFprobe mediu **5,000 s**, a 30 fps.
+
+Outro contrato nativo iniciou análise por MCP numa fonte A/V sintética de 6 s,
+criou/aplicou plano e exportou: duração calculada **2,999916 s**, vídeo e container
+medidos em **3,000 s**, dentro de um frame a 20 fps. Undo exato confirmado.
+Esse teste usa tom e silêncio conhecidos; não foi uma nova transcrição Whisper.
+Evidências:
+[REMOVE_SILENCES_REAL_RESULT.json](docs/validation/REMOVE_SILENCES_REAL_RESULT.json)
+e [REMOVE_SILENCES_FFMPEG_RESULT.json](docs/validation/REMOVE_SILENCES_FFMPEG_RESULT.json).
+
+### 4. Descoberta de tools e cliente independente
+
+Commit `02919b6`. Descrições das macros foram encurtadas e explicitam parâmetros,
+efeitos sobre camadas, análise pendente e aprovação. As primeiras tools são
+`remove_silences`, `cut_by_transcript`, `auto_captions`, `reframe_9x16`,
+`preview_plan` e `apply_plan`, antes dos comandos individuais. Permanecem 33
+tools; `remap_timeline` é um comando de lote, sem tool separada.
+
+SDK independente **1.32.1** passou em listagem, leitura/resource, plano/undo,
+revisão defasada, token inválido, path de exportação externo, PNGs, LUFS, jobs
+FFmpeg e exportação. **MCP Inspector 2.11.0** executou `tools/list --strict` e
+`get_project`: ambos exit 0, sem avisos. A ordem das seis primeiras tools foi
+conferida no resultado real do Inspector. O smoke usa um host Flutter de teste;
+os contratos específicos de silêncios estão na etapa 3. Registro:
+[REMOVE_SILENCES_INSPECTOR_RESULT.json](docs/validation/REMOVE_SILENCES_INSPECTOR_RESULT.json).
+
+### 5. Aplicativo recompilado e teste na janela nativa
+
+Build Windows release do código `02919b6`, com o helper de caminho curto:
+**exit 0, 46,2 s**. Foram copiados e conferidos por SHA-256 os **66 arquivos** em
+`aplicativo/`, com **zero divergências**. ProductVersion **0.3.0+3** preservada.
+Os caches de dependências foram restaurados para o caminho original depois da
+compilação; pubspec e lock não mudaram. Metadados:
+[REMOVE_SILENCES_BUILD_RESULT.json](docs/validation/REMOVE_SILENCES_BUILD_RESULT.json).
+
+O executável anterior foi fechado normalmente. No app recompilado foi aberta
+outra cópia privada do projeto, `app-remap-copy.json`, e o servidor foi ligado
+pela interface. SDK conectado ao servidor do próprio app executou uma nova
+análise: 45 silêncios; prévia de 293,547 s para 269,140312 s, sem editar.
+O plano foi revisado e aprovado em **Aprovar e aplicar**. A timeline mostrou
+4min29s e 221 clipes, com 46 trechos de vídeo e 46 de áudio vinculados.
+
+Um **Ctrl+Z válido pela interface** restaurou os 132 clipes e os 293,547 s.
+Após salvar, o arquivo voltou idêntico byte a byte, SHA-256
+`838673b2a964c5ccc1c3ca870bf9b131bd3a20ed4171121d128d18ae43e57596`.
+Uma primeira tentativa de injeção sem scan codes não acionou o atalho; foi
+corrigido somente o helper de automação e repetido o envio válido, produzindo
+uma única ação de undo. Nenhum código de teclado do app foi alterado.
+O projeto original foi preservado; arquivos privados, vídeos e prints ficaram
+na pasta local ignorada `.work/manual-mcp/`. O app permanece aberto na cópia
+restaurada, com o servidor ligado. Evidência sem conteúdo de legenda ou token:
+[REMOVE_SILENCES_NATIVE_APP_RESULT.json](docs/validation/REMOVE_SILENCES_NATIVE_APP_RESULT.json).
+
+[docs/MCP.md](docs/MCP.md) foi atualizado com parâmetros, algoritmo, bloqueios,
+exemplos e reprodução dos testes. Os nomes e a ordem das 33 tools documentadas
+foram comparados com o catálogo; os JSONs de evidência foram parseados e
+`git diff --check` passou.
+
+Resultados concluídos por etapa, antes da verificação final da documentação:
+
+| Etapa | Analyze | Test |
+| --- | --- | --- |
+| 1 — diagnóstico | sem problemas | 220 aprovados / 13 opcionais ignorados |
+| 2 — remapeamento | sem problemas | 222 aprovados / 13 opcionais ignorados |
+| 3 — regressão e FFmpeg | sem problemas | 250 aprovados / zero ignorados |
+| 4 — catálogo | sem problemas | 238 aprovados / 14 opcionais ignorados |
+
+Logs locais: `.work/manual-mcp/stage1-*` até `stage5-*`. As etapas 3 e a
+verificação final usam `TGI_RUN_FFMPEG_INTEGRATION_TESTS=true` para executar
+também os testes nativos opcionais.
+
+Validação final da etapa 5, após recompilar, restaurar os caches e testar a janela
+nativa:
+
+| Comando em `source/` | Resultado |
+| --- | --- |
+| `flutter analyze --no-pub` | exit 0, sem problemas |
+| `flutter test --no-pub --concurrency=1 --dart-define=TGI_RUN_FFMPEG_INTEGRATION_TESTS=true` | exit 0, **252 aprovados / zero ignorados** |
+
+As contagens por etapa, confirmação de testes anteriores preservados e a
+ausência de mudanças em ProjectIOService foram registradas em
+[REMOVE_SILENCES_VALIDATION.json](docs/validation/REMOVE_SILENCES_VALIDATION.json).
+O commit final desta etapa reúne documentação e resultados executados.

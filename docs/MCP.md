@@ -88,7 +88,8 @@ Com aprovação ligada, tools de edição retornam planos pendentes. Revise-os e
 **Atividade da IA → Revisar plano → Aprovar e aplicar**. A IA não possui uma tool
 para conceder aprovação. Com aprovação desligada, a IA pode usar `apply_plan`;
 com aprovação ligada, a ação da UI aprova e aplica de uma vez. As quatro macros
-sempre produzem previews, mesmo com aprovação desligada.
+planejam sem editar, mesmo com aprovação desligada. `remove_silences` sem
+`job_id` inicia primeiro a análise assíncrona e devolve `analysis_pending`.
 `undo`/`redo` também passam pela aprovação quando chamados pela IA.
 
 O painel mostra chamadas, erros, planos e jobs. **Desfazer** aparece para a última
@@ -103,6 +104,12 @@ a revisão de exemplo. O catálogo exato de campos, limites e enums fica em
 
 | Tool | Comportamento | Exemplo de argumentos |
 | --- | --- | --- |
+| `remove_silences` | Analisa ou cria prévia de remoção com remapeamento; padrão todas as camadas e falha em bloqueios. | `{"clip_id":"video_1","job_id":"job_1","padding":0.12,"scope":"all_tracks","locked_tracks":"fail","base_revision":7}` |
+| `cut_by_transcript` | Prévia mantendo cues escolhidos e remapeando todas as camadas; falha em bloqueios. | `{"clip_id":"video_1","keep_cue_indices":[0,2,3],"base_revision":7}` |
+| `auto_captions` | Preview de legendas para o clipe usando transcrição já concluída. | `{"clip_id":"video_1","base_revision":7}` |
+| `reframe_9x16` | Preview de crop central estático e saída 1080×1920; resolução entra no mesmo undo. | `{"clip_id":"video_1","base_revision":7}` |
+| `preview_plan` | Prévia de lote ou da macro remove_silences, sem editar. | `{"macro":"remove_silences","arguments":{"clip_id":"video_1","job_id":"job_1","padding":0.12},"base_revision":7}` |
+| `apply_plan` | Aplica snapshot aprovado na mesma revisão, em uma transação. | `{"plan_id":"plan_1","base_revision":7}` |
 | `split_clip` | Divide vídeo/áudio/texto/imagem e vínculos; o tempo deve estar dentro do clipe. IDs mudam. | `{"clip_id":"video_1","at":4.5,"base_revision":7}` |
 | `trim_clip` | Ajusta fonte de vídeo/áudio; mínimo 0,1 s na timeline; respeita espaço e bloqueios. | `{"clip_id":"video_1","source_start":1,"source_duration":6,"base_revision":7}` |
 | `delete_clip` | Exclui grupo; ripple fecha espaço e ajusta marcadores/transições. | `{"clip_id":"video_1","ripple":true,"base_revision":7}` |
@@ -130,12 +137,6 @@ a revisão de exemplo. O catálogo exato de campos, limites e enums fica em
 | `export` | Job de exportação do snapshot/revisão, com configurações atuais do app. | `{"filename":"resultado.mp4","base_revision":7}` |
 | `get_job` | Status, progresso, resultado ou erro. | `{"job_id":"job_1"}` |
 | `cancel_job` | Cancela análise/exportação; resultado cancelado não é publicado. | `{"job_id":"job_1"}` |
-| `preview_plan` | Dry-run de lote com antes/depois. | `{"base_revision":7,"commands":[{"command":"add_marker","arguments":{"at":1,"name":"Revisão"}}]}` |
-| `apply_plan` | Aplica snapshot aprovado na mesma revisão, em uma transação. | `{"plan_id":"plan_1","base_revision":7}` |
-| `remove_silences` | Preview usando job de silêncio concluído na revisão atual, do mesmo media_id. | `{"clip_id":"video_1","job_id":"job_1","padding":0.08,"base_revision":7}` |
-| `cut_by_transcript` | Preview mantendo cues escolhidos da transcrição fonte; cortes ripple no grupo. | `{"clip_id":"video_1","keep_cue_indices":[0,2,3],"base_revision":7}` |
-| `auto_captions` | Preview de legendas para o clipe usando transcrição já concluída. | `{"clip_id":"video_1","base_revision":7}` |
-| `reframe_9x16` | Preview de crop central estático e saída 1080×1920; resolução entra no mesmo undo. | `{"clip_id":"video_1","base_revision":7}` |
 
 Tools trazem `readOnlyHint`, `destructiveHint`, `idempotentHint` e
 `openWorldHint`. Previews e análises não alteram o projeto. Exportação escreve
@@ -152,6 +153,69 @@ Erros de tools usam `isError: true`, com o mesmo objeto no texto e em
 ```json
 {"error":{"code":"revision_conflict","message":"Leia get_project e refaça o plano usando a revisão atual.","details":{"base_revision":6,"current_revision":7}}}
 ```
+
+## Remoção de silêncios por remapeamento
+
+As seis primeiras tools na descoberta MCP são as quatro macros, `preview_plan`
+e `apply_plan`. Para remover silêncios, escolha o vídeo/áudio principal e leia a
+revisão atual. Limiar e duração mínima são parâmetros da análise da fonte:
+
+```json
+{"name":"preview_plan","arguments":{"macro":"remove_silences","arguments":{"clip_id":"video_1","threshold_db":-35,"minimum":0.5,"padding":0.12,"scope":"all_tracks","locked_tracks":"fail"},"base_revision":7}}
+```
+
+Sem `job_id`, a resposta contém `analysis_pending: true` e o job iniciado.
+Aguarde `get_job` completar e repita com o mesmo objeto `arguments`, acrescentando
+o `job_id`. Um job reutilizado precisa pertencer à mesma mídia, projeto e revisão.
+Se informar `threshold_db` ou `minimum`, os valores precisam coincidir com os do
+job. `padding` preserva segundos da fonte nas duas bordas de cada silêncio.
+
+A prévia une os intervalos removidos, calcula os trechos mantidos e retorna
+`time_map`, `removed_duration`, escopo, camadas afetadas/ignoradas/desbloqueadas e
+antes/depois. A função é contínua e monotônica não decrescente:
+`F(t) = t − Σ clamp(t − início, 0, fim − início)`. Dentro de um silêncio removido,
+o tempo fica constante. Os cálculos usam microssegundos inteiros.
+
+| Tempo antigo, com remoções [2,4] e [7,8] | Tempo novo |
+| --- | --- |
+| 1 s | 1 s |
+| 3 s | 2 s |
+| 6 s | 4 s |
+| 9 s | 6 s |
+| Duração 10 s | 7 s |
+
+Em `all_tracks`, cada vídeo/áudio é cortado nos limites dos trechos mantidos,
+preservando fonte, velocidade, reverso e os grupos A/V. Textos, legendas e
+overlays estáticos totalmente removidos desaparecem; os que cruzam cortes são
+aparados, e os que atravessam vários cortes permanecem um único clipe encurtado.
+Os keyframes mantêm valores interpolados nos limites e são renormalizados;
+descontinuidades de curvas lineares v14 usam um passo de 1 µs na junção.
+Marcadores dentro de silêncios vão à junção do corte. Transições são aparadas,
+encurtadas ou removidas conforme o mesmo mapa.
+
+`scope="main_track_only"` inclui a camada principal e seus companheiros
+vinculados. As demais preservam os tempos originais, e a prévia avisa sobre a
+possível perda de sincronismo e a duração global.
+
+`locked_tracks` aceita `fail` (padrão), `skip` ou `unlock`. O padrão lista todos
+os bloqueios do escopo **antes de iniciar análise ou transformação**. `skip`
+preserva também as camadas vinculadas às bloqueadas, impedindo editar metade
+de um grupo; se isso excluir o principal, a operação falha. `unlock` inclui o
+desbloqueio na mesma transação, restaurado pelo undo. Com camadas ignoradas, a
+duração global pode permanecer maior. No modo padrão, a duração final é a
+original menos a soma dos silêncios efetivamente removidos.
+
+O comando serializável `remap_timeline` aceita intervalos absolutos da timeline
+e os mesmos parâmetros de escopo/bloqueio dentro de `commands`. Ele permite
+combinar a remoção com `set_caption_style` no mesmo `preview_plan`. Não é uma
+tool separada. Aplique o snapshot aprovado com `apply_plan`; um Ctrl+Z restaura
+todo o projeto, incluindo bloqueios, keyframes, marcadores e estilos.
+
+`placement_conflict.details` inclui `cause`, `clip_ids`, `track_ids`,
+`group_ids`, `interval.start/end` em segundos e `suggestion`. Causas possíveis:
+`overlap`, `incompatible_track`, `locked_track`, `locked_clip`, `linked_group`.
+O modelo v14 atual guarda bloqueios por camada; não foi criado um campo de
+bloqueio individual de clipe. Esses detalhes existem apenas nas respostas.
 
 ## Transporte e segurança
 
@@ -191,7 +255,7 @@ Erros de tools usam `isError: true`, com o mesmo objeto no texto e em
   demais clipes. Use o preview do editor para revisar o conjunto.
 - Legendas usam a transcrição existente; `transcribe` não aplica edições.
   Cues muito curtos são agrupados quando possível. Uma legenda final abaixo
-  de 1 s gera erro útil, respeitando o mínimo do modelo v14.
+  de 1 s gera erro útil, respeitando o mínimo aplicado pelo gerador de legendas.
 - `add_transition` mantém o modelo global de transições v14; não cria um novo
   modelo de transição por par/pista. Split troca IDs; releia os clipes depois.
 - Páginas contêm até 100 clipes/mídias/cues. O resumo inclui até 100 marcadores
@@ -241,8 +305,68 @@ O script usa o SDK, executa o Inspector CLI, salva `report.json` sem credenciais
 e sinaliza a parada do host. `session.json` contém um token **temporário de teste**
 e deve permanecer na pasta ignorada. O teste tem limite de 5 minutos.
 
-Na validação final: análise limpa, **215 testes padrão aprovados / 13 opcionais
+Na validação inicial do servidor: análise limpa, **215 testes padrão aprovados / 13 opcionais
 ignorados**; com o dart-define acima, **228 aprovados / zero ignorados**. Testes
 anteriores foram preservados sem edição. O build Windows release foi copiado
 para `aplicativo/`, com 66 arquivos conferidos por SHA-256, zero divergências.
 Evidência do build: [validation/MCP_BUILD_RESULT.json](validation/MCP_BUILD_RESULT.json).
+
+### Validação da correção de silêncios
+
+A reprodução usou uma **cópia privada do projeto real**, com 132 clipes, cinco
+camadas e os 45 silêncios capturados no teste anterior. O ripple antigo criou
+uma sobreposição entre `clip_124_txt` e `clip_123_txt`, na camada
+`track_video_manual_2`, de 278,300522 s a 278,58 s. Registro estruturado:
+[REMOVE_SILENCES_DIAGNOSIS.json](validation/REMOVE_SILENCES_DIAGNOSIS.json).
+
+O novo plano removeu 24,406688 s com padding 0,12 s, passando de 293,547 s para
+269,140312 s. Foram executados `preview_plan → apply_plan → undo` por HTTP MCP;
+o JSON completo voltou exatamente ao original. FFmpeg exportou cinco segundos
+da mídia real remapeada e FFprobe mediu **5,000 s**, a 30 fps. O arquivo privado
+não foi versionado, e o arquivo original foi preservado:
+[REMOVE_SILENCES_REAL_RESULT.json](validation/REMOVE_SILENCES_REAL_RESULT.json).
+
+A fixture pública tem a mesma distribuição de 132 clipes, com conteúdo sintético.
+Testes cobrem vídeo isolado, cruzamentos de legendas, bloqueios fail/skip/unlock,
+vínculos A/V, keyframes, marcadores, transições, speed/reverso, padding e
+sincronismo de palavras/legendas dentro de um frame. Um teste nativo independente
+analisou uma fonte A/V sintética de 6 s e exportou **3,000 s**, para duração
+calculada de 2,999916 s, dentro de um frame a 20 fps:
+[REMOVE_SILENCES_FFMPEG_RESULT.json](validation/REMOVE_SILENCES_FFMPEG_RESULT.json).
+
+MCP Inspector 2.11.0 passou novamente em `tools/list --strict` e `get_project`,
+sem avisos; SDK 1.32.1 passou no smoke independente. A ordem real das seis
+primeiras tools está registrada em
+[REMOVE_SILENCES_INSPECTOR_RESULT.json](validation/REMOVE_SILENCES_INSPECTOR_RESULT.json).
+O Inspector verifica catálogo/leitura; os contratos de remoção e undo foram
+executados separadamente pelo cliente MCP de teste, incluindo a cópia real.
+
+O build Windows foi recompilado em 46,2 s e copiado para `aplicativo/`: 66
+arquivos conferidos por SHA-256, sem divergências. A janela nativa abriu outra
+cópia privada dos 132 clipes. O SDK conectado ao servidor dentro do app fez uma
+nova análise (45 silêncios), e `preview_plan` retornou o mesmo resultado de
+269,140312 s. O plano foi revisado e aprovado em **Aprovar e aplicar**; a timeline
+passou a 221 clipes, incluindo 46 trechos de vídeo e 46 de áudio vinculados.
+Um Ctrl+Z válido pela interface restaurou os 132 clipes e os 293,547 s. Depois
+de salvar, o arquivo ficou idêntico byte a byte à cópia inicial, com SHA-256
+`838673b2a964c5ccc1c3ca870bf9b131bd3a20ed4171121d128d18ae43e57596`.
+
+Uma primeira tentativa de injeção de tecla estava sem scan codes e não acionou
+o undo. O helper de automação foi corrigido; o código de atalhos do app não foi
+alterado. Evidências sem token ou conteúdo privado:
+[REMOVE_SILENCES_BUILD_RESULT.json](validation/REMOVE_SILENCES_BUILD_RESULT.json)
+e [REMOVE_SILENCES_NATIVE_APP_RESULT.json](validation/REMOVE_SILENCES_NATIVE_APP_RESULT.json).
+
+Para reproduzir a cópia privada, defina `MCP_REPRO_PROJECT`, `MCP_REPRO_ANALYSIS`,
+`MCP_REPRO_OUTPUT` e `MCP_REPRO_EXPECT_SUCCESS=1`, em `source/`, e execute
+`flutter test --no-pub tool/reproduce_silence_test.dart`. O arquivo de análise
+contém `arguments` e o resultado capturado de `detect_silence`. Opcionalmente
+`MCP_REPRO_EXPORT` escolhe um destino local para exportar cinco segundos.
+Sem os arquivos privados, execute os testes públicos em
+`test/remove_silences_regression_test.dart` e `test/remove_silences_ffmpeg_test.dart`.
+
+Na verificação final desta correção: `flutter analyze --no-pub` sem problemas e
+**252 testes aprovados / zero ignorados**, com
+`--dart-define=TGI_RUN_FFMPEG_INTEGRATION_TESTS=true`. Os testes anteriores
+permaneceram sem edição. Contagens e evidências:
+[REMOVE_SILENCES_VALIDATION.json](validation/REMOVE_SILENCES_VALIDATION.json).

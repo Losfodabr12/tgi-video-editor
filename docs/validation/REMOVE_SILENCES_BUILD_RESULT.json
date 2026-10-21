@@ -1,0 +1,12 @@
+{
+    "sha256_mismatches":  0,
+    "package":  "aplicativo/",
+    "build_seconds":  46.2,
+    "source_commit":  "02919b694096666b08cfa46c03c25d25a0f9621b",
+    "original_path_pub_get_restored":  true,
+    "product_version":  "0.3.0+3",
+    "files_verified":  66,
+    "configuration":  "Windows x64 release",
+    "published_release":  false,
+    "app_so_sha256":  "9b6b3f2078bfda01db4221e860009be1e82769dfb07a06b932494b30b5f850a8"
+}
