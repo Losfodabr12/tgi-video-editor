@@ -1,6 +1,7 @@
 import 'dart:convert';
 import '../core/commands/command_engine.dart';
 import '../core/commands/timeline_time_map.dart';
+import '../core/commands/silence_options.dart';
 import '../domain/models/project.dart';
 import '../features/editor/application/editor_controller.dart';
 import 'editor_read_service.dart';
@@ -111,10 +112,11 @@ class McpToolRouter {
       lockedTracks: args['locked_tracks'] as String? ?? 'fail',
     );
     if (args['job_id'] == null) {
+      final options = SilenceOptions(args);
       final job = reads.detectSilence(
         clip.mediaItemId,
-        thresholdDb: (args['threshold_db'] as num?)?.toDouble() ?? -35,
-        minimum: (args['minimum'] as num?)?.toDouble() ?? 0.5,
+        thresholdDb: options.thresholdDb,
+        minimum: options.minimum,
       );
       return {
         ...job.toJson(),

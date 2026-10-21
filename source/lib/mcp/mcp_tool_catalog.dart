@@ -58,6 +58,12 @@ class McpToolDefinition {
 final removeSilencesArguments = objectSchema(
   {
     'clip_id': clipIdSchema,
+    'mode': {
+      ...stringSchema(['suave', 'normal', 'agressivo']),
+      'default': 'normal',
+      'description':
+          'Preset de detecção/padding. Parâmetros explícitos prevalecem.',
+    },
     'job_id': {
       ...stringSchema(),
       'description':
@@ -94,6 +100,14 @@ final removeSilencesArguments = objectSchema(
 );
 
 final cutJoinFields = <String, dynamic>{
+  'min_keep_ms': {
+    'type': 'integer',
+    'minimum': 0,
+    'maximum': 10000,
+    'default': 250,
+    'description':
+        'Funde trechos mantidos curtos restaurando o intervalo até o vizinho mais próximo; 0 desativa.',
+  },
   'protect_words': {
     'type': 'boolean',
     'description':

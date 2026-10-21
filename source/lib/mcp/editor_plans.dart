@@ -4,6 +4,7 @@ import '../core/commands/command_engine.dart';
 import '../core/commands/command_transaction.dart';
 import '../core/commands/timeline_time_map.dart';
 import '../core/commands/cut_range_policy.dart';
+import '../core/commands/silence_options.dart';
 import '../domain/models/clip.dart';
 import '../domain/models/project.dart';
 import '../domain/models/track.dart';
@@ -242,6 +243,7 @@ class EditorPlans {
     Map<String, Object?> effects = const {};
     switch (name) {
       case 'remove_silences':
+        final options = SilenceOptions(args);
         const TimelineRemapper().preflight(
           before,
           clip,
@@ -266,13 +268,15 @@ class EditorPlans {
           );
         }
         for (final key in ['threshold_db', 'minimum']) {
-          if (args.containsKey(key) && args[key] != result[key]) {
+          final requested = options.toJson()[key];
+          if ((args.containsKey(key) || args.containsKey('mode')) &&
+              requested != result[key]) {
             throw CommandError(
               'analysis_mismatch',
               'O job precisa usar os mesmos parâmetros da macro.',
               {
                 'parameter': key,
-                'requested': args[key],
+                'requested': requested,
                 'analysis_value': result[key],
                 'suggestion':
                     'Execute detect_silence com threshold_db e minimum desejados e use o novo job_id.',
@@ -280,13 +284,7 @@ class EditorPlans {
             );
           }
         }
-        final padding = (args['padding'] as num?)?.toDouble() ?? 0.08;
-        if (!padding.isFinite || padding < 0 || padding > 1) {
-          throw const CommandError(
-            'out_of_range',
-            'Padding deve estar entre 0 e 1 segundo.',
-          );
-        }
+        final padding = options.padding;
         final ranges = <(double, double)>[
           for (final interval in result['intervals'] as List)
             (
@@ -297,7 +295,16 @@ class EditorPlans {
         final protected = _protectRanges(clip, ranges, args);
         final remap = _remapRanges(before, clip, protected.$1, args);
         next = remap.project;
-        effects = {...remap.toJson(), ...protected.$2};
+        effects = {
+          ...remap.toJson(),
+          ...protected.$2,
+          'parameters': {
+            ...options.toJson(),
+            if (result['threshold_db'] != null)
+              'threshold_db': result['threshold_db'],
+            if (result['minimum'] != null) 'minimum': result['minimum'],
+          },
+        };
         if (remap.timeMap.removed.isNotEmpty) {
           commands.add(
             EditorCommand('remap_timeline', {
@@ -506,7 +513,10 @@ class EditorPlans {
     return const TimelineRemapper().apply(
       before,
       clip,
-      TimelineTimeMap(ranges, end: before.timelineDuration.inMicroseconds),
+      mergeShortKeeps(
+        TimelineTimeMap(ranges, end: before.timelineDuration.inMicroseconds),
+        (args['min_keep_ms'] as int? ?? 250) * 1000,
+      ),
       scope: args['scope'] as String? ?? 'all_tracks',
       lockedTracks: args['locked_tracks'] as String? ?? 'fail',
       joinFadeMs: args['join_fade_ms'] as int? ?? 8,

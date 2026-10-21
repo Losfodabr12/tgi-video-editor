@@ -868,3 +868,13 @@ Novos testes cobriram limites de silêncio, palavras que os atravessam,
 parse/offset/subtokens, opção desativada e corte por transcrição.
 `flutter analyze --no-pub`: sem problemas. Suíte completa padrão:
 **243 aprovados / 15 testes FFmpeg opcionais ignorados**, sem editar testes anteriores.
+
+Etapa 3: presets suave (-40 dB / 0,7 s / 0,14 s), normal
+(-35 dB / 0,5 s / 0,08 s) e agressivo (-30 dB / 0,3 s / 0,04 s), com
+substituição por parâmetros explícitos e validação de compatibilidade do job.
+`min_keep_ms=250` funde trechos curtos restaurando o intervalo até o vizinho,
+incluindo bordas; `0` desativa. Valores e efeitos documentados em docs/MCP.md.
+Novos testes nos três modos com 132 clipes verificaram ausência de novas
+sobreposições, duração original menos remoções efetivas, palavras preservadas e
+legendas alinhadas dentro de um frame. `analyze` sem problemas; suíte padrão:
+**248 aprovados / 15 opcionais ignorados**.

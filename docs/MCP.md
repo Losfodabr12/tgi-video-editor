@@ -6,6 +6,31 @@ editor. Não precisa de chave de API de IA no aplicativo.
 
 ## Ligar e conectar
 
+Os presets de `remove_silences` são `mode="suave"|"normal"|"agressivo"`:
+
+| Modo | `threshold_db` | `minimum` (s da fonte) | `padding` (s por borda) |
+| --- | --- | --- | --- |
+| suave | -40 | 0,7 | 0,14 |
+| normal (padrão; detecção anterior) | -35 | 0,5 | 0,08 |
+| agressivo | -30 | 0,3 | 0,04 |
+
+Valores explícitos substituem o preset. Um `job_id` reutilizado precisa ter o
+mesmo limiar e duração mínima; não reutilize a análise de outro modo.
+`min_keep_ms=250` restaura o intervalo até o vizinho mais próximo para fundir
+um trecho mantido curto, preservando fala; isso pode reduzir os segundos removidos.
+Empates preferem o vizinho anterior. `0` desativa. Também vale para
+`cut_by_transcript`, onde a fusão pode manter conteúdo entre falas escolhidas.
+
+`join_fade_ms=8` aplica micro-fades apenas no áudio das novas emendas, usando os
+campos de fade existentes; `0` desativa. Fades externos maiores são preservados.
+`protect_words` fica ativo por padrão quando há transcrição; `word_margin=0.05`
+protege cada palavra na fonte, antes de mapear velocidade/reverso. Sem tempos
+por palavra, `remove_silences` protege frases inteiras conservadoramente;
+`cut_by_transcript` mantém seus limites de frase e informa a falta de precisão.
+Sem transcrição, o plano avisa que a proteção não foi aplicada e mantém o padding.
+
+## Ativação
+
 1. Abra o projeto e entre em **Arquivo → Configurações de IA (MCP)**.
 2. Escolha a porta (padrão **47321**). Para exportar, escolha também uma pasta.
 3. Mantenha **Aprovar plano antes de aplicar** ligado para revisar cada edição.
