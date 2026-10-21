@@ -1,0 +1,11 @@
+{
+    "distribution":  "aplicativo/VideoEditor.exe",
+    "flutter_release_build":  "success",
+    "sha256_mismatches":  0,
+    "format_version":  14,
+    "build_seconds":  43.8,
+    "source_commit":  "b845b86922e63ca779c54977975ec55a60fcefdd",
+    "product_version":  "0.3.0+3",
+    "copied_files":  66,
+    "app_so_sha256":  "0f915b48c509eac4cd6af38903063436f5f353f503b2ec5aa9ac88c5c6b86b06"
+}

@@ -1,0 +1,495 @@
+{
+  "client": "official MCP SDK 1.32.1",
+  "host": "compiled Windows app, private real-project copy, native window",
+  "tool_count": 34,
+  "first_tools": [
+    "remove_silences",
+    "cut_by_transcript",
+    "auto_captions",
+    "reframe_9x16",
+    "preview_plan",
+    "apply_plan",
+    "export_cut_check"
+  ],
+  "before": {
+    "revision": 1,
+    "duration": 293.547,
+    "clip_count": 132,
+    "format_version": 14
+  },
+  "modes": {
+    "suave": {
+      "parameters": {
+        "mode": "suave",
+        "threshold_db": -40,
+        "minimum": 0.7,
+        "padding": 0.14,
+        "min_keep_ms": 250
+      },
+      "analysis_interval_count": 14,
+      "cut_count": 13,
+      "internal_join_count": 13,
+      "seconds_removed": 10.60864,
+      "duration_before": 293.547,
+      "duration_after": 282.93836,
+      "retained_segment_count": 14,
+      "shortest_keep_seconds": 1.834739,
+      "longest_keep_seconds": 61.269433,
+      "first_cuts": [
+        {
+          "old_start": 37.067188,
+          "old_end": 37.602698,
+          "new_time": 37.067188,
+          "old_start_timestamp": "00:00:37.067",
+          "old_end_timestamp": "00:00:37.602",
+          "new_timestamp": "00:00:37.067"
+        },
+        {
+          "old_start": 41.794218,
+          "old_end": 42.474286,
+          "new_time": 41.258708,
+          "old_start_timestamp": "00:00:41.794",
+          "old_end_timestamp": "00:00:42.474",
+          "new_timestamp": "00:00:41.258"
+        },
+        {
+          "old_start": 44.993265,
+          "old_end": 45.589433,
+          "new_time": 43.777687,
+          "old_start_timestamp": "00:00:44.993",
+          "old_end_timestamp": "00:00:45.589",
+          "new_timestamp": "00:00:43.777"
+        },
+        {
+          "old_start": 59.116599,
+          "old_end": 59.692925,
+          "new_time": 57.304853,
+          "old_start_timestamp": "00:00:59.116",
+          "old_end_timestamp": "00:00:59.692",
+          "new_timestamp": "00:00:57.304"
+        },
+        {
+          "old_start": 72.224603,
+          "old_end": 72.982653,
+          "new_time": 69.836531,
+          "old_start_timestamp": "00:01:12.224",
+          "old_end_timestamp": "00:01:12.982",
+          "new_timestamp": "00:01:09.836"
+        },
+        {
+          "old_start": 74.817392,
+          "old_end": 75.384512,
+          "new_time": 71.67127,
+          "old_start_timestamp": "00:01:14.817",
+          "old_end_timestamp": "00:01:15.384",
+          "new_timestamp": "00:01:11.671"
+        },
+        {
+          "old_start": 110.04737,
+          "old_end": 112.590522,
+          "new_time": 106.334128,
+          "old_start_timestamp": "00:01:50.047",
+          "old_end_timestamp": "00:01:52.590",
+          "new_timestamp": "00:01:46.334"
+        },
+        {
+          "old_start": 137.605397,
+          "old_end": 138.107982,
+          "new_time": 131.349003,
+          "old_start_timestamp": "00:02:17.605",
+          "old_end_timestamp": "00:02:18.107",
+          "new_timestamp": "00:02:11.349"
+        },
+        {
+          "old_start": 144.744558,
+          "old_end": 145.186712,
+          "new_time": 137.985579,
+          "old_start_timestamp": "00:02:24.744",
+          "old_end_timestamp": "00:02:25.186",
+          "new_timestamp": "00:02:17.985"
+        },
+        {
+          "old_start": 152.392766,
+          "old_end": 152.823243,
+          "new_time": 145.191633,
+          "old_start_timestamp": "00:02:32.392",
+          "old_end_timestamp": "00:02:32.823",
+          "new_timestamp": "00:02:25.191"
+        }
+      ],
+      "word_protection_active": false,
+      "join_fade_ms": 8,
+      "join_fade_active": true,
+      "faded_audio_join_count": 13,
+      "word_protection": {
+        "active": false,
+        "requested": false,
+        "margin_seconds": 0.05,
+        "precision": "none"
+      },
+      "warnings": [
+        "Proteção de palavras não aplicada: não há transcrição disponível. Padding preservado."
+      ],
+      "command_count": 1,
+      "preview_dry_run": true
+    },
+    "agressivo": {
+      "parameters": {
+        "mode": "agressivo",
+        "threshold_db": -30,
+        "minimum": 0.3,
+        "padding": 0.04,
+        "min_keep_ms": 250
+      },
+      "analysis_interval_count": 149,
+      "cut_count": 123,
+      "internal_join_count": 123,
+      "seconds_removed": 64.22374,
+      "duration_before": 293.547,
+      "duration_after": 229.32326,
+      "retained_segment_count": 124,
+      "shortest_keep_seconds": 0.282539,
+      "longest_keep_seconds": 6.075012,
+      "first_cuts": [
+        {
+          "old_start": 5.402608,
+          "old_end": 5.639796,
+          "new_time": 5.402608,
+          "old_start_timestamp": "00:00:05.402",
+          "old_end_timestamp": "00:00:05.639",
+          "new_timestamp": "00:00:05.402"
+        },
+        {
+          "old_start": 8.915193,
+          "old_end": 9.322494,
+          "new_time": 8.678005,
+          "old_start_timestamp": "00:00:08.915",
+          "old_end_timestamp": "00:00:09.322",
+          "new_timestamp": "00:00:08.678"
+        },
+        {
+          "old_start": 11.226689,
+          "old_end": 11.801383,
+          "new_time": 10.5822,
+          "old_start_timestamp": "00:00:11.226",
+          "old_end_timestamp": "00:00:11.801",
+          "new_timestamp": "00:00:10.582"
+        },
+        {
+          "old_start": 12.372608,
+          "old_end": 12.602132,
+          "new_time": 11.153425,
+          "old_start_timestamp": "00:00:12.372",
+          "old_end_timestamp": "00:00:12.602",
+          "new_timestamp": "00:00:11.153"
+        },
+        {
+          "old_start": 13.46542,
+          "old_end": 13.844717,
+          "new_time": 12.016713,
+          "old_start_timestamp": "00:00:13.465",
+          "old_end_timestamp": "00:00:13.844",
+          "new_timestamp": "00:00:12.016"
+        },
+        {
+          "old_start": 14.250567,
+          "old_end": 14.88195,
+          "new_time": 12.422563,
+          "old_start_timestamp": "00:00:14.250",
+          "old_end_timestamp": "00:00:14.881",
+          "new_timestamp": "00:00:12.422"
+        },
+        {
+          "old_start": 15.992358,
+          "old_end": 16.220091,
+          "new_time": 13.532971,
+          "old_start_timestamp": "00:00:15.992",
+          "old_end_timestamp": "00:00:16.220",
+          "new_timestamp": "00:00:13.532"
+        },
+        {
+          "old_start": 17.885125,
+          "old_end": 18.133107,
+          "new_time": 15.198005,
+          "old_start_timestamp": "00:00:17.885",
+          "old_end_timestamp": "00:00:18.133",
+          "new_timestamp": "00:00:15.198"
+        },
+        {
+          "old_start": 19.579819,
+          "old_end": 19.90322,
+          "new_time": 16.644717,
+          "old_start_timestamp": "00:00:19.579",
+          "old_end_timestamp": "00:00:19.903",
+          "new_timestamp": "00:00:16.644"
+        },
+        {
+          "old_start": 21.2678,
+          "old_end": 21.660317,
+          "new_time": 18.009297,
+          "old_start_timestamp": "00:00:21.267",
+          "old_end_timestamp": "00:00:21.660",
+          "new_timestamp": "00:00:18.009"
+        }
+      ],
+      "word_protection_active": false,
+      "join_fade_ms": 8,
+      "join_fade_active": true,
+      "faded_audio_join_count": 123,
+      "word_protection": {
+        "active": false,
+        "requested": false,
+        "margin_seconds": 0.05,
+        "precision": "none"
+      },
+      "warnings": [
+        "Proteção de palavras não aplicada: não há transcrição disponível. Padding preservado."
+      ],
+      "command_count": 1,
+      "preview_dry_run": true
+    },
+    "normal": {
+      "parameters": {
+        "mode": "normal",
+        "threshold_db": -35,
+        "minimum": 0.5,
+        "padding": 0.08,
+        "min_keep_ms": 250
+      },
+      "analysis_interval_count": 45,
+      "cut_count": 43,
+      "internal_join_count": 43,
+      "seconds_removed": 26.514216,
+      "duration_before": 293.547,
+      "duration_after": 267.032784,
+      "retained_segment_count": 44,
+      "shortest_keep_seconds": 0.272925,
+      "longest_keep_seconds": 18.134557,
+      "first_cuts": [
+        {
+          "old_start": 14.459705,
+          "old_end": 14.841655,
+          "new_time": 14.459705,
+          "old_start_timestamp": "00:00:14.459",
+          "old_end_timestamp": "00:00:14.841",
+          "new_timestamp": "00:00:14.459"
+        },
+        {
+          "old_start": 27.149773,
+          "old_end": 27.551497,
+          "new_time": 26.767823,
+          "old_start_timestamp": "00:00:27.149",
+          "old_end_timestamp": "00:00:27.551",
+          "new_timestamp": "00:00:26.767"
+        },
+        {
+          "old_start": 36.978458,
+          "old_end": 37.663696,
+          "new_time": 36.194784,
+          "old_start_timestamp": "00:00:36.978",
+          "old_end_timestamp": "00:00:37.663",
+          "new_timestamp": "00:00:36.194"
+        },
+        {
+          "old_start": 41.733946,
+          "old_end": 42.534286,
+          "new_time": 40.265034,
+          "old_start_timestamp": "00:00:41.733",
+          "old_end_timestamp": "00:00:42.534",
+          "new_timestamp": "00:00:40.265"
+        },
+        {
+          "old_start": 44.933243,
+          "old_end": 45.686825,
+          "new_time": 42.663991,
+          "old_start_timestamp": "00:00:44.933",
+          "old_end_timestamp": "00:00:45.686",
+          "new_timestamp": "00:00:42.663"
+        },
+        {
+          "old_start": 52.100295,
+          "old_end": 52.47907,
+          "new_time": 49.077461,
+          "old_start_timestamp": "00:00:52.100",
+          "old_end_timestamp": "00:00:52.479",
+          "new_timestamp": "00:00:49.077"
+        },
+        {
+          "old_start": 59.02356,
+          "old_end": 59.788798,
+          "new_time": 55.621951,
+          "old_start_timestamp": "00:00:59.023",
+          "old_end_timestamp": "00:00:59.788",
+          "new_timestamp": "00:00:55.621"
+        },
+        {
+          "old_start": 65.149274,
+          "old_end": 65.490136,
+          "new_time": 60.982427,
+          "old_start_timestamp": "00:01:05.149",
+          "old_end_timestamp": "00:01:05.490",
+          "new_timestamp": "00:01:00.982"
+        },
+        {
+          "old_start": 71.04483,
+          "old_end": 71.464762,
+          "new_time": 66.537121,
+          "old_start_timestamp": "00:01:11.044",
+          "old_end_timestamp": "00:01:11.464",
+          "new_timestamp": "00:01:06.537"
+        },
+        {
+          "old_start": 72.144943,
+          "old_end": 73.055782,
+          "new_time": 67.217302,
+          "old_start_timestamp": "00:01:12.144",
+          "old_end_timestamp": "00:01:13.055",
+          "new_timestamp": "00:01:07.217"
+        }
+      ],
+      "word_protection_active": false,
+      "join_fade_ms": 8,
+      "join_fade_active": true,
+      "faded_audio_join_count": 43,
+      "word_protection": {
+        "active": false,
+        "requested": false,
+        "margin_seconds": 0.05,
+        "precision": "none"
+      },
+      "warnings": [
+        "Proteção de palavras não aplicada: não há transcrição disponível. Padding preservado."
+      ],
+      "command_count": 1,
+      "preview_dry_run": true
+    }
+  },
+  "normal_plan_id": "plan_3",
+  "cut_check": {
+    "plan_id": "plan_3",
+    "cut_count": 10,
+    "window_count": 9,
+    "duration": 9.680181,
+    "windows": [
+      {
+        "start": 13.959705,
+        "end": 14.959705
+      },
+      {
+        "start": 26.267823,
+        "end": 27.267823
+      },
+      {
+        "start": 35.694784,
+        "end": 36.694784
+      },
+      {
+        "start": 39.765034,
+        "end": 40.765034
+      },
+      {
+        "start": 42.163991,
+        "end": 43.163991
+      },
+      {
+        "start": 48.577461,
+        "end": 49.577461
+      },
+      {
+        "start": 55.121951,
+        "end": 56.121951
+      },
+      {
+        "start": 60.482427,
+        "end": 61.482427
+      },
+      {
+        "start": 66.037121,
+        "end": 67.717302
+      }
+    ],
+    "project_edited": false,
+    "filename": "normal-first-cuts.wav",
+    "resolution": "1080p"
+  },
+  "inspector": {
+    "version": "2.11.0",
+    "strict_tools_list": true,
+    "exit_code": 0,
+    "output_bytes": 74061
+  },
+  "auditory_quality_judged": false,
+  "result": "normal applied through native approval, then one native Ctrl+Z restored exact project bytes",
+  "applied": {
+    "revision": 2,
+    "duration": 267.032784,
+    "clip_count": 217,
+    "tracks": [
+      {
+        "id": "track_video_manual_3",
+        "clip_count": 1
+      },
+      {
+        "id": "track_video_manual_2",
+        "clip_count": 106
+      },
+      {
+        "id": "track_default_text_overlay",
+        "clip_count": 22
+      },
+      {
+        "id": "track_default_video",
+        "clip_count": 44
+      },
+      {
+        "id": "track_default_audio_volume",
+        "clip_count": 44
+      }
+    ],
+    "format_version": 14
+  },
+  "undone": {
+    "revision": 3,
+    "duration": 293.547,
+    "clip_count": 132,
+    "tracks": [
+      {
+        "id": "track_video_manual_3",
+        "clip_count": 1
+      },
+      {
+        "id": "track_video_manual_2",
+        "clip_count": 107
+      },
+      {
+        "id": "track_default_text_overlay",
+        "clip_count": 22
+      },
+      {
+        "id": "track_default_video",
+        "clip_count": 1
+      },
+      {
+        "id": "track_default_audio_volume",
+        "clip_count": 1
+      }
+    ],
+    "format_version": 14
+  },
+  "valid_native_ctrl_z_count": 1,
+  "local_approval_ui": true,
+  "project_byte_identical_after_undo": true,
+  "sha256_before": "838673b2a964c5ccc1c3ca870bf9b131bd3a20ed4171121d128d18ae43e57596",
+  "sha256_after_undo": "838673b2a964c5ccc1c3ca870bf9b131bd3a20ed4171121d128d18ae43e57596",
+  "sha256_applied": "f84c2555316d889d480260f4b574cd0b1022d80e2fd0654ddc6678169f563838",
+  "sample_pcm": {
+    "channels": 2,
+    "sample_rate": 48000,
+    "frames": 465600,
+    "decoded_duration": 9.7
+  },
+  "sample_relative_file": ".work/cut-quality/export/normal-first-cuts.wav",
+  "private_project_committed": false,
+  "absolute_paths_in_report": false,
+  "credentials_in_report": false
+}

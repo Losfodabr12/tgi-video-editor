@@ -902,3 +902,39 @@ path traversal, arquivo existente, revisão antiga, aprovação local,
 preview → apply → undo com serialização idêntica. Executado também com FFmpeg:
 WAV decodificado com **2,000 s** para duas janelas de teste. `analyze` sem
 problemas; suíte completa com FFmpeg: **267 aprovados / zero ignorados**.
+
+Etapa 6 — validação na janela nativa com cópia privada do projeto real:
+release compilado em 43,8 s; 66 arquivos copiados para `aplicativo/`, sem
+diferenças SHA-256 em relação ao build. Executável ativo corresponde ao código
+do commit `b845b86` ([build](docs/validation/CUT_QUALITY_BUILD_RESULT.json)).
+Cliente externo **SDK MCP 1.32.1** conectado ao servidor dentro do app;
+**MCP Inspector 2.11.0 tools/list --strict** aprovado com 34 tools.
+
+| Modo | Cortes efetivos | Segundos removidos | Menor trecho mantido (s) |
+| --- | ---: | ---: | ---: |
+| suave | 13 | 10,608640 | 1,834739 |
+| normal | 43 | 26,514216 | 0,272925 |
+| agressivo | 123 | 64,223740 | 0,282539 |
+
+Os três previews preservaram arquivo e revisão. Não havia transcrição
+temporizada em memória nessa sessão reiniciada: os planos avisaram proteção
+de palavras inativa; fades de 8 ms estavam ativos. O modo normal foi aprovado
+e aplicado pela UI: **132 → 217 clipes**, **293,547 → 267,032784 s**, revisão
+**1 → 2**. Um único Ctrl+Z nativo e salvar restauraram **132 clipes**, revisão
+**3**, e o arquivo **idêntico byte a byte**. SHA-256 antes/depois:
+`838673b2a964c5ccc1c3ca870bf9b131bd3a20ed4171121d128d18ae43e57596`.
+
+`export_cut_check` gerou `normal-first-cuts.wav` antes da aprovação, com os
+dez primeiros cortes em nove janelas (duas se sobrepunham). Duração simulada
+9,680181 s; PCM real **9,700 s, estéreo/48 kHz**, dentro de um frame a 30 fps.
+Arquivo local: `.work/cut-quality/export/normal-first-cuts.wav`.
+Nenhuma avaliação de qualidade auditiva foi feita. Projeto privado e screenshots
+ficaram fora do Git. Resultados numéricos, sem caminhos absolutos ou tokens:
+[CUT_QUALITY_NATIVE_RESULT.json](docs/validation/CUT_QUALITY_NATIVE_RESULT.json).
+
+Após a validação nativa e restauração dos caches de build: `flutter analyze
+--no-pub` sem problemas; suíte completa com FFmpeg **267 aprovados / zero
+ignorados**. A tabela de tools da documentação foi comparada ao registro real:
+34 nomes na mesma ordem. Inspeção dos arquivos de `docs/validation` não encontrou
+caminhos absolutos locais ou credenciais; testes preexistentes e ProjectIOService
+permanecem sem alterações ([verificação](docs/validation/CUT_QUALITY_PRIVACY_RESULT.json)).
