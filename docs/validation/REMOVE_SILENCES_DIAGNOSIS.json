@@ -1,0 +1,41 @@
+{
+  "fixture": "private real project copy; not committed",
+  "clip_count": 132,
+  "track_count": 5,
+  "analysis_interval_count": 45,
+  "padding": 0.12,
+  "format_version": 14,
+  "success": false,
+  "error": {
+    "code": "placement_conflict",
+    "message": "Operação bloqueada por sobreposição, pista incompatível ou conteúdo bloqueado.",
+    "details": {
+      "cause": "overlap",
+      "clip_ids": [
+        "clip_124_txt",
+        "clip_123_txt"
+      ],
+      "track_ids": [
+        "track_video_manual_2"
+      ],
+      "group_ids": [
+        "group_123",
+        "group_122"
+      ],
+      "interval": {
+        "start": 278.300522,
+        "end": 278.58
+      },
+      "suggestion": "Apare os clipes clip_124_txt e clip_123_txt ou remapeie a camada track_video_manual_2 inteira antes de fechar o espaço.",
+      "valid_track_ids": [
+        "track_video_manual_3",
+        "track_video_manual_2",
+        "track_default_text_overlay",
+        "track_default_video",
+        "track_default_audio_volume"
+      ],
+      "locked_track_ids": []
+    }
+  },
+  "original_unchanged": true
+}

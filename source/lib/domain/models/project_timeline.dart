@@ -71,7 +71,11 @@ extension DynamicTimeline on TgiProject {
     return project.copyWith(updatedAt: DateTime.now());
   }
 
-  TgiProject changeAudioSpeed(String groupId, double value) {
+  TgiProject changeAudioSpeed(
+    String groupId,
+    double value, {
+    PlacementConflictHandler? onConflict,
+  }) {
     if (groupsAreLocked({groupId}) || !value.isFinite || value <= 0) {
       return this;
     }
@@ -93,7 +97,11 @@ extension DynamicTimeline on TgiProject {
               clip.timelineGroupId == groupId &&
               clip.trackType == TrackType.video,
         )) {
-      return updateClipGroupPlaybackSpeed(groupId, playbackSpeed: speed);
+      return updateClipGroupPlaybackSpeed(
+        groupId,
+        playbackSpeed: speed,
+        onConflict: onConflict,
+      );
     }
     return copyWith(
       tracks: tracks
@@ -119,10 +127,13 @@ extension DynamicTimeline on TgiProject {
           )
           .toList(),
       updatedAt: DateTime.now(),
-    ).validatedAgainst(this);
+    ).validatedAgainst(this, onConflict: onConflict);
   }
 
-  TgiProject rippleRemoveGroups(Set<String> groups) {
+  TgiProject rippleRemoveGroups(
+    Set<String> groups, {
+    PlacementConflictHandler? onConflict,
+  }) {
     if (groups.isEmpty || groupsAreLocked(groups)) return this;
     final ranges = <(Duration, Duration)>[
       for (final track in tracks)
@@ -178,19 +189,26 @@ extension DynamicTimeline on TgiProject {
             ),
       ],
       updatedAt: DateTime.now(),
-    ).validatedAgainst(this);
+    ).validatedAgainst(this, onConflict: onConflict);
   }
 
   /// Checks only changed spans, leaving pre-existing legacy overlaps untouched.
   /// Locked companions also guard ripple/trim operations spanning other lanes.
-  TgiProject validatedAgainst(TgiProject original) {
+  TgiProject validatedAgainst(
+    TgiProject original, {
+    PlacementConflictHandler? onConflict,
+  }) {
     for (final track in original.tracks.where((track) => track.isLocked)) {
       final next = trackById(track.id);
       if (next == null || next.clips.length != track.clips.length) {
+        onConflict?.call(_lockedTrackConflict(track));
         return original;
       }
       for (var index = 0; index < track.clips.length; index++) {
-        if (!identical(track.clips[index], next.clips[index])) return original;
+        if (!identical(track.clips[index], next.clips[index])) {
+          onConflict?.call(_lockedTrackConflict(track));
+          return original;
+        }
       }
     }
     for (final track in tracks) {
@@ -202,11 +220,13 @@ extension DynamicTimeline on TgiProject {
             original.clipTrackById(clip.id)?.id == track.id) {
           continue;
         }
-        if (!canPlaceOnTrack(
+        final conflict = placementConflictOnTrack(
           track,
           clip,
           ignoringGroups: {clip.timelineGroupId},
-        )) {
+        );
+        if (conflict != null) {
+          onConflict?.call(conflict);
           return original;
         }
       }
@@ -341,6 +361,65 @@ extension DynamicTimeline on TgiProject {
       return track.copyWith(clips: clips);
     }).toList();
     return changed ? copyWith(tracks: next, updatedAt: DateTime.now()) : this;
+  }
+
+  PlacementConflict _lockedTrackConflict(Track track) => PlacementConflict(
+    cause: PlacementConflictCause.lockedTrack,
+    clipIds: track.clips.map((c) => c.id).toList(),
+    trackIds: [track.id],
+    groupIds: track.clips.map((c) => c.timelineGroupId).toSet().toList(),
+    start: track.clips.isEmpty
+        ? Duration.zero
+        : track.clips
+              .map((c) => c.timelineStart)
+              .reduce((a, b) => a < b ? a : b),
+    end: track.clips.isEmpty
+        ? Duration.zero
+        : track.clips.map((c) => c.timelineEnd).reduce((a, b) => a > b ? a : b),
+    suggestion:
+        'Desbloqueie a camada ${track.id} antes de editar seus clipes ou vínculos.',
+  );
+
+  PlacementConflict? placementConflictOnTrack(
+    Track track,
+    Clip clip, {
+    Set<String> ignoringGroups = const {},
+  }) {
+    if (track.isLocked) return _lockedTrackConflict(track);
+    if (!track.accepts(clip.trackType)) {
+      return PlacementConflict(
+        cause: PlacementConflictCause.incompatibleTrack,
+        clipIds: [clip.id],
+        trackIds: [track.id],
+        groupIds: [clip.timelineGroupId],
+        start: clip.timelineStart,
+        end: clip.timelineEnd,
+        suggestion:
+            'Use uma camada ${clip.trackType == TrackType.audio ? "de áudio" : "visual"} para o clipe ${clip.id}.',
+      );
+    }
+    for (final other in track.clips) {
+      if (!ignoringGroups.contains(other.timelineGroupId) &&
+          other.id != clip.id &&
+          clip.timelineStart < other.timelineEnd &&
+          other.timelineStart < clip.timelineEnd) {
+        return PlacementConflict(
+          cause: PlacementConflictCause.overlap,
+          clipIds: [clip.id, other.id],
+          trackIds: [track.id],
+          groupIds: [clip.timelineGroupId, other.timelineGroupId],
+          start: clip.timelineStart > other.timelineStart
+              ? clip.timelineStart
+              : other.timelineStart,
+          end: clip.timelineEnd < other.timelineEnd
+              ? clip.timelineEnd
+              : other.timelineEnd,
+          suggestion:
+              'Apare os clipes ${clip.id} e ${other.id} ou remapeie a camada ${track.id} inteira antes de fechar o espaço.',
+        );
+      }
+    }
+    return null;
   }
 
   bool canPlaceOnTrack(
@@ -539,6 +618,7 @@ extension DynamicTimeline on TgiProject {
     required Duration timelineStart,
     String? targetTrackId,
     Set<String>? selectedGroups,
+    PlacementConflictHandler? onConflict,
   }) {
     final source = trackForClip(anchorClipId);
     if (source == null) return this;
@@ -553,6 +633,11 @@ extension DynamicTimeline on TgiProject {
     if (target == null ||
         target.isLocked ||
         !target.accepts(anchor.trackType)) {
+      if (target != null) {
+        onConflict?.call(
+          placementConflictOnTrack(target, anchor, ignoringGroups: groups)!,
+        );
+      }
       return this;
     }
     final compatible = tracks
@@ -583,12 +668,34 @@ extension DynamicTimeline on TgiProject {
         final index =
             compatible.indexWhere((candidate) => candidate.id == track.id) +
             verticalDelta;
-        if (index < 0 || index >= compatible.length) return this;
+        if (index < 0 || index >= compatible.length) {
+          onConflict?.call(
+            PlacementConflict(
+              cause: PlacementConflictCause.linkedGroup,
+              clipIds: moving.map((c) => c.id).toList(),
+              trackIds: {source.id, track.id, target.id}.toList(),
+              groupIds: groups.toList(),
+              start: earliest,
+              end: moving
+                  .map((c) => c.timelineEnd)
+                  .reduce((a, b) => a > b ? a : b),
+              suggestion:
+                  'Crie camadas compatíveis para todos os membros vinculados antes de mover o grupo.',
+            ),
+          );
+          return this;
+        }
         destination = compatible[index];
       }
       for (final clip in clips) {
         final moved = clip.copyWith(timelineStart: clip.timelineStart + delta);
-        if (!canPlaceOnTrack(destination, moved, ignoringGroups: groups)) {
+        final conflict = placementConflictOnTrack(
+          destination,
+          moved,
+          ignoringGroups: groups,
+        );
+        if (conflict != null) {
+          onConflict?.call(conflict);
           return this;
         }
         placements.putIfAbsent(destination.id, () => []).add(moved);

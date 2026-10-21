@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'clip.dart';
+import 'placement_conflict.dart';
 import 'media_item.dart';
 import 'timeline_marker.dart';
 import 'timeline_transition.dart';
@@ -1144,6 +1145,7 @@ class TgiProject {
     String clipId, {
     required Duration sourceStart,
     required Duration sourceDuration,
+    PlacementConflictHandler? onConflict,
   }) {
     final referenceClip = _findClipById(clipId);
     if (referenceClip == null ||
@@ -1229,7 +1231,7 @@ class TgiProject {
     return copyWith(
       tracks: updatedTracks,
       updatedAt: DateTime.now(),
-    ).validatedAgainst(this);
+    ).validatedAgainst(this, onConflict: onConflict);
   }
 
   TgiProject updateClipVolume(String clipId, {required double volume}) {
@@ -1838,6 +1840,7 @@ class TgiProject {
   TgiProject updateClipGroupPlaybackSpeed(
     String timelineGroupId, {
     required double playbackSpeed,
+    PlacementConflictHandler? onConflict,
   }) {
     final speed = _clampPlaybackSpeed(playbackSpeed);
     Clip? referenceClip;
@@ -1940,7 +1943,7 @@ class TgiProject {
       markers: _sortMarkers(updatedMarkers),
       transitions: _sortTransitions(updatedTransitions),
       updatedAt: DateTime.now(),
-    ).validatedAgainst(this);
+    ).validatedAgainst(this, onConflict: onConflict);
   }
 
   TgiProject slipTimelineClipGroup(
@@ -2451,8 +2454,10 @@ class TgiProject {
     return copyWith(tracks: updatedTracks, updatedAt: DateTime.now());
   }
 
-  TgiProject rippleDeleteTimelineClipGroups(Set<String> timelineGroupIds) =>
-      rippleRemoveGroups(timelineGroupIds);
+  TgiProject rippleDeleteTimelineClipGroups(
+    Set<String> timelineGroupIds, {
+    PlacementConflictHandler? onConflict,
+  }) => rippleRemoveGroups(timelineGroupIds, onConflict: onConflict);
 
   TgiProject duplicateTimelineClipGroups(
     Set<String> timelineGroupIds, {

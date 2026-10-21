@@ -1,4 +1,5 @@
 import '../../domain/models/clip.dart';
+import '../../domain/models/placement_conflict.dart';
 import '../../domain/models/project.dart';
 import '../../domain/models/track.dart';
 import '../../domain/models/timeline_transition.dart';
@@ -45,6 +46,7 @@ class CommandEngine {
           'track_locked',
           'Destrave as pistas vinculadas antes de editar.',
           {
+            ..._lockedGroupConflict(project, {clip.timelineGroupId}).toJson(),
             'clip_id': clip.id,
             'locked_track_ids': [
               for (final t in project.tracks)
@@ -101,11 +103,12 @@ class CommandEngine {
           clip.id,
           sourceStart: start,
           sourceDuration: duration,
+          onConflict: (conflict) => _throwConflict(before, conflict),
         );
         if (identical(project, before) &&
             (clip.sourceStart != start ||
                 clip.effectiveSourceDuration != duration)) {
-          _placementError(before);
+          _placementError(before, clip: clip);
         }
       case 'delete_clip':
         project = a['ripple'] == true
@@ -133,19 +136,20 @@ class CommandEngine {
           );
         }
         if (groups != null && project.groupsAreLocked(groups)) {
-          _placementError(project);
+          _throwConflict(project, _lockedGroupConflict(project, groups));
         }
         project = project.placeClipGroups(
           clip!.id,
           targetTrackId: trackId,
           timelineStart: time('timeline_start'),
           selectedGroups: groups,
+          onConflict: (conflict) => _throwConflict(before, conflict),
         );
         if (identical(project, before) &&
             (clip.timelineStart != time('timeline_start') ||
                 (trackId != null &&
                     before.clipTrackById(clip.id)?.id != trackId))) {
-          _placementError(before);
+          _placementError(before, clip: clip);
         }
       case 'set_clip_speed':
         if (clip!.trackType != TrackType.video &&
@@ -169,10 +173,15 @@ class CommandEngine {
             ? project.updateClipGroupPlaybackSpeed(
                 clip.timelineGroupId,
                 playbackSpeed: n('speed'),
+                onConflict: (conflict) => _throwConflict(before, conflict),
               )
-            : project.changeAudioSpeed(clip.timelineGroupId, n('speed'));
+            : project.changeAudioSpeed(
+                clip.timelineGroupId,
+                n('speed'),
+                onConflict: (conflict) => _throwConflict(before, conflict),
+              );
         if (identical(project, before) && clip.playbackSpeed != n('speed')) {
-          _placementError(before);
+          _placementError(before, clip: clip);
         }
       case 'add_text':
         project = project.addTextClipToTimeline(
@@ -357,9 +366,12 @@ class CommandEngine {
           'Use o dispatcher com o histórico do editor.',
         );
     }
-    final validated = project.validatedAgainst(before);
+    final validated = project.validatedAgainst(
+      before,
+      onConflict: (conflict) => _throwConflict(before, conflict),
+    );
     if (!identical(project, before) && identical(validated, before)) {
-      _placementError(before);
+      _placementError(before, clip: clip);
     }
     return validated;
   }
@@ -369,18 +381,94 @@ class CommandEngine {
     Set<String> groups, {
     bool ripple = false,
   }) {
-    if (project.groupsAreLocked(groups)) _placementError(project);
+    if (project.groupsAreLocked(groups)) {
+      _throwConflict(project, _lockedGroupConflict(project, groups));
+    }
     final next = ripple
-        ? project.rippleDeleteTimelineClipGroups(groups)
+        ? project.rippleDeleteTimelineClipGroups(
+            groups,
+            onConflict: (conflict) => _throwConflict(project, conflict),
+          )
         : project.deleteTimelineClipGroups(groups);
-    if (identical(next, project) && groups.isNotEmpty) _placementError(project);
+    if (identical(next, project) && groups.isNotEmpty) {
+      _placementError(project, groups: groups);
+    }
     return next;
   }
 
-  Never _placementError(TgiProject project) => throw CommandError(
+  PlacementConflict _lockedGroupConflict(
+    TgiProject project,
+    Set<String> groups,
+  ) {
+    final tracks = project.tracks
+        .where(
+          (t) =>
+              t.isLocked &&
+              t.clips.any((c) => groups.contains(c.timelineGroupId)),
+        )
+        .toList();
+    final clips = tracks
+        .expand((t) => t.clips)
+        .where((c) => groups.contains(c.timelineGroupId))
+        .toList();
+    return PlacementConflict(
+      cause: PlacementConflictCause.lockedTrack,
+      clipIds: clips.map((c) => c.id).toList(),
+      trackIds: tracks.map((t) => t.id).toList(),
+      groupIds: groups.toList(),
+      start: clips.isEmpty
+          ? Duration.zero
+          : clips.map((c) => c.timelineStart).reduce((a, b) => a < b ? a : b),
+      end: clips.isEmpty
+          ? Duration.zero
+          : clips.map((c) => c.timelineEnd).reduce((a, b) => a > b ? a : b),
+      suggestion:
+          'Desbloqueie as camadas vinculadas ${tracks.map((t) => t.id).join(", ")} antes de editar.',
+    );
+  }
+
+  Never _placementError(
+    TgiProject project, {
+    Clip? clip,
+    Set<String>? groups,
+  }) => _throwConflict(
+    project,
+    PlacementConflict(
+      cause: PlacementConflictCause.linkedGroup,
+      clipIds: project.tracks
+          .expand((t) => t.clips)
+          .where(
+            (c) =>
+                c.timelineGroupId == clip?.timelineGroupId ||
+                (groups?.contains(c.timelineGroupId) ?? false),
+          )
+          .map((c) => c.id)
+          .toList(),
+      trackIds: project.tracks
+          .where(
+            (t) => t.clips.any(
+              (c) =>
+                  c.timelineGroupId == clip?.timelineGroupId ||
+                  (groups?.contains(c.timelineGroupId) ?? false),
+            ),
+          )
+          .map((t) => t.id)
+          .toList(),
+      start: clip?.timelineStart ?? Duration.zero,
+      end: clip?.timelineEnd ?? project.timelineDuration,
+      suggestion:
+          'Confira os vínculos A/V e use uma camada compatível para todos os membros do grupo.',
+    ),
+  );
+
+  Never _throwConflict(
+    TgiProject project,
+    PlacementConflict conflict,
+  ) => throw CommandError(
     'placement_conflict',
     'Operação bloqueada por sobreposição, pista incompatível ou conteúdo bloqueado.',
     {
+      ...conflict.toJson(),
       'valid_track_ids': project.tracks
           .where((t) => !t.isLocked)
           .map((t) => t.id)
