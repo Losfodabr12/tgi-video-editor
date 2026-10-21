@@ -7,6 +7,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import '../../../core/commands/command_engine.dart';
 
 import '../../../domain/models/audio_waveform.dart';
 import '../../../domain/models/clip.dart' as domain;
@@ -154,7 +155,7 @@ class EditorController extends ChangeNotifier {
        _audioLevelService =
            audioLevelService ??
            AudioLevelService(ffmpegService ?? mediaImportService.ffmpegService),
-       _project =
+       _projectValue =
            initialProject ?? TgiProject.empty(name: 'Projeto sem t\u00EDtulo');
 
   final MediaImportService mediaImportService;
@@ -164,7 +165,32 @@ class EditorController extends ChangeNotifier {
   final AudioLevelService _audioLevelService;
   final Map<String, AudioLevels> _audioLevels = {};
   bool _isAnalyzingAudio = false;
-  TgiProject _project;
+  TgiProject _projectValue;
+  int _projectRevision = 0;
+  int get projectRevision => _projectRevision;
+  TgiProject get _project => _projectValue;
+  set _project(TgiProject value) {
+    if (!identical(value, _projectValue)) _projectRevision++;
+    _projectValue = value;
+  }
+
+  TgiProject _commandProject(
+    String name,
+    Map<String, Object?> arguments, {
+    TgiProject? base,
+  }) {
+    final project = base ?? _project;
+    try {
+      return const CommandEngine().apply(
+        project,
+        EditorCommand(name, arguments),
+      );
+    } on CommandError catch (error) {
+      _errorMessage = error.message;
+      return project;
+    }
+  }
+
   bool _isImporting = false;
   bool _isExporting = false;
   double _exportProgress = 0;
@@ -1400,18 +1426,18 @@ class EditorController extends ChangeNotifier {
 
     final start = _normalizeTimelinePosition(_playheadPosition);
     final previousClipIds = _timelineClipIds(_project);
-    final nextProject = _project.addTextClipToTimeline(
-      text: content,
-      isCaption: registerAsCaption,
-      timelineStart: start,
-      duration: duration,
-      fontFamily: fontFamily,
-      fontSize: fontSize,
-      textColor: textColor,
-      backgroundColor: backgroundColor,
-      opacity: opacity,
-      textAnimation: textAnimation,
-    );
+    final nextProject = _commandProject('add_text', {
+      'text': content,
+      'is_caption': registerAsCaption,
+      'timeline_start': start.inMicroseconds / 1e6,
+      'duration': duration.inMicroseconds / 1e6,
+      'font_family': fontFamily,
+      'font_size': fontSize,
+      'text_color': textColor,
+      'background_color': backgroundColor,
+      'opacity': opacity,
+      'animation': textAnimation.name,
+    });
     if (identical(nextProject, _project)) {
       return;
     }
@@ -1681,7 +1707,10 @@ class EditorController extends ChangeNotifier {
     final activeGroupId = activeTimelineClip?.timelineGroupId;
     final nextProject = groupsToMove.length > 1
         ? _project.moveTimelineClipGroupsByDelta(groupsToMove, delta: delta)
-        : _project.moveTimelineClipGroup(timelineGroupId, timelineStart: start);
+        : _commandProject('move_clip', {
+            'clip_id': referenceClip.id,
+            'timeline_start': start.inMicroseconds / 1e6,
+          });
     if (identical(nextProject, _project)) {
       return;
     }
@@ -2009,16 +2038,16 @@ class EditorController extends ChangeNotifier {
       return;
     }
 
-    final nextProject = _project.updateTextClipProperties(
-      clipId,
-      text: content,
-      fontFamily: fontFamily,
-      fontSize: fontSize,
-      textColor: textColor,
-      backgroundColor: backgroundColor,
-      opacity: opacity,
-      textAnimation: textAnimation,
-    );
+    final nextProject = _commandProject('set_caption_style', {
+      'clip_id': clipId,
+      'text': content,
+      'font_family': ?fontFamily,
+      'font_size': ?fontSize,
+      'text_color': ?textColor,
+      'background_color': ?backgroundColor,
+      'opacity': ?opacity,
+      if (textAnimation != null) 'animation': textAnimation.name,
+    });
     if (identical(nextProject, _project)) {
       return;
     }
@@ -2167,11 +2196,11 @@ class EditorController extends ChangeNotifier {
     }
 
     _trimPreviewBaseProject ??= _project;
-    final nextProject = baseProject.trimTimelineClipGroup(
-      clipId,
-      sourceStart: sourceStart,
-      sourceDuration: sourceDuration,
-    );
+    final nextProject = _commandProject('trim_clip', {
+      'clip_id': clipId,
+      'source_start': sourceStart.inMicroseconds / 1e6,
+      'source_duration': sourceDuration.inMicroseconds / 1e6,
+    }, base: baseProject);
     _project = nextProject;
     final updatedClip =
         _findClipByIdInProject(nextProject, clipId) ??
@@ -2227,11 +2256,11 @@ class EditorController extends ChangeNotifier {
       return;
     }
 
-    final nextProject = baseProject.trimTimelineClipGroup(
-      clipId,
-      sourceStart: sourceStart,
-      sourceDuration: sourceDuration,
-    );
+    final nextProject = _commandProject('trim_clip', {
+      'clip_id': clipId,
+      'source_start': sourceStart.inMicroseconds / 1e6,
+      'source_duration': sourceDuration.inMicroseconds / 1e6,
+    }, base: baseProject);
     _clearTrimPreviewState();
     if (identical(nextProject, baseProject)) {
       _logController('trim-commit clip=$clipId no-op');
@@ -2292,7 +2321,10 @@ class EditorController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    final nextProject = _project.updateClipVolume(clipId, volume: volume);
+    final nextProject = _commandProject('set_volume', {
+      'clip_id': clipId,
+      'volume': volume.clamp(0, 2).toDouble(),
+    });
     if (identical(nextProject, _project)) {
       return;
     }
@@ -2443,10 +2475,10 @@ class EditorController extends ChangeNotifier {
       return;
     }
 
-    final nextProject = _project.updateClipGroupPlaybackSpeed(
-      clip.timelineGroupId,
-      playbackSpeed: playbackSpeed,
-    );
+    final nextProject = _commandProject('set_clip_speed', {
+      'clip_id': clip.id,
+      'speed': playbackSpeed.clamp(0.25, 4).toDouble(),
+    });
     if (identical(nextProject, _project)) {
       return;
     }
@@ -3272,12 +3304,13 @@ class EditorController extends ChangeNotifier {
       return;
     }
 
-    final nextProject = _project.upsertClipKeyframe(
-      clip.id,
-      property: property,
-      time: _normalizedClipTimeAtPlayhead(clip),
-      value: value,
-    );
+    final range = keyframeRange(property);
+    final nextProject = _commandProject('set_keyframe', {
+      'clip_id': clip.id,
+      'property': property.name,
+      'time': _normalizedClipTimeAtPlayhead(clip),
+      'value': value.clamp(range.$1, range.$2).toDouble(),
+    });
     if (identical(nextProject, _project)) {
       return;
     }
@@ -3555,28 +3588,28 @@ class EditorController extends ChangeNotifier {
       return;
     }
 
-    final nextProject = _project.updateVideoClipLook(
-      clip.id,
-      brightness: brightness,
-      contrast: contrast,
-      saturation: saturation,
-      exposure: exposure,
-      hue: hue,
-      temperature: temperature,
-      tint: tint,
-      shadows: shadows,
-      highlights: highlights,
-      curveShadows: curveShadows,
-      curveMidtones: curveMidtones,
-      curveHighlights: curveHighlights,
-      filterPreset: filterPreset,
-      reverseVideo: reverseVideo,
-      chromaKeyEnabled: chromaKeyEnabled,
-      chromaKeyColor: chromaKeyColor,
-      chromaKeySimilarity: chromaKeySimilarity,
-      chromaKeyBlend: chromaKeyBlend,
-      stabilizationEnabled: stabilizationEnabled,
-    );
+    final nextProject = _commandProject('apply_effect', {
+      'clip_id': clip.id,
+      'brightness': ?brightness,
+      'contrast': ?contrast,
+      'saturation': ?saturation,
+      'exposure': ?exposure,
+      'hue': ?hue,
+      'temperature': ?temperature,
+      'tint': ?tint,
+      'shadows': ?shadows,
+      'highlights': ?highlights,
+      'curve_shadows': ?curveShadows,
+      'curve_midtones': ?curveMidtones,
+      'curve_highlights': ?curveHighlights,
+      'reverse': ?reverseVideo,
+      'chroma_key_enabled': ?chromaKeyEnabled,
+      'chroma_key_color': ?chromaKeyColor,
+      'chroma_key_similarity': ?chromaKeySimilarity,
+      'chroma_key_blend': ?chromaKeyBlend,
+      'stabilization': ?stabilizationEnabled,
+      'filter': ?filterPreset?.name,
+    });
     if (identical(nextProject, _project)) {
       return;
     }
@@ -3654,10 +3687,10 @@ class EditorController extends ChangeNotifier {
     }
     final position = _normalizeTimelinePosition(timelinePosition);
     final referenceClip = _findClipById(clipId);
-    final nextProject = _project.splitTimelineClipGroupAt(
-      clipId,
-      timelinePosition: position,
-    );
+    final nextProject = _commandProject('split_clip', {
+      'clip_id': clipId,
+      'at': position.inMicroseconds / 1e6,
+    });
     if (identical(nextProject, _project)) {
       return;
     }
@@ -3797,7 +3830,10 @@ class EditorController extends ChangeNotifier {
       return;
     }
 
-    final nextProject = _project.deleteTimelineClipGroups(groupsToDelete);
+    final nextProject = const CommandEngine().deleteGroups(
+      _project,
+      groupsToDelete,
+    );
     if (identical(nextProject, _project)) {
       return;
     }
@@ -3837,7 +3873,11 @@ class EditorController extends ChangeNotifier {
       notifyListeners();
       return;
     }
-    final nextProject = _project.rippleDeleteTimelineClipGroups(groupsToDelete);
+    final nextProject = const CommandEngine().deleteGroups(
+      _project,
+      groupsToDelete,
+      ripple: true,
+    );
     if (identical(nextProject, _project)) return;
     _pushHistory();
     _project = nextProject;
@@ -4341,7 +4381,10 @@ class EditorController extends ChangeNotifier {
   }
 
   void addMarkerAtPlayhead() {
-    final nextProject = _project.addTimelineMarker(position: _playheadPosition);
+    final nextProject = _commandProject('add_marker', {
+      'at': _playheadPosition.inMicroseconds / 1e6,
+      'name': 'Marcador ${_project.markers.length + 1}',
+    });
     if (identical(nextProject, _project)) {
       return;
     }
@@ -4441,16 +4484,16 @@ class EditorController extends ChangeNotifier {
       return;
     }
 
-    final nextProject = _project.upsertTimelineTransition(
-      name: name,
-      timelinePosition: target.position,
-      duration: duration,
-      placement: target.placement,
-      preset: preset,
-      direction: direction,
-      color: color,
-      intensity: intensity,
-    );
+    final nextProject = _commandProject('add_transition', {
+      'name': name,
+      'at': target.position.inMicroseconds / 1e6,
+      'duration': duration.inMicroseconds / 1e6,
+      'placement': target.placement.name,
+      'preset': preset.name,
+      'direction': direction.name,
+      'color': color,
+      'intensity': intensity,
+    });
     if (identical(nextProject, _project)) {
       return;
     }
