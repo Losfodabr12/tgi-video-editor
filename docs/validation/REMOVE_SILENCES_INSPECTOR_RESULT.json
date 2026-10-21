@@ -1,0 +1,41 @@
+{
+    "sdk":  "1.32.1",
+    "inspector":  "2.11.0",
+    "checks":  [
+                   "sdk tools/list",
+                   "sdk get_project",
+                   "sdk project resource",
+                   "sdk preview/apply exact plan",
+                   "sdk stale revision rejection",
+                   "sdk undo",
+                   "http invalid token 401",
+                   "sdk outside export rejection",
+                   "sdk source PNG thumbnails",
+                   "sdk ebur128 loudness",
+                   "sdk native analysis jobs",
+                   "sdk native export",
+                   "MCP Inspector strict tools/list",
+                   "MCP Inspector get_project"
+               ],
+    "tool_count":  33,
+    "inspector_tools":  {
+                            "exit":  0,
+                            "output_bytes":  69881,
+                            "warnings":  ""
+                        },
+    "inspector_read":  {
+                           "exit":  0,
+                           "output_bytes":  2140,
+                           "warnings":  ""
+                       },
+    "ok":  true,
+    "macro_discovery_order":  [
+                                  "remove_silences",
+                                  "cut_by_transcript",
+                                  "auto_captions",
+                                  "reframe_9x16",
+                                  "preview_plan",
+                                  "apply_plan"
+                              ],
+    "tested_scope":  "Official SDK smoke and Inspector catalog/read validation; silence remapping and exact undo validated separately over MCP on synthetic and private real project copies."
+}

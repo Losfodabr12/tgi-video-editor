@@ -58,16 +58,41 @@ class McpToolDefinition {
 final removeSilencesArguments = objectSchema(
   {
     'clip_id': clipIdSchema,
-    'job_id': stringSchema(),
-    'threshold_db': {...numberSchema(-80, 0), 'default': -35},
-    'minimum': {...numberSchema(0.1, 10), 'default': 0.5},
-    'padding': {...numberSchema(0, 1), 'default': 0.08},
+    'job_id': {
+      ...stringSchema(),
+      'description':
+          'Job detect_silence concluído na revisão atual. Sem job_id, inicia análise e devolve um job para consultar.',
+    },
+    'threshold_db': {
+      ...numberSchema(
+        -80,
+        0,
+        'Limiar de silêncio em dB; deve coincidir com o job reutilizado.',
+      ),
+      'default': -35,
+    },
+    'minimum': {
+      ...numberSchema(
+        0.1,
+        10,
+        'Duração mínima do silêncio, em segundos da fonte; deve coincidir com o job.',
+      ),
+      'default': 0.5,
+    },
+    'padding': {
+      ...numberSchema(
+        0,
+        1,
+        'Segundos da fonte preservados em cada borda do silêncio.',
+      ),
+      'default': 0.08,
+    },
     ...remapScopeFields,
   },
   ['clip_id'],
 );
 
-final mcpToolCatalog = <String, McpToolDefinition>{
+final _mcpToolDefinitions = <String, McpToolDefinition>{
   for (final e in commandCatalog.entries.where(
     (e) => e.key != 'remap_timeline',
   ))
@@ -198,7 +223,7 @@ final mcpToolCatalog = <String, McpToolDefinition>{
   ),
   'preview_plan': McpToolDefinition(
     'preview_plan',
-    'Prévia sem editar: lote commands ou macro="remove_silences" com arguments. Devolve antes/depois e plan_id, válido na mesma revisão por 15 minutos. Se faltar job_id, inicia análise assíncrona.',
+    'Prévia de commands ou macro="remove_silences" + arguments. Retorna antes/depois e plan_id sem editar; sem job_id inicia análise. Plano expira em 15 min ou ao mudar a revisão.',
     {
       'type': 'object',
       'additionalProperties': false,
@@ -241,7 +266,7 @@ final mcpToolCatalog = <String, McpToolDefinition>{
   ),
   'remove_silences': McpToolDefinition(
     'remove_silences',
-    'PREVIEW: plano de cortes ripple no clipe/grupo usando job detect_silence concluído na revisão atual. Padding preserva bordas da fala. Aplique com apply_plan.',
+    'Prévia de remoção de silêncios: clip_id, threshold_db, minimum, padding, scope e locked_tracks. Sem job_id inicia análise; com job pronto remapeia A/V, camadas, keyframes e marcadores. Padrão all_tracks; bloqueios falham. Aplicar: apply_plan; um undo.',
     objectSchema(
       {
         ...removeSilencesArguments['properties'] as Map<String, dynamic>,
@@ -253,7 +278,7 @@ final mcpToolCatalog = <String, McpToolDefinition>{
   ),
   'cut_by_transcript': McpToolDefinition(
     'cut_by_transcript',
-    'PREVIEW: mantém apenas falas escolhidas por índices de get_transcript(media_id). Usa transcrição existente; corta o clipe/grupo e fecha os espaços. Aplique com apply_plan.',
+    'Prévia: clip_id + keep_cue_indices da transcrição pronta. Mantém as falas escolhidas e remapeia todas as camadas; falha em bloqueios. Aplicar: apply_plan; um undo.',
     objectSchema(
       {
         'clip_id': clipIdSchema,
@@ -271,7 +296,7 @@ final mcpToolCatalog = <String, McpToolDefinition>{
   ),
   'auto_captions': McpToolDefinition(
     'auto_captions',
-    'PREVIEW: converte transcrição existente em legendas para o trecho/speed/reverso do clipe. Trechos abaixo de 1s são agrupados quando possível (limite v14). Aplique com apply_plan.',
+    'Prévia: clip_id com transcrição pronta. Acrescenta legendas brancas sincronizadas com trim/speed/reverso; agrupa falas abaixo de 1s quando possível. Pode criar camadas. Aplicar: apply_plan.',
     objectSchema(
       {'clip_id': clipIdSchema, 'base_revision': revisionSchema},
       ['clip_id', 'base_revision'],
@@ -280,11 +305,26 @@ final mcpToolCatalog = <String, McpToolDefinition>{
   ),
   'reframe_9x16': McpToolDefinition(
     'reframe_9x16',
-    'PREVIEW: crop central estático do clipe e saída 1080x1920. Não rastreia pessoas. Crop e resolução compartilham undo. Aplique com apply_plan.',
+    'Prévia: clip_id de vídeo/imagem com dimensões conhecidas. Recorta ao centro e muda a saída do projeto para 1080x1920. Crop e resolução são desfeitos juntos. Aplicar: apply_plan.',
     objectSchema(
       {'clip_id': clipIdSchema, 'base_revision': revisionSchema},
       ['clip_id', 'base_revision'],
     ),
     readOnly: true,
   ),
+};
+
+/// Stable discovery order: intent-level macros before individual edit tools.
+const macroToolNames = [
+  'remove_silences',
+  'cut_by_transcript',
+  'auto_captions',
+  'reframe_9x16',
+  'preview_plan',
+  'apply_plan',
+];
+final mcpToolCatalog = <String, McpToolDefinition>{
+  for (final name in macroToolNames) name: _mcpToolDefinitions[name]!,
+  for (final entry in _mcpToolDefinitions.entries)
+    if (!macroToolNames.contains(entry.key)) entry.key: entry.value,
 };

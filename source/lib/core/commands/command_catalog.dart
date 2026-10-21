@@ -62,10 +62,14 @@ final remapScopeFields = <String, dynamic>{
   'scope': {
     ...stringSchema(['all_tracks', 'main_track_only']),
     'default': 'all_tracks',
+    'description':
+        'all_tracks remapeia todas as camadas; main_track_only inclui a principal e seus vínculos, preservando tempos das demais.',
   },
   'locked_tracks': {
     ...stringSchema(['fail', 'skip', 'unlock']),
     'default': 'fail',
+    'description':
+        'fail lista bloqueios e cancela antes de editar; skip preserva camadas bloqueadas e seus vínculos; unlock as desbloqueia na mesma transação.',
   },
 };
 
