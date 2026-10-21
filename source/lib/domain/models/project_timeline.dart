@@ -385,7 +385,21 @@ extension DynamicTimeline on TgiProject {
     Clip clip, {
     Set<String> ignoringGroups = const {},
   }) {
-    if (track.isLocked) return _lockedTrackConflict(track);
+    if (track.isLocked) {
+      return PlacementConflict(
+        cause: PlacementConflictCause.lockedTrack,
+        clipIds: {clip.id, ...track.clips.map((c) => c.id)}.toList(),
+        trackIds: [track.id],
+        groupIds: {
+          clip.timelineGroupId,
+          ...track.clips.map((c) => c.timelineGroupId),
+        }.toList(),
+        start: clip.timelineStart,
+        end: clip.timelineEnd,
+        suggestion:
+            'Desbloqueie a camada ${track.id} antes de posicionar o clipe ${clip.id}.',
+      );
+    }
     if (!track.accepts(clip.trackType)) {
       return PlacementConflict(
         cause: PlacementConflictCause.incompatibleTrack,

@@ -12,6 +12,20 @@
     "change_count": 222,
     "command_count": 1
   },
+  "removed_duration": 24.406688,
   "undo_exact": true,
+  "real_media_export": {
+    "range_seconds": 5,
+    "ffprobe_duration": 5.0,
+    "frames_per_second": 30,
+    "tolerance_seconds": 0.03333333333333333
+  },
+  "mcp_transport": "Streamable HTTP loopback",
+  "mcp_sequence": [
+    "preview_plan",
+    "apply_plan",
+    "undo"
+  ],
+  "mcp_undo_exact": true,
   "original_unchanged": true
 }

@@ -228,6 +228,18 @@ class TimelineRemapper {
           if (usedGroups.add(clip.timelineGroupId)) return clip.timelineGroupId;
           return unique('${clip.timelineGroupId}_silence_$segment', groupIds);
         });
+    // Reserve groups in timeline order even when an early companion is unchanged.
+    for (var i = 0; i < map.retained.length; i++) {
+      final r = map.retained[i];
+      for (final clip in all) {
+        if ((clip.trackType == TrackType.video ||
+                clip.trackType == TrackType.audio) &&
+            clip.timelineStart.inMicroseconds < r.$2 &&
+            clip.timelineEnd.inMicroseconds > r.$1) {
+          group(clip, i);
+        }
+      }
+    }
     final tracks = <Track>[];
     for (final track in original.tracks) {
       if (!selection.tracks.contains(track.id)) {

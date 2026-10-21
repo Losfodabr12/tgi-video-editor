@@ -1,0 +1,25 @@
+{
+  "fixture": "generated 6-second A/V source with known silence intervals; no speech transcription",
+  "transport": "Streamable HTTP MCP",
+  "detected_intervals": [
+    {
+      "start": 0.0,
+      "end": 1.000042
+    },
+    {
+      "start": 2.0,
+      "end": 4.000042
+    }
+  ],
+  "original_duration": 6.0,
+  "removed_duration": 3.000084,
+  "expected_duration": 2.999916,
+  "ffprobe_video_duration": 3.0,
+  "ffprobe_container_duration": 3.0,
+  "frames_per_second": 20,
+  "tolerance_seconds": 0.05,
+  "preview_dry_run": true,
+  "apply_single_transaction": true,
+  "undo_exact": true,
+  "format_version": 14
+}
