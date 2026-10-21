@@ -97,6 +97,19 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
   final Duration processTimeout;
 
   Future<void> _lastJob = Future<void>.value();
+  bool _cancelled = false;
+  Process? _activeWhisper;
+  void cancel() {
+    _cancelled = true;
+    _activeWhisper?.kill();
+    ffmpegService.cancelActiveTranscriptionPreparation();
+  }
+
+  void _checkCancelled() {
+    if (_cancelled) {
+      throw const AutoCaptionException('Transcrição cancelada.');
+    }
+  }
 
   @override
   Future<List<CaptionCue>> generateCaptionsForMedia(
@@ -137,7 +150,9 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       );
     }
 
+    _checkCancelled();
     final config = await _resolveConfig(modelName);
+    _checkCancelled();
     final tempDir = await Directory.systemTemp.createTemp('tgi_auto_caption_');
     try {
       onProgress?.call(0, 'Preparando audio');
@@ -160,6 +175,7 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
 
       final rawCues = <CaptionCue>[];
       for (var index = 0; index < chunks.length; index++) {
+        _checkCancelled();
         final chunk = chunks[index];
         final baseProgress =
             _audioPreparationProgressShare +
@@ -247,6 +263,11 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       );
     }
 
+    _activeWhisper = process;
+    if (_cancelled) {
+      process.kill();
+    }
+
     void handleOutput(String chunkOutput) {
       output.write(chunkOutput);
       final normalizedLocalProgress = _parseWhisperProgressRatio(
@@ -276,6 +297,8 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
         .asFuture<void>();
 
     final exitCode = await _waitForWhisperExitCode(process);
+    _activeWhisper = null;
+    _checkCancelled();
     await Future.wait([
       stdoutDone,
       stderrDone,

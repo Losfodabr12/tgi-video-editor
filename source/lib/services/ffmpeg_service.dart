@@ -77,6 +77,38 @@ class FfmpegService {
   bool _exportCancellationRequested = false;
   bool _previewProxyCancellationRequested = false;
 
+  MediaProcessHandle? _transcriptionPreparation;
+  bool _transcriptionPreparationCancelled = false;
+  void cancelActiveTranscriptionPreparation() {
+    _transcriptionPreparationCancelled = true;
+    final active = _transcriptionPreparation;
+    if (active != null) {
+      unawaited(active.cancel());
+    }
+  }
+
+  Future<ProcessResult> _runTranscriptionPreparation(
+    String executable,
+    List<String> arguments,
+  ) async {
+    if (_transcriptionPreparationCancelled) {
+      throw const FfmpegProcessException('Transcrição cancelada.');
+    }
+    final process = await _startMediaProcess(executable, arguments);
+    _transcriptionPreparation = process;
+    if (_transcriptionPreparationCancelled) {
+      await process.cancel();
+    }
+    try {
+      final stdout = process.stdout.transform(systemEncoding.decoder).join();
+      final stderr = process.stderr.transform(systemEncoding.decoder).join();
+      final code = await process.exitCode;
+      return ProcessResult(process.pid, code, await stdout, await stderr);
+    } finally {
+      _transcriptionPreparation = null;
+    }
+  }
+
   bool cancelActiveExport() {
     _exportCancellationRequested = true;
     final process = _activeExportProcess;
@@ -405,6 +437,7 @@ class FfmpegService {
     Duration chunkDuration = const Duration(minutes: 5),
     FfmpegExportProgressCallback? onProgress,
   }) async {
+    _transcriptionPreparationCancelled = false;
     final inputFile = File(inputPath);
     if (!await inputFile.exists()) {
       throw FfmpegProcessException(
@@ -451,7 +484,7 @@ class FfmpegService {
         outputDirectory.path,
         'caption_chunk_${index.toString().padLeft(3, '0')}.wav',
       );
-      final result = await _runTool(toolchain.ffmpegPath, [
+      final result = await _runTranscriptionPreparation(toolchain.ffmpegPath, [
         '-y',
         '-hide_banner',
         '-nostdin',
