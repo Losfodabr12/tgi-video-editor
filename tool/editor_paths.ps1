@@ -28,8 +28,10 @@ function Invoke-EditorFlutter {
     param([Parameter(Mandatory=$true)][string[]]$Arguments)
     $flutter = Get-Command flutter -ErrorAction SilentlyContinue
     if ($null -ne $flutter) { $flutterPath = $flutter.Source }
-    elseif (Test-Path -LiteralPath 'C:\flutter\bin\flutter.bat') { $flutterPath = 'C:\flutter\bin\flutter.bat' }
-    else { throw 'Flutter nao encontrado no PATH.' }
+    elseif ($env:FLUTTER_ROOT -and (Test-Path -LiteralPath (Join-Path $env:FLUTTER_ROOT 'bin\flutter.bat'))) {
+        $flutterPath = Join-Path $env:FLUTTER_ROOT 'bin\flutter.bat'
+    }
+    else { throw 'Flutter nao encontrado no PATH ou em FLUTTER_ROOT.' }
     # PowerShell 5 treats native stderr as ErrorRecord. Exit code is authoritative.
     $ErrorActionPreference = 'Continue'
     & $flutterPath @Arguments

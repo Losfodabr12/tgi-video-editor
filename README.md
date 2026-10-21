@@ -1,7 +1,7 @@
 # Frame Studio
 
 Editor de vídeo offline para Windows em Flutter, derivado do editor TGI.
-Pacote **0.3.0+3**, projetos **v14**, código atual na branch `main`.
+Pacote **0.4.0+4**, projetos **v14**, código atual na branch `main`.
 Para revisar esta implementação, comece pelo
 [relatório das etapas e resultados reais](RELATORIO_ALTERACOES.md).
 
@@ -14,7 +14,7 @@ Para revisar esta implementação, comece pelo
 Na cópia de trabalho, abra **INICIAR EDITOR.cmd** ou **aplicativo/VideoEditor.exe**.
 Os arquivos de runtime devem acompanhar o executável.
 
-O workflow por tag publica o [pacote Windows 0.3.0](https://github.com/Losfodabr12/tgi-video-editor/releases/tag/v0.3.0)
+O workflow por tag publica o [pacote Windows 0.4.0](https://github.com/Losfodabr12/tgi-video-editor/releases/tag/v0.4.0)
 com FFmpeg, ffprobe, Whisper Base, fontes e bibliotecas nativas. Extraia a
 pasta inteira e abra `VideoEditor.exe`. Veja [licenças e versões dos runtimes](docs/THIRD_PARTY.md).
 
@@ -31,6 +31,9 @@ pasta inteira e abra `VideoEditor.exe`. Veja [licenças e versões dos runtimes]
 - Presets YouTube/4K/9:16/1:1/WAV, GPU automática e fallback CPU.
 - Importação/exportação SRT e edição do estilo das legendas.
 - Caches persistentes de proxies, miniaturas e waveform.
+- MCP local para IA, revisão de planos e cortes por silêncio/transcrição com um undo.
+
+Novidades: [CHANGELOG.md](CHANGELOG.md). Configuração e tools: [docs/MCP.md](docs/MCP.md).
 
 ## Desenvolver no Windows
 

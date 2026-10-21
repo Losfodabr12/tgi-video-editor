@@ -1,7 +1,7 @@
 # Relatório de alterações
 
-A revisão mais recente está em [MCP integrado](#mcp-integrado--21-de-outubro-de-2026),
-com comandos, testes e validação externa executados. Os resultados das etapas
+A revisão mais recente está em [Release 0.4.0](#release-040),
+com a versão, verificações e evidências da publicação. Os resultados das etapas
 anteriores permanecem como histórico, vinculados aos respectivos commits.
 
 O texto completo, incluindo os resultados remotos da release 0.3.0, está
@@ -522,7 +522,7 @@ permanece acima; as imagens abaixo mostram os casos novos desta revisão.
 
 ### Comandos executados
 
-Windows, Flutter 3.44.4 / Dart 3.12.2, caminho curto `V:\source`:
+Windows, Flutter 3.44.4 / Dart 3.12.2, caminho curto temporário do script de build:
 
 | Comando | Resultado real |
 | --- | --- |
@@ -960,3 +960,40 @@ falhou com `InvalidType is not a subtype of FunctionType`, por carregar
 dependências Flutter/FFI fora desse runner. Isso não ocorreu no app nem na
 suíte oficial. Arquivos de validação foram verificados novamente, sem caminhos
 absolutos locais ou credenciais.
+
+## Release 0.4.0
+
+Versão do aplicativo elevada para **0.4.0+4** no `source/pubspec.yaml`.
+Formato de projeto **v14** preservado; ProjectIOService e testes anteriores
+permanecem sem edição. `CHANGELOG.md` curto e notas em `docs/RELEASE_0.4.0.md`
+incluem MCP, remapeamento de silêncios, presets, fades e proteção de palavras.
+O catálogo possui **33 tools de base + export_cut_check (34 expostas)**;
+a distinção está registrada sem omitir a tool adicional.
+
+O empacotamento confere ProductVersion e FileVersion contra o pubspec e
+registra as duas em `BUILD_INFO.json`, junto de versão/build, commit e hashes.
+Changelog e documentação MCP acompanham o ZIP. Removida a referência a um
+caminho absoluto temporário no relatório; localização do Flutter agora usa
+PATH ou `FLUTTER_ROOT`. Varredura de textos rastreados e arquivos novos não
+ignorados, incluindo docs/validation, relatórios e scripts, sem caminhos de
+usuário ou credenciais. Referências genéricas do Windows e fixtures sintéticas
+dos testes foram identificadas como não pessoais, sem editar testes.
+[Verificação de privacidade](docs/validation/RELEASE_0.4.0_PRIVACY_RESULT.json).
+
+Verificação local executada: `flutter pub get`; `flutter analyze --no-pub`
+sem problemas (**53,9 s**); `flutter test --no-pub --concurrency=1
+--dart-define=TGI_RUN_FFMPEG_INTEGRATION_TESTS=true`: **267 aprovados, zero
+ignorados (2 min 27 s)**. Os scripts PowerShell alterados foram analisados
+pelo parser do PowerShell sem erros de sintaxe.
+
+Build local `flutter build windows --release --no-pub` concluído com exit 0
+em **53,4 s**. EXE compilado: **ProductVersion e FileVersion 0.4.0+4**.
+Uma checagem iniciada antes do fim da compilação encontrou a versão antiga
+no cache; após o término, a conferência passou antes do empacotamento.
+O pacote local de teste contém `BUILD_INFO.json` com versão **0.4.0**, build
+**4** e as duas versões completas **0.4.0+4**. O ZIP e os **94 arquivos**
+listados no manifesto tiveram SHA-256 conferido, com zero divergências;
+`CHANGELOG.md` e `docs/MCP.md` estão presentes.
+[Resultado do pacote local](docs/validation/RELEASE_0.4.0_LOCAL_PACKAGE_RESULT.json).
+Esse pacote foi gerado durante a preparação: registra o commit base `9ccde88`
+e `workingTreeDirty=true`, refletindo as alterações da versão ainda não commitadas.

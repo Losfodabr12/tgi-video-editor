@@ -1,0 +1,13 @@
+{
+  "scope": "all tracked and nonignored text files in repository; includes validation docs, reports and scripts",
+  "text_files_scanned": 339,
+  "personal_windows_paths_found": 0,
+  "credentials_found": 0,
+  "absolute_paths_in_docs_reports_scripts": 0,
+  "secret_values_logged": false,
+  "cleanup": [
+    "Replaced a temporary absolute build path in the historical report with a generic description.",
+    "Build script resolves Flutter through PATH or FLUTTER_ROOT."
+  ],
+  "reviewed_nonpersonal_references": "Generic Windows runtime/font lookup defaults, a loudness regex, and synthetic test paths are not personal filesystem locations."
+}

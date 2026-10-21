@@ -17,8 +17,10 @@ $releaseRoot = Join-Path $projectRoot 'source\build\windows\x64\runner\Release'
 foreach ($required in @('VideoEditor.exe','flutter_windows.dll','data\app.so')) {
     if (-not (Test-Path -LiteralPath (Join-Path $releaseRoot $required))) { throw ('Build incompleto: ' + $required) }
 }
-$exeVersion = (Get-Item -LiteralPath (Join-Path $releaseRoot 'VideoEditor.exe')).VersionInfo.ProductVersion
+$exeInfo = (Get-Item -LiteralPath (Join-Path $releaseRoot 'VideoEditor.exe')).VersionInfo
+$exeVersion = $exeInfo.ProductVersion
 if ($exeVersion -ne ($version + '+' + $buildNumber)) { throw ('Build desatualizado: ' + $exeVersion) }
+if ($exeInfo.FileVersion -ne $exeVersion) { throw 'FileVersion e ProductVersion divergem.' }
 $scratchPath = Join-Path $outputPath ('.package-' + [guid]::NewGuid().ToString('N'))
 $packageName = 'FrameStudio-' + $version + '-windows-x64'
 $packagePath = Join-Path $scratchPath $packageName
@@ -46,6 +48,9 @@ try {
         Copy-Item -LiteralPath (Join-Path $env:WINDIR ('System32\' + $dll)) -Destination $packagePath -Force
     }
     Copy-Item -LiteralPath $ReportPath -Destination (Join-Path $packagePath 'RELATORIO_ALTERACOES.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'CHANGELOG.md') -Destination $packagePath
+    New-Item -ItemType Directory -Path (Join-Path $packagePath 'docs') -Force | Out-Null
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\MCP.md') -Destination (Join-Path $packagePath 'docs\MCP.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'docs\THIRD_PARTY.md') -Destination $packagePath
     @'
 FRAME STUDIO - Windows x64
@@ -62,7 +67,8 @@ ffmpeg\LICENSE, whisper\LICENSE e data\flutter_assets\NOTICES.Z.
     $changes = @(git -C $projectRoot status --porcelain)
     if ($LASTEXITCODE -ne 0) { throw 'Estado do checkout nao encontrado.' }
     @{
-        version = $version; build = $buildNumber; commit = $commit
+        version = $version; build = $buildNumber; productVersion = $exeVersion
+        fileVersion = $exeInfo.FileVersion; commit = $commit
         workingTreeDirty = ($changes.Count -gt 0)
         ffmpeg = $ffmpegVersion[0]; ffmpegLicense = 'GPL-3.0-or-later'
         files = @(Get-ChildItem -LiteralPath $packagePath -Recurse -File | ForEach-Object {

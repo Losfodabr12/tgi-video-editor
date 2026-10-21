@@ -1,0 +1,20 @@
+{
+  "artifact": "local",
+  "archive": "FrameStudio-0.4.0-windows-x64.zip",
+  "archive_bytes": 252218829,
+  "sha256": "ba99b219b6ccd1ae7e17c2e3c7d94b06bd30a8a42bb70ee9443e074f4e87f1ae",
+  "sha256sums_matches": true,
+  "manifest_version": "0.4.0",
+  "manifest_build": "4",
+  "manifest_product_version": "0.4.0+4",
+  "manifest_file_version": "0.4.0+4",
+  "manifest_commit": "9ccde88b921a3b1b8cd6d38d83703d80b4f791f8",
+  "manifest_working_tree_dirty": true,
+  "manifest_files_verified": 94,
+  "manifest_hash_mismatches": 0,
+  "file_version": "0.4.0+4",
+  "product_version": "0.4.0+4",
+  "includes_changelog_and_mcp_docs": true,
+  "project_format_version": 14,
+  "private_paths_in_report": false
+}

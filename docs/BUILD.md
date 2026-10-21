@@ -49,8 +49,8 @@ publica o ZIP, checksum e relatório em GitHub Releases com `GITHUB_TOKEN` e
 `contents: write` restrito ao job de publicação. Exemplo para esta versão:
 
 ```powershell
-git tag -a v0.3.0 -m "Frame Studio 0.3.0"
-git push origin v0.3.0
+git tag -a v0.4.0 -m "Frame Studio 0.4.0"
+git push origin v0.4.0
 ```
 
 Checkout 7.0.1, cache 6.1.0, upload-artifact 7.0.2 e download-artifact 8.0.2
@@ -64,6 +64,13 @@ transcritos no `RELATORIO_ALTERACOES.md` versionado, para revisão sem baixar
 assets. Cada registro identifica o SHA realmente executado; publicações
 posteriores da documentação não são confundidas com o commit validado.
 O estado final do workflow foi conferido na API antes da entrega.
+
+Crie a tag somente depois de o CI do commit da versão ficar verde.
+O ZIP contém `BUILD_INFO.json` com `version`, `build`, `productVersion`,
+`fileVersion`, commit e hashes de todos os arquivos empacotados. A versão do
+EXE precisa coincidir com o pubspec; a tag também é validada no empacotamento.
+`SHA256SUMS.txt` permite conferir o ZIP publicado. `CHANGELOG.md` e `docs/MCP.md`
+acompanham o aplicativo. Flutter é localizado pelo PATH ou por `FLUTTER_ROOT`.
 
 Nome, marca e cores ficam em `source/lib/app/app_identity.dart`. O gerador
 `tool/generate_branding.ps1` produz os ícones e `windows/runner/app_branding.h`;
