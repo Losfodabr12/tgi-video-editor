@@ -187,8 +187,11 @@ class EditorReadService {
   }
 
   Future<Map<String, Object?>> getLoudness(String id) async {
+    final generation = _readGeneration;
+    final revision = controller.projectRevision;
     final item = media(id);
     final path = await checkMedia(item);
+    _checkReadGeneration(generation);
     _requireAudio(item);
     final output = await _run([
       '-hide_banner',
@@ -210,6 +213,7 @@ class EditorReadService {
     return {
       'media_id': id,
       'scope': 'source',
+      'revision': revision,
       'integrated_lufs': metric(r'I:\s+(-?[\d.]+) LUFS'),
       'loudness_range_lu': metric(r'LRA:\s+([\d.]+) LU'),
       'true_peak_dbfs': metric(r'Peak:\s+(-?[\d.]+) dBFS'),
@@ -229,8 +233,10 @@ class EditorReadService {
       );
     }
     final p = controller.project, revision = controller.projectRevision;
+    final generation = _readGeneration;
     final frames = <Map<String, Object?>>[];
     for (final at in times) {
+      _checkReadGeneration(generation);
       final position = Duration(microseconds: (at * 1e6).round());
       final clip = mediaId == null
           ? p
@@ -260,6 +266,7 @@ class EditorReadService {
         });
       }
       final path = await checkMedia(item), bytes = <int>[];
+      _checkReadGeneration(generation);
       await _run(
         [
           '-hide_banner',
@@ -456,13 +463,48 @@ class EditorReadService {
     }
   }
 
+  final Set<EditorJobContext> _activeReads = {};
+  int _readGeneration = 0;
+  void _checkReadGeneration(int generation) {
+    if (generation != _readGeneration) {
+      throw const CommandError('cancelled', 'Leitura cancelada pelo app.');
+    }
+  }
+
+  Future<void> cancelAll() async {
+    _readGeneration++;
+    for (final ctx in _activeReads.toList()) {
+      ctx.cancelled = true;
+      await ctx.onCancel?.call();
+    }
+    await jobs.cancelAll();
+  }
+
   Future<String> _run(
     List<String> arguments,
     EditorJobContext ctx, {
     List<int>? bytes,
   }) async {
+    _activeReads.add(ctx);
+    try {
+      return await _runOwned(arguments, ctx, bytes: bytes);
+    } finally {
+      _activeReads.remove(ctx);
+      ctx.onCancel = null;
+    }
+  }
+
+  Future<String> _runOwned(
+    List<String> arguments,
+    EditorJobContext ctx, {
+    List<int>? bytes,
+  }) async {
     ctx.check();
-    final process = await ffmpeg.startCommand(arguments);
+    final process = await ffmpeg.startCommand([
+      '-protocol_whitelist',
+      'file,pipe',
+      ...arguments,
+    ]);
     ctx.onCancel = () async {
       await process.cancel();
     };
@@ -510,5 +552,8 @@ class EditorReadService {
     return output.toString();
   }
 
-  Future<void> dispose() => jobs.close();
+  Future<void> dispose() async {
+    await cancelAll();
+    await jobs.close();
+  }
 }

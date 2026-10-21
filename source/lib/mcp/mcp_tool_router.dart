@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../core/commands/command_engine.dart';
+import '../domain/models/project.dart';
 import '../features/editor/application/editor_controller.dart';
 import 'editor_read_service.dart';
 import 'editor_plans.dart';
@@ -25,7 +26,7 @@ class McpToolRouter {
   final EditorReadService reads;
   final EditorPlans plans;
   final Future<String> Function(String filename)? resolveExport;
-  final Future<void> Function(String path)? authorizeExport;
+  final Future<void> Function(TgiProject project, String path)? authorizeExport;
   final McpActivityCallback? onActivity;
   List<Map<String, Object?>> listTools() =>
       mcpToolCatalog.values.map((t) => t.toJson()).toList();
@@ -214,8 +215,8 @@ class McpToolRouter {
               settings: c.commandExportSettings.copyWith(
                 audioOnly: path.toLowerCase().endsWith('.wav'),
               ),
-              authorize: (_, path) async {
-                await authorizeExport?.call(path);
+              authorize: (project, path) async {
+                await authorizeExport?.call(project, path);
               },
             )
             .toJson();

@@ -24,6 +24,7 @@ class McpTestClient {
       verb,
       Uri.parse('http://127.0.0.1:$port/mcp'),
     );
+    request.persistentConnection = false;
     request.headers.set('Authorization', 'Bearer ${bearer ?? token}');
     request.headers.set('Accept', 'application/json, text/event-stream');
     request.headers.contentType = ContentType.json;

@@ -36,6 +36,7 @@ class EditorMcpServer {
   final Map<String, _McpSession> _sessions = {};
   DateTime _rateStart = DateTime.now();
   int _rateCount = 0;
+  int _inFlight = 0;
   bool get running => _server != null;
   int get boundPort => _server?.port ?? port;
   int get connectedClients =>
@@ -80,7 +81,7 @@ class EditorMcpServer {
     _sessions.clear();
     router.plans.clear();
     await server?.close(force: true);
-    await router.reads.jobs.cancelAll();
+    await router.reads.cancelAll();
     onChanged?.call();
   }
 
@@ -96,6 +97,7 @@ class EditorMcpServer {
 
   Future<void> _handle(HttpRequest request, int generation) async {
     final response = request.response;
+    var counted = false;
     Future<void> reject(int status, String reason) async {
       onSecurityEvent?.call(reason);
       response.statusCode = status;
@@ -147,6 +149,12 @@ class EditorMcpServer {
         await reject(401, 'invalid_token');
         return;
       }
+      if (_inFlight >= 8) {
+        await reject(429, 'concurrency_limit');
+        return;
+      }
+      _inFlight++;
+      counted = true;
       final sessionId = request.headers.value('Mcp-Session-Id'),
           session = _sessions[sessionId];
       if (request.method == 'GET') {
@@ -360,12 +368,17 @@ class EditorMcpServer {
       } else {
         await response.close();
       }
-    } catch (_) {
+    } catch (e) {
+      onSecurityEvent?.call('handler_error:${e.runtimeType}');
       try {
         response.statusCode = 400;
         await response.close();
       } catch (_) {
         /* Disconnected or emergency stop. */
+      }
+    } finally {
+      if (counted) {
+        _inFlight--;
       }
     }
   }
