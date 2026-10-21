@@ -447,11 +447,17 @@ class EditorReadService {
 
   EditorJob export(
     String outputPath, {
+    TgiProject? snapshot,
+    int? revision,
+    String kind = 'export',
+    Map<String, Object?> resultDetails = const {},
     FfmpegExportSettings settings = FfmpegExportSettings.uiDefault,
     Future<void> Function(TgiProject, String)? authorize,
   }) {
-    final p = controller.project;
-    return jobs.start('export', controller.projectRevision, p.id, (ctx) async {
+    final p = snapshot ?? controller.project;
+    return jobs.start(kind, revision ?? controller.projectRevision, p.id, (
+      ctx,
+    ) async {
       await authorize?.call(p, outputPath);
       ctx.check();
       ctx.onCancel = () {
@@ -465,6 +471,7 @@ class EditorReadService {
       );
       ctx.check();
       return {
+        ...resultDetails,
         'filename': outputPath.split(Platform.pathSeparator).last,
         'resolution': settings.resolution.id,
       };

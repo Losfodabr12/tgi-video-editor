@@ -7,6 +7,7 @@ import '../features/editor/application/editor_controller.dart';
 import 'editor_read_service.dart';
 import 'editor_plans.dart';
 import 'mcp_tool_catalog.dart';
+import 'cut_check.dart';
 
 typedef McpActivityCallback =
     void Function(
@@ -31,7 +32,7 @@ class McpToolRouter {
   final Future<void> Function(TgiProject project, String path)? authorizeExport;
   final McpActivityCallback? onActivity;
   List<Map<String, Object?>> listTools() =>
-      mcpToolCatalog.values.map((t) => t.toJson()).toList();
+      mcpRuntimeToolCatalog.values.map((t) => t.toJson()).toList();
   Future<Map<String, Object?>> call(
     String name,
     Map<String, Object?> args,
@@ -39,10 +40,10 @@ class McpToolRouter {
     final before = reads.controller.projectRevision;
     Map<String, Object?> result;
     try {
-      final definition = mcpToolCatalog[name];
+      final definition = mcpRuntimeToolCatalog[name];
       if (definition == null) {
         throw CommandError('unknown_tool', 'Tool desconhecida.', {
-          'valid_tools': mcpToolCatalog.keys.toList(),
+          'valid_tools': mcpRuntimeToolCatalog.keys.toList(),
         });
       }
       validateValue(args, definition.schema, 'arguments');
@@ -252,6 +253,45 @@ class McpToolRouter {
       case 'reframe_9x16':
         final revision = a.remove('base_revision') as int;
         return plans.previewMacro(name, a, baseRevision: revision).toJson();
+      case 'export_cut_check':
+        checkRevision(a['base_revision'] as int, c.projectRevision);
+        final plan = plans.inspect(a['plan_id'] as String);
+        final check = buildCutCheck(plan);
+        if (resolveExport == null) {
+          throw const CommandError(
+            'export_directory_required',
+            'Escolha a pasta de exportação nas configurações MCP do app.',
+          );
+        }
+        final path = await resolveExport!(a['filename'] as String);
+        plans.inspect(plan.id);
+        return reads
+            .export(
+              path,
+              snapshot: check.project,
+              revision: plan.revision,
+              kind: 'export_cut_check',
+              settings: c.commandExportSettings.copyWith(
+                clearRange: true,
+                audioOnly: path.toLowerCase().endsWith('.wav'),
+              ),
+              resultDetails: {
+                'plan_id': plan.id,
+                'cut_count': check.cutCount,
+                'window_count': check.windows.length,
+                'duration': check.project.timelineDuration.inMicroseconds / 1e6,
+                'windows': [
+                  for (final w in check.windows)
+                    {'start': w.$1 / 1e6, 'end': w.$2 / 1e6},
+                ],
+                'project_edited': false,
+              },
+              authorize: (project, path) async {
+                plans.inspect(plan.id);
+                await authorizeExport?.call(project, path);
+              },
+            )
+            .toJson();
       case 'export':
         checkRevision(a['base_revision'] as int, c.projectRevision);
         if (resolveExport == null) {

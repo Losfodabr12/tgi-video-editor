@@ -148,6 +148,12 @@ class EditorPlans {
     return {...result, 'plan_id': id};
   }
 
+  EditorPlan inspect(String id) {
+    final plan = get(id);
+    _check(plan);
+    return plan;
+  }
+
   EditorPlan previewCommands(
     List<EditorCommand> commands, {
     required int baseRevision,

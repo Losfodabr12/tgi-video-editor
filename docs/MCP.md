@@ -1,10 +1,10 @@
 # MCP do editor
 
-O app expõe **33 tools** e o resource `editor://project/summary` para editar o
+O app expõe **34 tools** e o resource `editor://project/summary` para editar o
 projeto aberto. Funciona inteiramente local, com FFmpeg e Whisper já usados pelo
 editor. Não precisa de chave de API de IA no aplicativo.
 
-## Ligar e conectar
+## Cortes: presets e proteção
 
 Os presets de `remove_silences` são `mode="suave"|"normal"|"agressivo"`:
 
@@ -29,7 +29,7 @@ por palavra, `remove_silences` protege frases inteiras conservadoramente;
 `cut_by_transcript` mantém seus limites de frase e informa a falta de precisão.
 Sem transcrição, o plano avisa que a proteção não foi aplicada e mantém o padding.
 
-## Ativação
+## Métricas do plano
 
 Planos das macros de corte incluem `cut_summary`: `cut_count` (intervalos de
 remoção efetivos, incluindo bordas), `internal_join_count`, `seconds_removed`,
@@ -41,7 +41,21 @@ com tempos antigos, novo ponto e timestamps `HH:MM:SS.mmm`),
 de palavras são da fonte. `time_map` contém os intervalos completos. A revisão
 local também exibe métricas e avisos. Planos sem cortes retornam contagens zero.
 
-## Abrir o servidor
+## Ouvir antes de aprovar
+
+Depois de `preview_plan`, chame `export_cut_check` com `plan_id`,
+`base_revision` e um nome `.wav` (áudio) ou `.mp4` (vídeo/áudio). Consulte
+`get_job`/`cancel_job`. A composição usa o snapshot simulado, incluindo fades,
+mixagem e camadas, sem aplicar/aprovar o plano ou alterar revisão/histórico.
+Captura ±0,5 s de cada um dos dez primeiros pontos (bordas são limitadas à
+timeline). Janelas sobrepostas são unidas para não repetir conteúdo; a saída
+tem até cerca de 10 s. `result.windows` informa os intervalos da timeline simulada.
+Não adiciona fades nas junções entre amostras. A autorização revalida mídias e
+pasta escolhida; caminhos, sobrescrita e planos antigos/expirados são rejeitados.
+É somente leitura do projeto (`readOnlyHint=true`), porém grava esse arquivo;
+`idempotentHint=false`. Somente o usuário pode avaliar o resultado de ouvido.
+
+## Ligar e conectar
 
 1. Abra o projeto e entre em **Arquivo → Configurações de IA (MCP)**.
 2. Escolha a porta (padrão **47321**). Para exportar, escolha também uma pasta.
@@ -147,6 +161,7 @@ a revisão de exemplo. O catálogo exato de campos, limites e enums fica em
 | `reframe_9x16` | Preview de crop central estático e saída 1080×1920; resolução entra no mesmo undo. | `{"clip_id":"video_1","base_revision":7}` |
 | `preview_plan` | Prévia de lote ou da macro remove_silences, sem editar. | `{"macro":"remove_silences","arguments":{"clip_id":"video_1","job_id":"job_1","padding":0.12},"base_revision":7}` |
 | `apply_plan` | Aplica snapshot aprovado na mesma revisão, em uma transação. | `{"plan_id":"plan_1","base_revision":7}` |
+| `export_cut_check` | Job de amostra dos dez primeiros cortes do plano, sem editar. Pasta de export escolhida; não sobrescreve. | `{"plan_id":"plan_1","filename":"ouvir-cortes.wav","base_revision":7}` |
 | `split_clip` | Divide vídeo/áudio/texto/imagem e vínculos; o tempo deve estar dentro do clipe. IDs mudam. | `{"clip_id":"video_1","at":4.5,"base_revision":7}` |
 | `trim_clip` | Ajusta fonte de vídeo/áudio; mínimo 0,1 s na timeline; respeita espaço e bloqueios. | `{"clip_id":"video_1","source_start":1,"source_duration":6,"base_revision":7}` |
 | `delete_clip` | Exclui grupo; ripple fecha espaço e ajusta marcadores/transições. | `{"clip_id":"video_1","ripple":true,"base_revision":7}` |

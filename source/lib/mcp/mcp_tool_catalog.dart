@@ -38,10 +38,12 @@ class McpToolDefinition {
     this.schema, {
     this.readOnly = false,
     this.destructive = false,
+    this.idempotent,
   });
   final String name, description;
   final Map<String, dynamic> schema;
   final bool readOnly, destructive;
+  final bool? idempotent;
   Map<String, Object?> toJson() => {
     'name': name,
     'description': description,
@@ -49,7 +51,7 @@ class McpToolDefinition {
     'annotations': {
       'readOnlyHint': readOnly,
       'destructiveHint': destructive,
-      'idempotentHint': readOnly,
+      'idempotentHint': idempotent ?? readOnly,
       'openWorldHint': false,
     },
   };
@@ -363,5 +365,27 @@ const macroToolNames = [
 final mcpToolCatalog = <String, McpToolDefinition>{
   for (final name in macroToolNames) name: _mcpToolDefinitions[name]!,
   for (final entry in _mcpToolDefinitions.entries)
+    if (!macroToolNames.contains(entry.key)) entry.key: entry.value,
+};
+
+/// Original public catalog remains stable for consumers of the base tool set.
+/// The server advertises this full registry, including file-output readers.
+final mcpRuntimeToolCatalog = <String, McpToolDefinition>{
+  for (final name in macroToolNames) name: mcpToolCatalog[name]!,
+  'export_cut_check': McpToolDefinition(
+    'export_cut_check',
+    'Ouve antes de aprovar: plan_id, filename .mp4/.wav e base_revision. Exporta ~1s ao redor dos 10 primeiros cortes simulados na pasta escolhida; retorna job_id. Não edita o projeto; não sobrescreve arquivos.',
+    objectSchema(
+      {
+        'plan_id': stringSchema(),
+        'filename': stringSchema(),
+        'base_revision': revisionSchema,
+      },
+      ['plan_id', 'filename', 'base_revision'],
+    ),
+    readOnly: true,
+    idempotent: false,
+  ),
+  for (final entry in mcpToolCatalog.entries)
     if (!macroToolNames.contains(entry.key)) entry.key: entry.value,
 };

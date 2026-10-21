@@ -886,3 +886,19 @@ proteção de palavras e fades efetivamente ativos no áudio; um plano sem corte
 não anuncia emendas. A revisão nativa exibe métricas e avisos antes do resumo
 extenso. Descrições das macros mantidas curtas e campos documentados.
 `analyze` sem problemas; suíte padrão: **250 aprovados / 15 opcionais ignorados**.
+
+Etapa 5: `export_cut_check` disponível no servidor (34 tools; macros e amostra
+antes dos comandos individuais). Recebe plano/revisão/nome e gera job de áudio
+ou vídeo com janelas de ±0,5 s nos dez primeiros cortes simulados; janelas
+sobrepostas são unidas. Usa o snapshot com fades e composição, sem editar ou
+aprovar o projeto. Respeita pasta de exportação escolhida, mídias autorizadas,
+cancelamento, expiração/revisão e proibição de sobrescrita. Anotada como leitura
+do projeto, com gravação de arquivo explícita e `idempotentHint=false`.
+O catálogo público base foi preservado e o registro completo do servidor
+inclui a extensão; o teste anterior de descoberta passou sem edição.
+
+Contrato via HTTP real: listagem, amostra antes da aprovação, falta de pasta,
+path traversal, arquivo existente, revisão antiga, aprovação local,
+preview → apply → undo com serialização idêntica. Executado também com FFmpeg:
+WAV decodificado com **2,000 s** para duas janelas de teste. `analyze` sem
+problemas; suíte completa com FFmpeg: **267 aprovados / zero ignorados**.
