@@ -14,6 +14,7 @@ import '../services/auto_caption_service.dart';
 import '../services/ffmpeg_export_settings.dart';
 import 'editor_read_service.dart';
 import 'project_reads.dart';
+import 'cut_plan_summary.dart';
 
 class EditorPlan {
   EditorPlan({
@@ -455,6 +456,36 @@ class EditorPlans {
         'empty_plan',
         'A macro não encontrou alterações para aplicar.',
       );
+    }
+    if (effects['time_map'] case final Map timeMap) {
+      final map = TimelineTimeMap([
+        for (final r in timeMap['removed_ranges'] as List)
+          (
+            ((r['start'] as num) * 1e6).round(),
+            ((r['end'] as num) * 1e6).round(),
+          ),
+      ], end: before.timelineDuration.inMicroseconds);
+      final selection = const TimelineRemapper().preflight(
+        before,
+        clip,
+        scope: args['scope'] as String? ?? 'all_tracks',
+        lockedTracks: args['locked_tracks'] as String? ?? 'fail',
+      );
+      effects = {
+        ...effects,
+        'cut_summary': cutPlanSummary(
+          TimelineRemapResult(
+            next,
+            map,
+            selection,
+            args['scope'] as String? ?? 'all_tracks',
+          ),
+          durationBeforeUs: before.timelineDuration.inMicroseconds,
+          joinFadeMs: args['join_fade_ms'] as int? ?? 8,
+          wordProtection:
+              (effects['word_protection'] as Map?)?['active'] == true,
+        ),
+      };
     }
     return _save(
       before,

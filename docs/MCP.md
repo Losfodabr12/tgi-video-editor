@@ -31,6 +31,18 @@ Sem transcrição, o plano avisa que a proteção não foi aplicada e mantém o 
 
 ## Ativação
 
+Planos das macros de corte incluem `cut_summary`: `cut_count` (intervalos de
+remoção efetivos, incluindo bordas), `internal_join_count`, `seconds_removed`,
+`duration_before`, `duration_after`, `shortest_keep_seconds`,
+`longest_keep_seconds`, `retained_segment_count`, `first_cuts` (até 10 intervalos
+com tempos antigos, novo ponto e timestamps `HH:MM:SS.mmm`),
+`word_protection_active`, `join_fade_ms`, `join_fade_active` e
+`faded_audio_join_count`. Todos os segundos são da timeline; o padding e a margem
+de palavras são da fonte. `time_map` contém os intervalos completos. A revisão
+local também exibe métricas e avisos. Planos sem cortes retornam contagens zero.
+
+## Abrir o servidor
+
 1. Abra o projeto e entre em **Arquivo → Configurações de IA (MCP)**.
 2. Escolha a porta (padrão **47321**). Para exportar, escolha também uma pasta.
 3. Mantenha **Aprovar plano antes de aplicar** ligado para revisar cada edição.

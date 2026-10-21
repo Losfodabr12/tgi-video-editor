@@ -878,3 +878,11 @@ Novos testes nos três modos com 132 clipes verificaram ausência de novas
 sobreposições, duração original menos remoções efetivas, palavras preservadas e
 legendas alinhadas dentro de um frame. `analyze` sem problemas; suíte padrão:
 **248 aprovados / 15 opcionais ignorados**.
+
+Etapa 4: `cut_summary` no preview das duas macros de corte com contagens,
+segundos removidos, durações antes/depois, extremos dos trechos mantidos e os
+dez primeiros cortes com tempos antigos/novo ponto e timestamps. Informa
+proteção de palavras e fades efetivamente ativos no áudio; um plano sem cortes
+não anuncia emendas. A revisão nativa exibe métricas e avisos antes do resumo
+extenso. Descrições das macros mantidas curtas e campos documentados.
+`analyze` sem problemas; suíte padrão: **250 aprovados / 15 opcionais ignorados**.

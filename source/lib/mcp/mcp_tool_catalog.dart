@@ -302,7 +302,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'remove_silences': McpToolDefinition(
     'remove_silences',
-    'Prévia de remoção de silêncios: clip_id, threshold_db, minimum, padding, scope e locked_tracks. Sem job_id inicia análise; com job pronto remapeia A/V, camadas, keyframes e marcadores. Padrão all_tracks; bloqueios falham. Aplicar: apply_plan; um undo.',
+    'Prévia: clip_id, mode, protect_words, join_fade_ms e min_keep_ms. Sem job_id inicia análise; com job pronto retorna cortes/durações e remapeia camadas. scope=all_tracks; bloqueios falham. Aplicar: apply_plan; um undo.',
     objectSchema(
       {
         ...removeSilencesArguments['properties'] as Map<String, dynamic>,
@@ -314,7 +314,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'cut_by_transcript': McpToolDefinition(
     'cut_by_transcript',
-    'Prévia: clip_id + keep_cue_indices da transcrição pronta. Mantém as falas escolhidas e remapeia todas as camadas; falha em bloqueios. Aplicar: apply_plan; um undo.',
+    'Prévia: clip_id, keep_cue_indices, protect_words, join_fade_ms e min_keep_ms. Mantém falas escolhidas e remapeia camadas; retorna métricas, falha em bloqueios. Aplicar: apply_plan; um undo.',
     objectSchema(
       {
         'clip_id': clipIdSchema,

@@ -377,6 +377,12 @@ class _McpSettingsDialogState extends State<McpSettingsDialog> {
               child: SelectableText(
                 const JsonEncoder.withIndent('  ').convert({
                   'base_revision': plan.revision,
+                  if (summary['cut_summary'] != null)
+                    'cut_summary': summary['cut_summary'],
+                  if (summary['word_protection'] != null)
+                    'word_protection': summary['word_protection'],
+                  if (summary['warnings'] != null)
+                    'warnings': summary['warnings'],
                   'before': summary['before'],
                   'after': summary['after'],
                   if (plan.exportSettings != null)
