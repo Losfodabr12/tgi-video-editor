@@ -15,18 +15,29 @@ final commandListSchema = <String, dynamic>{
   'minItems': 1,
   'maxItems': 500,
   'items': {
+    'type': 'object',
+    'properties': {
+      'tool': stringSchema(
+        commandCatalog.keys
+            .where((name) => !['undo', 'redo', 'remap_timeline'].contains(name))
+            .toList(),
+      ),
+      'command': {
+        ...stringSchema(),
+        'description': 'Alias legado de tool; não combine os dois.',
+      },
+      'arguments': {'type': 'object', 'additionalProperties': true},
+      'base_revision': revisionSchema,
+    },
+    'required': ['arguments'],
+    'additionalProperties': false,
     'oneOf': [
-      for (final e in commandCatalog.entries.where(
-        (e) => !['undo', 'redo'].contains(e.key),
-      ))
-        objectSchema(
-          {
-            'command': stringSchema([e.key]),
-            'arguments': e.value.schema,
-            'base_revision': revisionSchema,
-          },
-          ['command', 'arguments'],
-        ),
+      {
+        'required': ['tool'],
+      },
+      {
+        'required': ['command'],
+      },
     ],
   },
 };
@@ -268,28 +279,19 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
       'properties': {
         'commands': commandListSchema,
         'macro': stringSchema(['remove_silences']),
-        'arguments': removeSilencesArguments,
+        'arguments': {'type': 'object', 'additionalProperties': true},
         'base_revision': revisionSchema,
         'label': stringSchema(),
       },
       'oneOf': [
-        objectSchema(
-          {
-            'commands': commandListSchema,
-            'base_revision': revisionSchema,
-            'label': stringSchema(),
-          },
-          ['commands', 'base_revision'],
-        ),
-        objectSchema(
-          {
-            'macro': stringSchema(['remove_silences']),
-            'arguments': removeSilencesArguments,
-            'base_revision': revisionSchema,
-          },
-          ['macro', 'arguments', 'base_revision'],
-        ),
+        {
+          'required': ['commands'],
+        },
+        {
+          'required': ['macro', 'arguments'],
+        },
       ],
+      'required': ['base_revision'],
     },
     readOnly: true,
   ),

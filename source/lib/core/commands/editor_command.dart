@@ -21,16 +21,18 @@ class EditorCommand {
         jsonDecode(jsonEncode(arguments)) as Map<String, dynamic>,
       );
   factory EditorCommand.fromJson(Map<String, dynamic> json) {
-    if (json['command'] is! String ||
+    final name = json['tool'] ?? json['command'];
+    if (name is! String ||
+        (json.containsKey('tool') && json.containsKey('command')) ||
         json['arguments'] is! Map ||
         (json['base_revision'] != null && json['base_revision'] is! int)) {
       throw const CommandError(
         'invalid_command',
-        'Use command (string), arguments (object) e base_revision (integer).',
+        'Use tool (string), arguments (object) e base_revision (integer). command é um alias legado; não combine os dois.',
       );
     }
     return EditorCommand(
-      json['command'] as String,
+      name,
       Map<String, Object?>.from(json['arguments'] as Map),
       baseRevision: json['base_revision'] as int?,
     );
@@ -73,6 +75,7 @@ void validateArguments(
   for (final entry in values.entries) {
     final field = properties[entry.key] as Map<String, dynamic>?;
     if (field == null) {
+      if (schema['additionalProperties'] != false) continue;
       throw CommandError(
         'invalid_argument',
         'Campo desconhecido: $path.${entry.key}.',
@@ -85,21 +88,6 @@ void validateArguments(
 
 void validateValue(Object? value, Map<String, dynamic> field, String path) {
   if (field['oneOf'] is List) {
-    if (value is Map && value['command'] is String) {
-      final candidates = (field['oneOf'] as List)
-          .where(
-            (s) =>
-                ((s as Map)['properties'] as Map?)?['command'] is Map &&
-                ((((s['properties'] as Map)['command'] as Map)['enum'] as List?)
-                        ?.contains(value['command']) ??
-                    false),
-          )
-          .toList();
-      if (candidates.length == 1) {
-        validateValue(value, candidates.single as Map<String, dynamic>, path);
-        return;
-      }
-    }
     var matched = 0;
     for (final alternative in field['oneOf'] as List) {
       try {
@@ -116,7 +104,6 @@ void validateValue(Object? value, Map<String, dynamic> field, String path) {
         {'matching_schemas': matched},
       );
     }
-    return;
   }
   final valid = switch (field['type']) {
     'string' => value is String,
@@ -125,7 +112,7 @@ void validateValue(Object? value, Map<String, dynamic> field, String path) {
     'boolean' => value is bool,
     'array' => value is List,
     'object' => value is Map<String, Object?>,
-    _ => false,
+    _ => !field.containsKey('type'),
   };
   if (!valid) {
     throw CommandError('invalid_argument', 'Tipo inválido em $path.', {

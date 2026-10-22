@@ -8,6 +8,7 @@ import 'editor_read_service.dart';
 import 'editor_plans.dart';
 import 'mcp_tool_catalog.dart';
 import 'cut_check.dart';
+import 'mcp_command_input.dart';
 
 typedef McpActivityCallback =
     void Function(
@@ -47,9 +48,24 @@ class McpToolRouter {
         });
       }
       validateValue(args, definition.schema, 'arguments');
+      if (name == 'preview_plan' && args.containsKey('macro')) {
+        validateArguments(
+          Map<String, Object?>.from(args['arguments'] as Map),
+          removeSilencesArguments,
+        );
+        if (args.containsKey('commands') || args.containsKey('label')) {
+          throw const CommandError(
+            'invalid_argument',
+            'Não combine macro com commands ou label.',
+          );
+        }
+      } else if (name == 'preview_plan' && args.containsKey('arguments')) {
+        throw const CommandError('invalid_argument', 'arguments exige macro.');
+      }
       result = await _call(name, Map<String, Object?>.of(args));
     } on CommandError catch (e) {
-      result = {'error': e.toJson()};
+      final commandName = e.details['command'] as String? ?? name;
+      result = {'error': commandInputError(e, commandName).toJson()};
     } catch (e) {
       result = {
         'error': const CommandError(
@@ -137,9 +153,7 @@ class McpToolRouter {
   ) async {
     final c = reads.controller;
     int page(String key, int fallback) => (a[key] as int?) ?? fallback;
-    List<EditorCommand> commands() => (a['commands'] as List)
-        .map((e) => EditorCommand.fromJson(Map<String, dynamic>.from(e as Map)))
-        .toList();
+    List<EditorCommand> commands() => parseMcpCommands(a['commands'] as List);
     if (commandCatalog.containsKey(name)) {
       final revision = a.remove('base_revision') as int;
       final cmd = EditorCommand(name, a, baseRevision: revision);
