@@ -418,7 +418,12 @@ class EditorReadService {
     });
   }
 
-  EditorJob transcribe(String id, {String? language}) {
+  EditorJob transcribe(
+    String id, {
+    String? language,
+    String? vocabulary,
+    bool? vad,
+  }) {
     final p = controller.project, item = media(id, p);
     _requireAudio(item);
     return jobs.start('transcribe', controller.projectRevision, p.id, (
@@ -440,6 +445,8 @@ class EditorReadService {
       final cues = await service.generateCaptionsForMedia(
         item.copyWith(filePath: path),
         languageCode: usedLanguage,
+        vocabulary: vocabulary ?? controller.transcripts.vocabulary,
+        vad: vad ?? controller.transcripts.vad,
         onProgress: ctx.update,
       );
       ctx.check();
@@ -453,6 +460,7 @@ class EditorReadService {
       return {
         'media_id': id,
         'cue_count': cues.length,
+        'vad': vad ?? controller.transcripts.vad,
         'scope': 'source',
         'language': usedLanguage,
       };

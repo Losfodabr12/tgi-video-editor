@@ -105,9 +105,13 @@ class _AutoCaptionsDialog extends StatefulWidget {
     required this.onOpenDownloads,
     this.initialSettings,
     this.defaultLanguage = 'pt',
+    this.defaultVocabulary = '',
+    this.defaultVad = true,
   });
 
   final String defaultLanguage;
+  final String defaultVocabulary;
+  final bool defaultVad;
   final bool hasPaidPlan;
   final VoidCallback onOpenDownloads;
   final _AutoCaptionsDialogResult? initialSettings;
@@ -191,6 +195,8 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
   ];
 
   late final TextEditingController _languageController;
+  late final TextEditingController _vocabularyController;
+  late bool _vad;
   late String _modelName;
   List<_WhisperModelOption> _modelOptions = const [
     _WhisperModelOption(value: 'base', label: 'Equilibrado recomendado'),
@@ -214,6 +220,10 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
     _languageController = TextEditingController(
       text: initial?.languageCode ?? widget.defaultLanguage,
     );
+    _vocabularyController = TextEditingController(
+      text: initial?.vocabulary ?? widget.defaultVocabulary,
+    );
+    _vad = initial?.vad ?? widget.defaultVad;
     _modelName = initial?.modelName ?? defaultLocalWhisperModelName;
     _captionStyleLabel =
         _captionStylePresets.any(
@@ -246,6 +256,7 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
   @override
   void dispose() {
     _languageController.dispose();
+    _vocabularyController.dispose();
     super.dispose();
   }
 
@@ -361,6 +372,20 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
                 ),
               ),
               const SizedBox(height: TgiSpacing.md),
+              TextField(
+                controller: _vocabularyController,
+                maxLength: 2000,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  labelText: 'Vocabulário / prompt inicial',
+                  hintText: 'Nomes e termos deste projeto',
+                ),
+              ),
+              SwitchListTile(
+                title: const Text('Detectar atividade de voz (VAD)'),
+                value: _vad,
+                onChanged: (v) => setState(() => _vad = v),
+              ),
               Text('Caracteres por legenda: $_maxCharsPerCue'),
               Slider(
                 value: _maxCharsPerCue.toDouble(),
@@ -507,6 +532,8 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
         languageCode: _languageController.text.trim().isEmpty
             ? null
             : _languageController.text.trim(),
+        vocabulary: _vocabularyController.text.trim(),
+        vad: _vad,
         maxCharsPerCue: _maxCharsPerCue,
         styleLabel: _captionStyleLabel,
         fontFamily: _fontFamily,

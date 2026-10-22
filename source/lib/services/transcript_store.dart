@@ -12,6 +12,8 @@ class TranscriptStore {
   TranscriptStore({this.directoryOverride});
   final String? directoryOverride;
   String language = 'pt';
+  String vocabulary = '';
+  bool vad = true;
   String? projectPath;
   String? _projectId;
   bool _bound = false;
@@ -44,6 +46,8 @@ class TranscriptStore {
     _projectId = project.id;
     projectPath = path;
     language = 'pt';
+    vocabulary = '';
+    vad = true;
     _entries.clear();
     final file = File(_path(project, path));
     if (!file.existsSync()) return;
@@ -52,6 +56,8 @@ class TranscriptStore {
           jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       if (data['schema'] != 1 || data['project_id'] != project.id) return;
       language = data['language'] as String? ?? 'pt';
+      vocabulary = data['vocabulary'] as String? ?? '';
+      vad = data['vad'] as bool? ?? true;
       for (final row in (data['media'] as List? ?? const [])) {
         final entry = Map<String, dynamic>.from(row as Map);
         final item = project.mediaItemById(entry['id'] as String);
@@ -101,6 +107,8 @@ class TranscriptStore {
     // In particular, ordinary v14 saves must not add an unnecessary disk write.
     if (_entries.isEmpty &&
         language == 'pt' &&
+        vocabulary.isEmpty &&
+        vad &&
         !File(_path(project, path ?? projectPath)).existsSync()) {
       if (path != null) projectPath = path;
       return;
@@ -113,6 +121,8 @@ class TranscriptStore {
         'schema': 1,
         'project_id': project.id,
         'language': language,
+        'vocabulary': vocabulary,
+        'vad': vad,
         'media': _entries.values.toList(),
       }),
     );

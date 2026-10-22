@@ -7,6 +7,7 @@ import '../domain/models/media_item.dart';
 import 'app_component_paths.dart';
 import 'ffmpeg_service.dart';
 import 'whisper_runtime.dart';
+import 'package:crypto/crypto.dart';
 
 const defaultLocalWhisperModelName = 'base';
 const localWhisperModelNames = <String>[
@@ -94,6 +95,8 @@ abstract class AutoCaptionService {
     MediaItem mediaItem, {
     String? languageCode,
     String modelName = '',
+    String vocabulary = '',
+    bool vad = true,
     int maxCharsPerCue = 44,
     AutoCaptionProgressCallback? onProgress,
   });
@@ -135,6 +138,8 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
     MediaItem mediaItem, {
     String? languageCode,
     String modelName = '',
+    String vocabulary = '',
+    bool vad = true,
     int maxCharsPerCue = 44,
     AutoCaptionProgressCallback? onProgress,
   }) {
@@ -144,6 +149,8 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
         mediaItem,
         languageCode: languageCode,
         modelName: modelName,
+        vocabulary: vocabulary,
+        vad: vad,
         maxCharsPerCue: maxCharsPerCue,
         onProgress: onProgress,
       ),
@@ -154,6 +161,8 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
     MediaItem mediaItem, {
     required String? languageCode,
     required String modelName,
+    required String vocabulary,
+    required bool vad,
     required int maxCharsPerCue,
     required AutoCaptionProgressCallback? onProgress,
   }) async {
@@ -207,6 +216,8 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
           chunk,
           config: config,
           languageCode: languageCode,
+          vocabulary: vocabulary,
+          vadModel: vad ? await _resolveVadModel() : null,
           outputDirectory: tempDir,
           chunkIndex: index,
           chunkCount: chunks.length,
@@ -239,6 +250,8 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
     FfmpegAudioChunk chunk, {
     required _LocalWhisperConfig config,
     required String? languageCode,
+    required String vocabulary,
+    required String? vadModel,
     required Directory outputDirectory,
     required int chunkIndex,
     required int chunkCount,
@@ -259,6 +272,9 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       '-pp',
     ];
 
+    arguments.addAll(
+      whisperSpeechArguments(vocabulary: vocabulary, vadModel: vadModel),
+    );
     final normalizedLanguage = languageCode?.trim();
     if (normalizedLanguage != null && normalizedLanguage.isNotEmpty) {
       arguments.addAll(['-l', normalizedLanguage]);
@@ -396,6 +412,24 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
     throw AutoCaptionException(
       'whisper.cpp local nao foi encontrado.',
       _localWhisperInstallHint(defaultLocalWhisperModelName),
+    );
+  }
+
+  Future<String> _resolveVadModel() async {
+    for (final directory in _whisperModelDirectories()) {
+      final path = _join(directory, 'ggml-silero-v5.1.2.bin');
+      if (await File(path).exists()) {
+        final hash = await TranscriptVadHash.sha(path);
+        if (hash != TranscriptVadHash.expected) {
+          throw const AutoCaptionException(
+            'Modelo VAD falhou no SHA-256. Execute setup_tools.',
+          );
+        }
+        return path;
+      }
+    }
+    throw const AutoCaptionException(
+      'Modelo VAD ausente. Execute setup_tools ou desligue VAD.',
     );
   }
 
@@ -1188,4 +1222,24 @@ String _lastOutputLines(String value, {int maxLines = 18}) {
     return '';
   }
   return lines.skip(math.max(0, lines.length - maxLines)).join('\n');
+}
+
+class TranscriptVadHash {
+  static const expected =
+      '29940d98d42b91fbd05ce489f3ecf7c72f0a42f027e4875919a28fb4c04ea2cf';
+  static Future<String> sha(String path) async =>
+      (await sha256.bind(File(path).openRead()).first).toString();
+}
+
+List<String> whisperSpeechArguments({
+  String vocabulary = '',
+  String? vadModel,
+}) {
+  if (vocabulary.length > 2000) {
+    throw const AutoCaptionException('Vocabulário: máximo de 2000 caracteres.');
+  }
+  return [
+    if (vocabulary.trim().isNotEmpty) ...['--prompt', vocabulary.trim()],
+    if (vadModel != null) ...['--vad', '-vm', vadModel],
+  ];
 }

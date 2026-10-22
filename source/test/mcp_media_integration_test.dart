@@ -27,6 +27,8 @@ class _Captions implements AutoCaptionService {
     MediaItem item, {
     String? languageCode,
     String modelName = '',
+    String vocabulary = '',
+    bool vad = true,
     int maxCharsPerCue = 44,
     AutoCaptionProgressCallback? onProgress,
   }) async => const [

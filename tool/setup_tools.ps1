@@ -70,6 +70,7 @@ if (-not $SkipWhisper) {
     if ($LASTEXITCODE -ne 0) { throw 'Whisper nao inicializou.' }
     $models = Join-Path $toolsPath 'whisper\models'
     New-Item -ItemType Directory -Path $models -Force | Out-Null
+    Get-VerifiedFile -Uri 'https://huggingface.co/ggml-org/whisper-vad/resolve/9ffd54a1e1ee413ddf265af9913beaf518d1639b/ggml-silero-v5.1.2.bin' -Path (Join-Path $models 'ggml-silero-v5.1.2.bin') -Sha256 '29940d98d42b91fbd05ce489f3ecf7c72f0a42f027e4875919a28fb4c04ea2cf'
     Get-VerifiedFile -Uri 'https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base.bin' -Path (Join-Path $models 'ggml-base.bin') -Sha256 '60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe'
 }
 Write-Output ('Ferramentas preparadas: ' + $toolsPath)

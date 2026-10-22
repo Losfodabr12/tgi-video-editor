@@ -1612,6 +1612,8 @@ class EditorController extends ChangeNotifier {
         final sourceCues = await autoCaptionService.generateCaptionsForMedia(
           mediaItem,
           languageCode: usedLanguage,
+          vocabulary: transcripts.vocabulary,
+          vad: transcripts.vad,
           modelName: modelName,
           maxCharsPerCue: maxCharsPerCue,
           onProgress: (progress, message) {

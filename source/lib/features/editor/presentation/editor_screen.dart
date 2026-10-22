@@ -1286,6 +1286,8 @@ class _EditorScreenState extends State<EditorScreen> {
         onOpenDownloads: _openPlanDownloads,
         initialSettings: _lastAutoCaptionsSettings,
         defaultLanguage: _controller.transcripts.language,
+        defaultVocabulary: _controller.transcripts.vocabulary,
+        defaultVad: _controller.transcripts.vad,
       ),
     );
     _restoreEditorShortcutFocus();
@@ -1294,6 +1296,8 @@ class _EditorScreenState extends State<EditorScreen> {
     }
     _lastAutoCaptionsSettings = result;
     _controller.transcripts.language = result.languageCode ?? 'pt';
+    _controller.transcripts.vocabulary = result.vocabulary;
+    _controller.transcripts.vad = result.vad;
     await _controller.transcripts.save(_controller.project);
     if (!mounted) return;
     if (result.modelName == 'small' && !_hasPaidPlan) {

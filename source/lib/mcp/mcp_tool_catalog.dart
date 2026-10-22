@@ -1,10 +1,7 @@
 import '../core/commands/command_engine.dart';
 import 'compact_schema.dart';
 
-final revisionSchema = <String, dynamic>{
-  'type': 'integer',
-  'minimum': 0,
-};
+final revisionSchema = <String, dynamic>{'type': 'integer', 'minimum': 0};
 final pageFields = <String, dynamic>{
   'offset': {'type': 'integer', 'minimum': 0},
   'limit': {'type': 'integer', 'minimum': 1, 'maximum': 100},
@@ -229,7 +226,12 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
     'transcribe',
     'Job Whisper local; guarda transcrição para get_transcript, sem criar legendas.',
     objectSchema(
-      {'media_id': stringSchema(), 'language': stringSchema()},
+      {
+        'media_id': stringSchema(),
+        'language': stringSchema(),
+        'vocabulary': {'type': 'string', 'maxLength': 2000},
+        'vad': {'type': 'boolean'},
+      },
       ['media_id'],
     ),
     readOnly: true,

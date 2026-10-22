@@ -256,6 +256,8 @@ class _AutoCaptionsDialogResult {
   const _AutoCaptionsDialogResult({
     required this.modelName,
     required this.languageCode,
+    this.vocabulary = '',
+    this.vad = true,
     required this.maxCharsPerCue,
     required this.styleLabel,
     required this.fontFamily,
@@ -268,6 +270,8 @@ class _AutoCaptionsDialogResult {
 
   final String modelName;
   final String? languageCode;
+  final String vocabulary;
+  final bool vad;
   final int maxCharsPerCue;
   final String styleLabel;
   final String fontFamily;

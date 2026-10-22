@@ -2404,6 +2404,8 @@ class _FakeAutoCaptionService implements AutoCaptionService {
     MediaItem mediaItem, {
     String? languageCode,
     String modelName = '',
+    String vocabulary = '',
+    bool vad = true,
     int maxCharsPerCue = 44,
     AutoCaptionProgressCallback? onProgress,
   }) async {

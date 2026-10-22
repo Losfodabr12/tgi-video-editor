@@ -217,6 +217,8 @@ class McpToolRouter {
             .transcribe(
               a['media_id'] as String,
               language: a['language'] as String?,
+              vocabulary: a['vocabulary'] as String?,
+              vad: a['vad'] as bool?,
             )
             .toJson();
       case 'get_job':

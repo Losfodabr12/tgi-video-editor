@@ -295,3 +295,24 @@ comparação; a revisão humana deve corrigir ouvindo o áudio.
 Ainda não existe referência revisada referencia-1min.txt; WER/CER não foram medidos.
 Toda a pasta docs/validation/ e os arquivos .words.json estão ignorados no Git.
 `analyze`: zero problemas. Suite da etapa 1: 262 testes passaram, 16 ignorados (condicionais já existentes), nenhuma falha.
+
+## Implementação — etapa 2: VAD e vocabulário
+
+VAD Silero v5.1.2 é incluído pelo setup (885.098 bytes, repositório oficial
+ggml-org/whisper-vad, revisão 9ffd54a1e1ee413ddf265af9913beaf518d1639b,
+SHA-256 29940d98d42b91fbd05ce489f3ecf7c72f0a42f027e4875919a28fb4c04ea2cf).
+O app verifica esse hash, sem download automático. Interface oferece VAD ligado
+por padrão e opção de desligar; vocabulário/prompt inicial por projeto, até 2.000
+caracteres. Ambos persistem no arquivo lateral. MCP aceita vocabulary/vad opcionais,
+herdando configurações do projeto; não altera as configurações quando há override.
+
+Antes da troca do padrão, executei o mesmo áudio privado de 300 s no Base CPU
+1.9.5, pt, 4 threads, prompt vazio: VAD desligado **28,811 s / 449,727 MiB RSS
+pico**; ligado **27,251 s / 476,101 MiB**. Uma execução por condição: teste de
+compatibilidade/custo, não prova de velocidade nem qualidade. Os valores exatos
+de RSS são 471.572.480 e 499.228.672 bytes; commit pico 891.719.680 e
+1.002.348.544 bytes. Ambas terminaram com código zero.
+O padrão foi ativado conforme solicitado após essa verificação operacional.
+WER permanece pendente de referência humana; nenhum ganho de qualidade é afirmado.
+
+Etapa 2 validada: analyze sem problemas; 263 testes passaram, 16 ignorados; orçamento MCP aprovado nos testes.

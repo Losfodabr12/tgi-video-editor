@@ -13,15 +13,21 @@ import 'support/silence_project.dart';
 
 class RecordingCaptions implements AutoCaptionService {
   String? used;
+  String? prompt;
+  bool? usedVad;
   @override
   Future<List<CaptionCue>> generateCaptionsForMedia(
     MediaItem media, {
     String? languageCode,
     String modelName = '',
+    String vocabulary = '',
+    bool vad = true,
     int maxCharsPerCue = 44,
     AutoCaptionProgressCallback? onProgress,
   }) async {
     used = languageCode;
+    prompt = vocabulary;
+    usedVad = vad;
     return const [
       CaptionCue(
         start: Duration(seconds: 1),
@@ -45,6 +51,21 @@ class RecordingCaptions implements AutoCaptionService {
 }
 
 void main() {
+  test(
+    'VAD and vocabulary map exactly to CLI flags; off adds no VAD flags',
+    () {
+      expect(
+        whisperSpeechArguments(vocabulary: '  Arsenal  ', vadModel: 'vad.bin'),
+        ['--prompt', 'Arsenal', '--vad', '-vm', 'vad.bin'],
+      );
+      expect(whisperSpeechArguments(), isEmpty);
+      expect(
+        () => whisperSpeechArguments(vocabulary: 'a' * 2001),
+        throwsA(isA<AutoCaptionException>()),
+      );
+    },
+  );
+
   test(
     'timed boundaries stay within one 30fps frame, including 0.60s tail',
     () {
@@ -116,12 +137,17 @@ void main() {
       expect(job.status, 'completed', reason: job.error.toString());
       expect(fake.used, 'pt');
       expect((job.result as Map)['language'], 'pt');
+      expect(fake.usedVad, isTrue);
       store.language = 'es';
+      store.vocabulary = 'Roblox, Arsenal';
+      store.vad = false;
       job = reads.transcribe('speech');
       while (!job.finished) {
         await Future<void>.delayed(const Duration(milliseconds: 1));
       }
       expect(fake.used, 'es');
+      expect(fake.prompt, 'Roblox, Arsenal');
+      expect(fake.usedVad, isFalse);
       expect((job.result as Map)['language'], 'es');
       final io = ProjectIOService();
       await io.saveToFile(project, projectPath);
@@ -141,6 +167,8 @@ void main() {
       addTearDown(reads2.dispose);
       final result = reads2.getTranscript(mediaId: 'speech');
       expect(result['language'], 'es');
+      expect(restored.vocabulary, 'Roblox, Arsenal');
+      expect(restored.vad, isFalse);
       expect(((result['cues'] as List).single as Map)['words'], hasLength(2));
       await mediaFile.writeAsBytes([5, 6, 7, 8]);
       await restored.open(reopened, path: projectPath);
