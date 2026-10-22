@@ -369,3 +369,61 @@ antes da requisição, cancelamento preservando parcial, bloqueio sem ação exp
 remoção e catálogo/heurística de RAM/GPU.
 
 Etapa 4: analyze sem problemas; 268 testes passaram, 16 ignorados. Nenhum peso opcional baixado.
+
+## Revalidação da etapa 1 e benchmark de 60 s (22/10/2026)
+
+`git log --stat` e a implementação atual confirmam que os três itens pedidos
+da etapa 1 já estavam implementados; nenhuma mudança adicional foi necessária:
+
+- `segmentCaptionCues`/`timedCaptionCues` particionam pelos limites das palavras.
+- `minimumCaptionCues`, usado no plano MCP, reparte novamente as palavras com
+  duração mínima de 1 s, incluindo a última legenda, ou pede revisão quando
+  não existe partição válida. O teste cobre a cauda final de 0,60 s.
+- Setup, verificação do runtime e empacotamento fixam whisper.cpp 1.9.5/b5454
+  para CPU e CUDA. O teste verifica os dois CLIs instalados.
+
+Revalidação local: os 9 testes de transcrição/modelos passaram; `analyze`
+sem problemas e suite completa com 268 testes passando, 16 ignorados.
+
+### Protocolo do benchmark de 60 s
+
+Áudio privado `.work/validation/referencia-1min.wav`: 60,000 s, mono, 16 kHz.
+Base é o modelo instalado neste editor; Small está disponível na instalação
+local do projeto TGI original e foi incluído sem copiar ou baixar pesos.
+Não há outros modelos de transcrição no diretório de componentes do editor;
+Silero é um modelo VAD, não um transcritor.
+
+Máquina: Ryzen 5 5500, 6 núcleos/12 threads, 15,87 GiB de RAM, RTX 3050.
+Mesmo CLI fixado, idioma `pt`, 4 threads, VAD Silero v5.1.2, JSON completo,
+3 execuções sequenciais por modelo/backend; CPU com `-ng`, CUDA sem `-ng`.
+Medição pelo `tool/benchmark_transcription.py`, incluindo inicialização e VAD,
+com memória do processo amostrada a cada 20 ms. Resultados brutos privados em
+`.work/accuracy-1min-final/`. A rodada preliminar foi descartada porque coincidiu
+com a suite local; a rodada final começou depois do término dos testes.
+
+### Resultados de 60 s
+
+Medianas das 3 execuções; RAM em MiB (1.048.576 bytes), pico de working set
+(RSS) e pico de commit do processo, medidos separadamente do tempo.
+
+| Modelo | Backend solicitado → efetivo | Tempo (s) | Pico RSS (MiB) | Pico commit (MiB) | WER | CER |
+|---|---|---:|---:|---:|---|---|
+| Base | CPU → CPU | 5,240 | 382,320 | 897,641 | pendente | pendente |
+| Small (instalação TGI original) | CPU → CPU | 13,754 | 850,137 | 1.366,918 | pendente | pendente |
+| Base | CUDA → CPU (fallback) | 5,376 | 381,484 | 897,152 | pendente | pendente |
+| Small (instalação TGI original) | CUDA → CPU (fallback) | 13,609 | 849,301 | 1.366,031 | pendente | pendente |
+
+**Backend realmente usado: CPU nas 12 execuções.** Os logs CUDA registram
+`loaded CPU backend` e `whisper_backend_init_gpu: no GPU found`, sem confirmação
+de inferência CUDA. A dependência `cublas64_11.dll` continua ausente dos caminhos
+pesquisados pelo aplicativo. Tempos e memória acima são de CPU, inclusive nas
+tentativas CUDA; tempo/RAM/VRAM de inferência GPU não estão disponíveis.
+Nenhuma comparação de qualidade é derivada desses tempos.
+
+### Referência e ferramenta de acurácia pendentes
+
+`tools/wer.dart`, que será fornecido pelo usuário, e a referência revisada
+`docs/validation/referencia-1min.txt` ainda não estão presentes nesta rodada.
+WER/CER não foram calculados e o teste da ferramenta aguarda sua interface real.
+O arquivo `referencia-1min.rascunho.txt` não foi usado como referência revisada;
+o scorer solicitado não foi recriado nem substituído.
