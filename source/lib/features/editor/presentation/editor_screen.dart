@@ -164,6 +164,7 @@ class EditorScreen extends StatefulWidget {
   const EditorScreen({
     super.key,
     this.startPreset = EditorStartPreset.standard,
+    this.controller,
     this.initialProject,
     this.initialProjectPath,
     this.initialExportSettings,
@@ -179,7 +180,8 @@ class EditorScreen extends StatefulWidget {
   });
 
   const EditorScreen.quickCreator({super.key})
-    : startPreset = EditorStartPreset.quickCreator,
+    : controller = null,
+      startPreset = EditorStartPreset.quickCreator,
       initialProject = null,
       initialProjectPath = null,
       initialExportSettings = null,
@@ -193,6 +195,8 @@ class EditorScreen extends StatefulWidget {
       projectHistoryService = null,
       workspaceLayoutPath = null;
 
+  /// Optional integration host; this screen owns and disposes the controller.
+  final EditorController? controller;
   final EditorStartPreset startPreset;
   final TgiProject? initialProject;
   final String? initialProjectPath;
@@ -649,11 +653,16 @@ class _EditorScreenState extends State<EditorScreen> {
     _exportSettings =
         widget.initialExportSettings ??
         _exportSettingsForStartPreset(widget.startPreset);
-    _controller = EditorController(
-      mediaImportService: MediaImportService(ffmpegService: FfmpegService()),
-      initialProject:
-          widget.initialProject ?? _projectForStartPreset(widget.startPreset),
-    );
+    _controller =
+        widget.controller ??
+        EditorController(
+          mediaImportService: MediaImportService(
+            ffmpegService: FfmpegService(),
+          ),
+          initialProject:
+              widget.initialProject ??
+              _projectForStartPreset(widget.startPreset),
+        );
     _controller.synchronizeCommandExportSettings(_exportSettings);
     _controller.addListener(_handleControllerChanged);
     _automation = EditorAutomation(_controller)

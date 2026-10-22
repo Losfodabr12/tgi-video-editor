@@ -201,10 +201,7 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
   late bool _vad;
   late String _modelName;
   bool _manualModel = false;
-  List<_WhisperModelOption> _modelOptions = const [
-    _WhisperModelOption(value: 'base', label: 'Equilibrado recomendado'),
-    _WhisperModelOption(value: 'small', label: 'Melhor qualidade - Plano'),
-  ];
+  List<_WhisperModelOption> _modelOptions = _allModelOptions;
   Set<String> _installedModelNames = const {};
   String? _modelHelpText = 'Verificando modelos instalados';
   late String _captionStyleLabel;
@@ -344,6 +341,7 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
                   'caption-model-$selectedModelName-$modelOptionsKey',
                 ),
                 initialValue: selectedModelName,
+                isExpanded: true,
                 decoration: InputDecoration(
                   labelText: 'Modelo local',
                   helperText: modelHelpText,

@@ -7,7 +7,8 @@ void main() {
     expect(WhisperRuntime.vulkanEngine('ggml_vulkan: 0 = NVIDIA RTX'), isNull);
     expect(
       WhisperRuntime.vulkanEngine(
-        'whisper_backend_init_gpu: using Vulkan1 backend',
+        'whisper_backend_init_gpu: using Vulkan1 backend\n'
+        'whisper_model_load: Vulkan1 total size = 573.40 MB',
       ),
       'Vulkan1',
     );
@@ -35,4 +36,29 @@ void main() {
       throwsFormatException,
     );
   });
+  test(
+    'failed GPU initialization never claims Vulkan from a selection log',
+    () {
+      const selection = 'whisper_backend_init_gpu: using Vulkan0 backend';
+      expect(WhisperRuntime.vulkanEngine(selection), isNull);
+      expect(
+        WhisperRuntime.vulkanEngine(
+          '$selection\nfailed to initialize Vulkan0 backend',
+        ),
+        isNull,
+      );
+      expect(
+        WhisperRuntime.vulkanEngine(
+          '$selection\nwhisper_model_load: Vulkan1 total size = 10 MB',
+        ),
+        isNull,
+      );
+      expect(
+        WhisperRuntime.vulkanEngine(
+          '$selection\nwhisper_model_load: Vulkan0 total size = 0.00 MB',
+        ),
+        isNull,
+      );
+    },
+  );
 }

@@ -68,9 +68,24 @@ abstract final class WhisperRuntime {
     r'using (?:device CUDA|CUDA(?:\d+)? backend)',
     caseSensitive: false,
   ).hasMatch(output);
-  static String? vulkanEngine(String output) => RegExp(
-    r'whisper_backend_init_gpu: using (Vulkan\d+) backend',
-  ).firstMatch(output)?.group(1);
+  static String? vulkanEngine(String output) {
+    final engine = RegExp(
+      r'whisper_backend_init_gpu: using (Vulkan\d+) backend',
+    ).firstMatch(output)?.group(1);
+    if (engine == null ||
+        output.contains('failed to initialize $engine backend')) {
+      return null;
+    }
+    // Upstream logs "using" before backend initialization can still fail.
+    // Confirm that model weights actually reached this GPU, not only discovery.
+    final allocation = RegExp(
+      'whisper_model_load:\\s+${RegExp.escape(engine)}\\s+total size\\s*=\\s*([0-9.]+)\\s+MB',
+    ).firstMatch(output);
+    return allocation != null &&
+            (double.tryParse(allocation.group(1)!) ?? 0) > 0
+        ? engine
+        : null;
+  }
 
   static Map<String, String> get manifest {
     const encoded = String.fromEnvironment('TGI_VULKAN_MANIFEST');

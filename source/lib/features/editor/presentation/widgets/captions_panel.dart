@@ -43,9 +43,14 @@ class CaptionsPanel extends StatelessWidget {
       children: [
         ValueListenableBuilder<String>(
           valueListenable: WhisperRuntime.backend,
-          builder: (context, value, _) => Text(
-            'Transcritor: ${WhisperRuntime.description}',
-            style: Theme.of(context).textTheme.bodySmall,
+          builder: (context, value, _) => Tooltip(
+            message: WhisperRuntime.description,
+            child: Text(
+              'Transcritor: $value${WhisperRuntime.activeDevice == 'CPU' ? '' : ' — ${WhisperRuntime.activeDevice.replaceFirst('NVIDIA GeForce ', '')}'}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ),
         ),
         Wrap(

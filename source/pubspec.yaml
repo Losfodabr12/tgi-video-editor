@@ -57,6 +57,8 @@ dependencies:
   # 10.x requer win32 6.x, enquanto file_picker 11 ainda requer win32 5.x.
   package_info_plus: ^9.0.1
 dev_dependencies:
+  integration_test:
+    sdk: flutter
   flutter_test:
     sdk: flutter
 

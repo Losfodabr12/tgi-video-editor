@@ -675,3 +675,73 @@ do runtime; não foram adicionados downloads silenciosos.
 Validação da etapa 3: analyze sem avisos; 283 testes passaram, 16 integrações
 condicionais ignoradas; release Windows compilado. Testados limites de VRAM,
 precedência manual via MCP, persistência e reabertura sem mudar o v14.
+
+
+## Validação real da integração — etapa 4 (2026-10-22)
+
+Windows 11, Ryzen 5 5500, RTX 3050 6 GiB, driver 621.01. Português (`pt`),
+Turbo q5_0, seis threads e VAD Silero. O áudio PCM de 60 s recebeu um vídeo
+preto H.264; nenhuma fala ou imagem do projeto é publicada aqui.
+
+`source/integration_test/transcription_gpu_test.dart` executa o EditorScreen
+Windows com os serviços reais. A UI aciona o diálogo de legendas; o MCP usa
+HTTP e o roteador real do mesmo app. Vulkan exige confirmação de seleção e
+alocação dos pesos na GPU. Hipóteses, jobs e amostras ficam somente em
+`.work/gpu-app-validation/native-results/`.
+
+Tempos de ponta a ponta no aplicativo nativo **Debug** de integração: incluem
+preparação, inferência e conclusão da UI/job. São medianas de três execuções
+quando N=3; N=1 identifica verificações adicionais. Cada execução iniciou um
+processo novo de inferência. O cache de shaders já estava aquecido.
+
+| Fluxo | N | Modelo | Backend efetivo | Dispositivo | Tempo mediano (s) | Pico VRAM inferência (MiB) | Pico VRAM app/filhos (MiB) | Pico RAM app/filhos (MiB) |
+|---|---:|---|---|---|---:|---:|---:|---:|
+| UI | 3 | Preciso (turbo), q5_0 | Vulkan | NVIDIA GeForce RTX 3050 | 6.021 | 899.7 | 972.5 | 742.0 |
+| MCP | 3 | Preciso (turbo), q5_0 | Vulkan | NVIDIA GeForce RTX 3050 | 5.461 | 899.7 | 967.9 | 748.2 |
+| UI — CPU forçada | 1 | Preciso (turbo), q5_0 | CPU | CPU | 35.268 | 0.0 | 71.6 | 1382.4 |
+| MCP — CPU forçada | 3 | Preciso (turbo), q5_0 | CPU | CPU | 34.341 | 0.0 | 67.4 | 1386.5 |
+| MCP — DLL Vulkan ausente | 1 | Preciso (turbo), q5_0 | CPU | CPU | 35.875 | 0.0 | 70.4 | 1342.7 |
+
+UI/Vulkan: 6.961455 s, 6.020833 s, 5.442948 s.
+MCP/Vulkan: 5.413840 s, 5.473298 s, 5.461123 s.
+MCP/CPU: 35.156428 s, 34.340740 s, 33.484487 s.
+
+VRAM: contadores PDH `GPU Process Memory / Dedicated Usage`, atribuídos aos PIDs
+do Whisper e, separadamente, à árvore do app. RAM: máximo amostrado da soma dos
+working sets do app/filhos; páginas compartilhadas podem aparecer em mais de
+um processo. A tabela usa o **maior pico observado** de cada grupo. Amostragem
+a cada 100 ms por `tool/measure_windows_process_tree.py` (psutil); o próprio
+coletor é excluído. Outros programas da sessão permaneceram abertos. Não se
+atribuiu o consumo global da GPU ao Whisper.
+
+A CPU foi escolhida nas configurações e confirmada na UI e no MCP. O Turbo
+manual permaneceu selecionado. Remover temporariamente `ggml-vulkan.dll` da
+cópia isolada também concluiu em CPU com `fallback=true`; a DLL foi restaurada.
+O roteiro usou projeto privado de teste, preservando os projetos do usuário.
+
+Dez execuções concluídas foram preservadas na retomada
+`TGI_GPU_VALIDATION_RESUME=1`; a recuperação por DLL ausente foi executada
+novamente e a suite nativa terminou verde. Não se reutilizaram hipóteses para
+substituir inferências. Tentativas interrompidas ou com mídia alterada na
+sessão interativa ficaram fora da tabela. A UI nativa encontrou e corrigiu os
+limites do dropdown e do indicador de dispositivo em janelas menores.
+
+Conferência adicional no executável **Release**, pelo seu MCP real: três
+execuções Vulkan/RTX 3050, mediana **4,562 s**, maior pico de RAM app/filhos
+**511,6 MiB** e VRAM app/filhos **948,7 MiB**. Esse coletor anterior não separava
+a VRAM do Whisper da VRAM do app; o valor não é VRAM exclusiva da inferência.
+Release e Debug não foram combinados numa única mediana.
+
+O usuário também informou que o Preciso (turbo) funcionou bem em teste manual;
+esse resultado funcional não cronometrado não entrou nas medianas.
+
+Limites: um minuto de áudio, uma máquina e cache aquecido; não estimam
+qualidade, outras GPUs, vídeos longos ou partida fria. A referência histórica
+de WER começou por um rascunho do Small e pode favorecê-lo. Esta etapa não
+recalculou WER/CER nem os usa como prova de qualidade do Turbo.
+
+Catálogo MCP capturado por HTTP: **24546 bytes** (id de um dígito), maior schema **1807 bytes**, maior descrição **166 bytes**, 34 ferramentas. Mantidos os limites de 25/30 KB, 4 KB/schema, 3 KB nos schemas de lote e 300 bytes/descrição. Projeto continua v14.
+
+Validação da etapa 4: analyze sem avisos; 284 testes passaram, 16 integrações
+condicionais ignoradas; a integração nativa Windows terminou verde após
+completar as 11 execuções reais da matriz e verificar UI, HTTP MCP e fallback.
