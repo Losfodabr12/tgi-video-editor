@@ -63,7 +63,9 @@ void validateArguments(
   Map<String, Object?> values,
   Map<String, dynamic> schema, [
   String path = 'arguments',
+  Map<String, dynamic>? root,
 ]) {
+  root ??= schema;
   final properties = schema['properties'] as Map<String, dynamic>? ?? {};
   for (final key in schema['required'] as List? ?? const []) {
     if (!values.containsKey(key)) {
@@ -82,16 +84,34 @@ void validateArguments(
         {'valid_fields': properties.keys.toList()},
       );
     }
-    validateValue(entry.value, field, '$path.${entry.key}');
+    validateValue(entry.value, field, '$path.${entry.key}', root);
   }
 }
 
-void validateValue(Object? value, Map<String, dynamic> field, String path) {
+void validateValue(
+  Object? value,
+  Map<String, dynamic> field,
+  String path, [
+  Map<String, dynamic>? root,
+]) {
+  root ??= field;
+  final reference = field[r'$ref'];
+  if (reference is String) {
+    if (!reference.startsWith('#/\$defs/')) {
+      throw StateError('Somente refs locais em \$defs são aceitas.');
+    }
+    final target = (root[r'$defs'] as Map?)?[reference.substring(8)];
+    if (target is! Map<String, dynamic>) {
+      throw StateError('Schema não encontrado: $reference');
+    }
+    validateValue(value, target, path, root);
+    return;
+  }
   if (field['oneOf'] is List) {
     var matched = 0;
     for (final alternative in field['oneOf'] as List) {
       try {
-        validateValue(value, alternative as Map<String, dynamic>, path);
+        validateValue(value, alternative as Map<String, dynamic>, path, root);
         matched++;
       } on CommandError {
         /* Report the union rather than one arbitrary branch. */
@@ -153,8 +173,11 @@ void validateValue(Object? value, Map<String, dynamic> field, String path) {
         value[i],
         field['items'] as Map<String, dynamic>,
         '$path[$i]',
+        root,
       );
     }
   }
-  if (value is Map<String, Object?>) validateArguments(value, field, path);
+  if (value is Map<String, Object?>) {
+    validateArguments(value, field, path, root);
+  }
 }

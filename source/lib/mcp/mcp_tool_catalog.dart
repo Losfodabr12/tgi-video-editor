@@ -1,4 +1,5 @@
 import '../core/commands/command_engine.dart';
+import 'compact_schema.dart';
 
 final revisionSchema = <String, dynamic>{
   'type': 'integer',
@@ -58,7 +59,7 @@ class McpToolDefinition {
   Map<String, Object?> toJson() => {
     'name': name,
     'description': description,
-    'inputSchema': schema,
+    'inputSchema': compactSchema(schema),
     'annotations': {
       'readOnlyHint': readOnly,
       'destructiveHint': destructive,
