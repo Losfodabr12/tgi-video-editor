@@ -103,7 +103,8 @@ try:
     (work/'vulkan-build-provenance.json').write_text(json.dumps(manifest,indent=2),encoding='utf8')
     run('whisper-vulkan-configure',args)
     run('whisper-vulkan-build',[cmake,'--build','R:/whisper-build','--target','whisper-cli','ggml-vulkan','ggml-cpu','--parallel','4'])
-    run('vulkan-probe-build',[shutil.which('cl.exe',path=build_env['PATH']),'/nologo','/std:c++17','/EHsc','/O2','/MD',str(root/'tool/vulkan_probe.cpp'),'/I'+str(source/'ggml/include'),'/Fo'+str(work/'vulkan-probe.obj'),'/Fe'+str(work/'vulkan-probe.exe'),'/link','/LIBPATH:R:/whisper-build/src','/LIBPATH:R:/whisper-build/ggml/src','ggml.lib','ggml-base.lib'])
+    if not (work/'vulkan-probe.exe').is_file() or (work/'vulkan-probe.exe').stat().st_mtime < (root/'tool/vulkan_probe.cpp').stat().st_mtime:
+        run('vulkan-probe-build',[shutil.which('cl.exe',path=build_env['PATH']),'/nologo','/std:c++17','/EHsc','/O2','/MD',str(root/'tool/vulkan_probe.cpp'),'/I'+str(source/'ggml/include'),'/Fo'+str(work/'vulkan-probe.obj'),'/Fe'+str(work/'vulkan-probe.exe'),'/link','/LIBPATH:R:/whisper-build/src','/LIBPATH:R:/whisper-build/ggml/src','ggml.lib','ggml-base.lib'])
 finally:
     subprocess.run(['subst.exe','R:','/D'],check=True)
 
@@ -134,3 +135,15 @@ for path in runtime.iterdir():shutil.copy2(path,destination/path.name)
 (destination.parent/'manifest.json').write_text(json.dumps(digests,sort_keys=True),encoding='utf8')
 (destination.parent/'provenance.json').write_text(json.dumps(manifest,indent=2),encoding='utf8')
 print('Vulkan runtime installed (SHA-256 verified build inputs and measured output manifest).',flush=True)
+
+license_root=destination.parent/'licenses'
+license_root.mkdir(exist_ok=True)
+for name,path in {
+    'whisper.cpp-MIT.txt': source/'LICENSE',
+    'Vulkan-Headers-LICENSE.md': headers/'LICENSE.md',
+    'Vulkan-Headers-Apache-2.0.txt': headers/'LICENSES/Apache-2.0.txt',
+    'Vulkan-Headers-MIT.txt': headers/'LICENSES/MIT.txt',
+    'SPIRV-Headers-MIT.txt': spirv/'LICENSE',
+}.items():
+    shutil.copy2(path,license_root/name)
+print('Pinned upstream notices included in the runtime package.',flush=True)

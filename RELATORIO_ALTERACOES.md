@@ -1136,3 +1136,52 @@ testes padrão/FFmpeg, build release e empacotamento. O relatório do artefato d
 registra o SHA exato executado e o link do run; nenhuma tag/release é alterada.
 
 A ferramenta de medição também passou em `dart analyze tool/mcp_catalog_sizes.dart`.
+
+## Integração Vulkan e validação real — 22/10/2026
+
+Implementação entregue em cinco etapas independentes. O projeto mantém o formato
+v14 e o modelo registrado nos projetos existentes. A escolha manual sempre vence.
+
+1. Runtime whisper.cpp b5454 (1.9.5), com Vulkan compilado da mesma fonte fixada,
+   detecção automática e recuperação em CPU diante de ausência do driver, GPU,
+   DLL ou falha de inicialização. Um watchdog encerra processos sem progresso.
+2. Configurações de transcrição enumeram dispositivos Vulkan, preferem GPU
+   dedicada e permitem escolher GPU ou CPU. A tela e o resultado MCP exibem a
+   execução efetiva, incluindo o dispositivo e a ocorrência de fallback.
+3. Em transcrições novas, a política automática escolhe Preciso (turbo) quando
+   a GPU selecionada tem pelo menos 3 GiB totais e 2 GiB livres; nos demais casos,
+   Small na CPU. O usuário pode escolher outro modelo. O modelo do projeto
+   existente é preservado e o gerenciador mantém downloads explícitos.
+4. Teste Windows nativo com a tela real, FFmpeg, whisper e servidor HTTP MCP:
+   três execuções UI e três MCP em Vulkan/RTX 3050, CPU forçada e recuperação
+   com DLL Vulkan temporariamente ausente. Onze inferências reais registradas.
+   O teste retomou resultados completos após correções do próprio harness;
+   nenhuma inferência foi simulada. Texto e áudio permanecem em .work/.
+5. Empacotamento inclui os avisos upstream e verifica os executáveis/DLLs reais
+   por SHA-256. O aplicativo recebe o manifesto medido na própria compilação.
+   THIRD_PARTY traz identificadores SPDX e links, sem reproduzir licenças.
+
+O acréscimo dos sete binários Vulkan é 48.947.200 bytes (48,95 MB); o ZIP isolado
+mede aproximadamente 15,19 MB. Está abaixo de 50 MB e acompanha o ZIP do app.
+O loader é fornecido pelo driver; SDK Vulkan e CUDA não são exigidos do usuário.
+Os arquivos fonte e ferramentas usados na compilação têm origem e SHA-256
+verificados. Os avisos completos acompanham o pacote, fora deste relatório.
+
+As medianas da UI e MCP no teste nativo foram 6,021 s e 5,461 s em Vulkan;
+MCP na CPU forçada: 34,341 s. No aplicativo Release, MCP/Vulkan: 4,562 s.
+Medições de RAM/VRAM, amostragem, limitações e tempos individuais estão em
+[docs/TRANSCRICAO.md](docs/TRANSCRICAO.md). A confirmação manual do usuário de que
+Preciso funcionou bem é adicional e não entra nas medianas.
+
+O catálogo MCP medido tem 34 ferramentas e 24.546 bytes UTF-8 na resposta
+canônica; o maior schema tem 1.807 bytes e a maior descrição, 166 bytes.
+Nenhuma expansão do formato v14 foi necessária. A validação remota executa
+analyze, testes, integração FFmpeg, build Release e empacotamento; seu relatório
+com o resultado efetivamente executado integra o artefato do workflow Windows.
+
+Validação final da etapa 5: analyze sem problemas; suíte principal com 284 testes
+aprovados e 16 integrações desativadas nessa rodada; segunda rodada com FFmpeg
+habilitado, 300 testes aprovados. Build Windows Release concluído. ZIP local
+gerado e inspecionado: sete binários Vulkan com SHA-256 conferido e cinco avisos
+upstream presentes; nenhum arquivo de .work/, referência privada ou runtime
+CUDA no pacote. A sonda Vulkan também detectou a RTX 3050 no runtime final.

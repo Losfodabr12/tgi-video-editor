@@ -40,7 +40,8 @@ try {
         }
     }
     foreach ($required in @('ffmpeg\bin\ffmpeg.exe','ffmpeg\bin\ffprobe.exe','ffmpeg\LICENSE',
-        'whisper\bin\whisper-cli.exe','whisper\models\ggml-base.bin','whisper\LICENSE')) {
+        'whisper\bin\whisper-cli.exe','whisper\models\ggml-base.bin','whisper\LICENSE',
+        'whisper\vulkan\licenses\Vulkan-Headers-MIT.txt')) {
         if (-not (Test-Path -LiteralPath (Join-Path $packagePath $required))) { throw ('Runtime incompleto: ' + $required) }
     }
     $whisperCliHash = (Get-FileHash -LiteralPath (Join-Path $packagePath 'whisper\bin\whisper-cli.exe') -Algorithm SHA256).Hash.ToLowerInvariant()

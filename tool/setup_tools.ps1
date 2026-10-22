@@ -78,10 +78,21 @@ if (-not $SkipWhisper) {
             if (-not (Test-Path -LiteralPath $binary) -or (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.Value) { $vulkanReady = $false; break }
         }
     }
+    if (-not (Test-Path -LiteralPath (Join-Path $toolsPath 'whisper\vulkan\licenses\Vulkan-Headers-MIT.txt'))) { $vulkanReady = $false }
     if (-not $vulkanReady) {
         & python (Join-Path $PSScriptRoot 'build_whisper_vulkan.py') --tools-root $toolsPath
         if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar Vulkan fixado.' }
     }
+    # Direct flutter/IDE builds also bind the actual verified local runtime.
+    $entries = Get-Content -LiteralPath $vulkanManifest -Raw | ConvertFrom-Json
+    $dartManifest = @('// Measured from the b5454 build; CI embeds its measured build manifest.', 'const bundledVulkanManifest = <String, String>{')
+    foreach ($entry in ($entries.PSObject.Properties | Sort-Object Name)) {
+        if ($entry.Name -notmatch '^[a-z0-9_.-]+$' -or $entry.Value -notmatch '^[a-f0-9]{64}$') { throw 'Manifesto Vulkan invalido.' }
+        $dartManifest += ("  '" + $entry.Name + "': '" + $entry.Value + "',")
+    }
+    $dartManifest += '};'
+    $dartTarget = Join-Path (Split-Path $PSScriptRoot -Parent) 'source\lib\services\whisper_vulkan_manifest.dart'
+    [IO.File]::WriteAllText($dartTarget, ($dartManifest -join "`n") + "`n", (New-Object Text.UTF8Encoding($false)))
     $models = Join-Path $toolsPath 'whisper\models'
     New-Item -ItemType Directory -Path $models -Force | Out-Null
     Get-VerifiedFile -Uri 'https://huggingface.co/ggml-org/whisper-vad/resolve/9ffd54a1e1ee413ddf265af9913beaf518d1639b/ggml-silero-v5.1.2.bin' -Path (Join-Path $models 'ggml-silero-v5.1.2.bin') -Sha256 '29940d98d42b91fbd05ce489f3ecf7c72f0a42f027e4875919a28fb4c04ea2cf'

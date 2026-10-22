@@ -21,7 +21,7 @@ As licenças dos componentes são independentes da identidade do editor.
 
 ## Whisper, fontes e componentes Flutter
 
-- Whisper.cpp CPU x64 **b5454**, ZIP verificado por SHA-256
+- Whisper.cpp CPU/Vulkan x64 **b5454**, ZIP verificado por SHA-256
   `6ba69e3482d7826214f90a6a9c84ca07782aec1e1d0c6a7c30c994fd5d816ccb`;
   [fonte e licença MIT](https://github.com/ggml-org/whisper.cpp/tree/b5454).
   O pacote preserva `whisper/LICENSE`.
@@ -39,3 +39,15 @@ As licenças dos componentes são independentes da identidade do editor.
 
 O download prepara o ambiente de desenvolvimento/CI. A execução do ZIP completo
 utiliza os runtimes e o modelo já incluídos e não necessita desses downloads.
+
+
+## Vulkan e validação — SPDX e links
+
+| Componente | SPDX | Links |
+|---|---|---|
+| whisper.cpp / ggml b5454, CPU e Vulkan | MIT | [Fonte](https://github.com/ggml-org/whisper.cpp/tree/b5454), [licença](https://github.com/ggml-org/whisper.cpp/blob/b5454/LICENSE) |
+| Vulkan-Headers 1.4.357.0 | Apache-2.0 OR MIT | [Fonte](https://github.com/KhronosGroup/Vulkan-Headers/tree/vulkan-sdk-1.4.357.0), [licenças](https://github.com/KhronosGroup/Vulkan-Headers/blob/vulkan-sdk-1.4.357.0/LICENSE.md) |
+| SPIRV-Headers 1.4.357.0 | MIT | [Fonte](https://github.com/KhronosGroup/SPIRV-Headers/tree/vulkan-sdk-1.4.357.0), [licenças](https://github.com/KhronosGroup/SPIRV-Headers/blob/vulkan-sdk-1.4.357.0/LICENSE) |
+| shaderc/glslc, compilação | Apache-2.0 | [Fonte](https://github.com/google/shaderc), [licença](https://github.com/google/shaderc/blob/main/LICENSE) |
+| psutil, medições locais | BSD-3-Clause | [Fonte](https://github.com/giampaolo/psutil), [licença](https://github.com/giampaolo/psutil/blob/master/LICENSE) |
+| Flutter / integration_test | BSD-3-Clause | [Fonte](https://github.com/flutter/flutter/tree/3.44.4), [licença](https://github.com/flutter/flutter/blob/3.44.4/LICENSE) |

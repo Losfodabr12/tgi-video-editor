@@ -745,3 +745,25 @@ Catálogo MCP capturado por HTTP: **24546 bytes** (id de um dígito), maior sche
 Validação da etapa 4: analyze sem avisos; 284 testes passaram, 16 integrações
 condicionais ignoradas; a integração nativa Windows terminou verde após
 completar as 11 execuções reais da matriz e verificar UI, HTTP MCP e fallback.
+
+## Distribuição e avisos — etapa 5
+
+O runtime final continua em 48.947.200 bytes (48,95 MB) de binários e cabe no
+ZIP do aplicativo; não há pacote GPU separado. O build fixa b5454/1.9.5 e
+verifica os SHA-256 das entradas baixadas e das saídas reais. A compilação do
+aplicativo incorpora seu manifesto medido; a inicialização verifica cada DLL
+e executável antes de habilitar Vulkan. O setup também gera esse manifesto para
+builds diretos no Flutter/IDE. A ausência ou corrupção do runtime permite CPU.
+
+O ZIP inclui os avisos upstream whisper.cpp, Vulkan-Headers e SPIRV-Headers.
+[THIRD_PARTY.md](THIRD_PARTY.md) lista SPDX e links; o cache do CI foi atualizado
+para exigir esses avisos no empacotamento. O driver fornece o loader Vulkan.
+A receita de build e os fontes da aplicação permanecem no repositório; modelos,
+recorte de áudio, hipóteses, referências e medições brutas privadas ficam fora dele.
+
+Validação final da etapa 5: analyze sem problemas; suíte principal com 284 testes
+aprovados e 16 integrações desativadas nessa rodada; segunda rodada com FFmpeg
+habilitado, 300 testes aprovados. Build Windows Release concluído. ZIP local
+gerado e inspecionado: sete binários Vulkan com SHA-256 conferido e cinco avisos
+upstream presentes; nenhum arquivo de .work/, referência privada ou runtime
+CUDA no pacote. A sonda Vulkan também detectou a RTX 3050 no runtime final.
