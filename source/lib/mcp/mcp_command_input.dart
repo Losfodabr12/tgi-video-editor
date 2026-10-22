@@ -43,6 +43,34 @@ CommandError commandInputError(CommandError error, String name, {int? index}) {
   });
 }
 
+/// Envelope validation may fail before a batch item can be parsed (for example,
+/// arguments is a string). Keep that error and attach the selected tool's help.
+CommandError mcpInputError(
+  CommandError error,
+  String tool,
+  Map<String, Object?> arguments,
+) {
+  var name = error.details['command'] as String? ?? tool;
+  var index = error.details['command_index'] as int?;
+  if (['preview_plan', 'apply_commands'].contains(tool)) {
+    final path = RegExp(
+      r'arguments\.commands\[(\d+)\]',
+    ).firstMatch(error.message);
+    index ??= path == null ? null : int.tryParse(path.group(1)!);
+    final commands = arguments['commands'];
+    if (commands is List && index != null && index < commands.length) {
+      final item = commands[index];
+      if (item is Map) {
+        final selected = item['tool'] ?? item['command'];
+        if (selected is String && !['undo', 'redo'].contains(selected)) {
+          name = selected;
+        }
+      }
+    }
+  }
+  return commandInputError(error, name, index: index);
+}
+
 Object? _minimalValue(Map<String, dynamic> schema) {
   if (schema['enum'] is List) return (schema['enum'] as List).first;
   return switch (schema['type']) {

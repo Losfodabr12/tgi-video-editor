@@ -183,4 +183,32 @@ void main() {
       expect(plans.all, isEmpty);
     },
   );
+
+  test(
+    'malformed argument objects still identify the tool schema and example',
+    () async {
+      for (final batchTool in ['preview_plan', 'apply_commands']) {
+        for (final payload in [
+          {'tool': 'set_volume', 'arguments': 'invalid'},
+          {'tool': 'set_volume'},
+        ]) {
+          final result = await call(batchTool, {
+            'base_revision': 0,
+            'commands': [payload],
+          });
+          final details = result['error']['details'] as Map;
+          expect(result['error']['code'], 'invalid_argument');
+          expect(details['command_index'], 0);
+          expect(details['tool'], 'set_volume');
+          expect(
+            details['expected_schema'],
+            commandCatalog['set_volume']!.schema,
+          );
+          expect(details['example']['tool'], 'set_volume');
+        }
+      }
+      expect(controller.projectRevision, 0);
+      expect(plans.all, isEmpty);
+    },
+  );
 }

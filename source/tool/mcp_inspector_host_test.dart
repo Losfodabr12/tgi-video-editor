@@ -1,6 +1,7 @@
 // Explicit external-client harness; not included in `flutter test`'s test/ scan.
 import 'dart:convert';
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tgi_video_editor/domain/models/project.dart';
 import 'package:tgi_video_editor/features/editor/application/editor_controller.dart';
@@ -63,6 +64,13 @@ void main() {
       c.dispose();
     });
     final before = ProjectIOService().serializeProject(c.project);
+    final io = ProjectIOService();
+    await io.saveToFile(
+      c.project,
+      '$root/project-before.json',
+      exportSettings: c.commandExportSettings,
+    );
+    final beforeBytes = await File('$root/project-before.json').readAsBytes();
     await File('$root/session.json').writeAsString(
       jsonEncode({
         'url': 'http://127.0.0.1:${server.boundPort}/mcp',
@@ -84,5 +92,33 @@ void main() {
     );
     // External smoke script undoes its transaction before signaling completion.
     expect(ProjectIOService().serializeProject(c.project), before);
+    await io.saveToFile(
+      c.project,
+      '$root/project-after-undo.json',
+      exportSettings: c.commandExportSettings,
+    );
+    final afterBytes = await File(
+      '$root/project-after-undo.json',
+    ).readAsBytes();
+    await File('$root/roundtrip.json').writeAsString(
+      jsonEncode({
+        'format_version': jsonDecode(utf8.decode(afterBytes))['version'],
+        'before_bytes': beforeBytes.length,
+        'after_bytes': afterBytes.length,
+        'before_sha256': sha256.convert(beforeBytes).toString(),
+        'after_sha256': sha256.convert(afterBytes).toString(),
+        'byte_identical':
+            sha256.convert(beforeBytes).toString() ==
+            sha256.convert(afterBytes).toString(),
+        'project_revision_after_undo': c.projectRevision,
+        'fixture':
+            'isolated Flutter host, real FFmpeg media, production MCP/router/controller and ProjectIOService',
+      }),
+    );
+    expect(
+      afterBytes,
+      beforeBytes,
+      reason: 'Saved v14 file must be byte-identical after SDK undo.',
+    );
   }, timeout: const Timeout(Duration(minutes: 6)));
 }

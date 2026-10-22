@@ -1,0 +1,39 @@
+{
+  "sdk": "1.32.1",
+  "inspector": "2.11.0",
+  "checks": [
+    "official SDK tools/list",
+    "all inputSchemas compile as JSON Schema 2020-12 with local refs",
+    "wire and per-tool budgets",
+    "compact preview_plan -> apply_plan -> undo over real HTTP",
+    "structured error preserves bounds and supplies valid schema/minimal example",
+    "malformed argument object still includes selected tool schema/example",
+    "legacy command alias apply_commands -> undo",
+    "MCP Inspector strict tools/list",
+    "MCP Inspector get_project"
+  ],
+  "wire_bytes": 24358,
+  "tool_count": 34,
+  "schemas_validated": 34,
+  "first_eight": [
+    "get_project",
+    "remove_silences",
+    "cut_by_transcript",
+    "auto_captions",
+    "reframe_9x16",
+    "preview_plan",
+    "apply_plan",
+    "split_clip"
+  ],
+  "inspector_tools": {
+    "exit": 0,
+    "output_bytes": 24218,
+    "warnings": ""
+  },
+  "inspector_read": {
+    "exit": 0,
+    "output_bytes": 2142,
+    "warnings": ""
+  },
+  "ok": true
+}

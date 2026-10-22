@@ -64,8 +64,7 @@ class McpToolRouter {
       }
       result = await _call(name, Map<String, Object?>.of(args));
     } on CommandError catch (e) {
-      final commandName = e.details['command'] as String? ?? name;
-      result = {'error': commandInputError(e, commandName).toJson()};
+      result = {'error': mcpInputError(e, name, args).toJson()};
     } catch (e) {
       result = {
         'error': const CommandError(
