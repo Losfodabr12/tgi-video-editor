@@ -114,6 +114,7 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
   }) : processTimeout = processTimeout ?? _resolveTimeoutFromEnvironment(),
        assert(chunkDuration >= Duration.zero);
 
+  WhisperExecution? lastExecution;
   final FfmpegService ffmpegService;
   final String? whisperExecutablePath;
   final String? modelPath;
@@ -239,10 +240,7 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
           'Nenhuma fala foi detectada na transcricao.',
         );
       }
-      onProgress?.call(
-        1,
-        'Legendas geradas — ${WhisperRuntime.backend.value}',
-      );
+      onProgress?.call(1, 'Legendas geradas — ${WhisperRuntime.backend.value}');
       return cues;
     } finally {
       unawaited(
@@ -276,7 +274,8 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       );
     } catch (error) {
       _checkCancelled();
-      if (config.executablePath == config.cpuExecutablePath || config.gpuFailed) {
+      if (config.executablePath == config.cpuExecutablePath ||
+          config.gpuFailed) {
         rethrow;
       }
       config.gpuFailed = true;
@@ -439,13 +438,22 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
         'Vulkan não foi ativado no dispositivo selecionado.',
       );
     }
+    WhisperRuntime.activeDevice = config.device?.name ?? 'CPU';
     WhisperRuntime.backend.value = engine == null
         ? (WhisperRuntime.fallbackReason == null
               ? 'CPU'
               : 'CPU (fallback Vulkan)')
         : 'Vulkan';
     final body = await jsonFile.readAsString();
-    return _captionCuesFromWhisperJson(body, chunk);
+    final cues = _captionCuesFromWhisperJson(body, chunk);
+    lastExecution = WhisperExecution(
+      backend: engine == null ? 'CPU' : 'Vulkan',
+      device: config.device?.name ?? 'CPU',
+      deviceId: config.device?.id ?? 'cpu',
+      model: config.modelName,
+      fallback: WhisperRuntime.fallbackReason != null,
+    );
+    return cues;
   }
 
   Future<int> _waitForWhisperExitCode(Process process) async {
@@ -1347,9 +1355,7 @@ List<String> whisperSpeechArguments({
   String? vadModel,
 }) {
   if (vocabulary.length > 2000) {
-    throw const AutoCaptionException(
-      'Vocabulário: máximo de 2000 caracteres.',
-    );
+    throw const AutoCaptionException('Vocabulário: máximo de 2000 caracteres.');
   }
   return [
     if (vocabulary.trim().isNotEmpty) ...['--prompt', vocabulary.trim()],

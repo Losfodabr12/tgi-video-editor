@@ -44,7 +44,7 @@ class CaptionsPanel extends StatelessWidget {
         ValueListenableBuilder<String>(
           valueListenable: WhisperRuntime.backend,
           builder: (context, value, _) => Text(
-            'Transcritor: $value',
+            'Transcritor: ${WhisperRuntime.description}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),

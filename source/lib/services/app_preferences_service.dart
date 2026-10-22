@@ -100,12 +100,14 @@ class AppPreferences {
     this.outputDirectories = const {},
     this.editorShortcuts = const {},
     this.visualStyle = AppVisualStyle.clean,
+    this.whisperDevice = 'auto',
   });
 
   factory AppPreferences.fromJson(Map<String, dynamic> json) {
     final rawDirectories = json['outputDirectories'];
     final rawShortcuts = json['editorShortcuts'];
     return AppPreferences(
+      whisperDevice: json['whisperDevice'] as String? ?? 'auto',
       outputDirectories: {
         if (rawDirectories is Map)
           for (final module in AppOutputModule.values)
@@ -132,6 +134,7 @@ class AppPreferences {
   final Map<AppOutputModule, String> outputDirectories;
   final Map<String, AppShortcutBinding> editorShortcuts;
   final AppVisualStyle visualStyle;
+  final String whisperDevice;
 
   String? outputDirectoryFor(AppOutputModule module) {
     final value = outputDirectories[module]?.trim();
@@ -142,17 +145,20 @@ class AppPreferences {
     Map<AppOutputModule, String>? outputDirectories,
     Map<String, AppShortcutBinding>? editorShortcuts,
     AppVisualStyle? visualStyle,
+    String? whisperDevice,
   }) {
     return AppPreferences(
       outputDirectories: outputDirectories ?? this.outputDirectories,
       editorShortcuts: editorShortcuts ?? this.editorShortcuts,
       visualStyle: visualStyle ?? this.visualStyle,
+      whisperDevice: whisperDevice ?? this.whisperDevice,
     );
   }
 
   Map<String, dynamic> toJson() => {
     'version': 2,
     'visualStyle': visualStyle.name,
+    'whisperDevice': whisperDevice,
     'outputDirectories': {
       for (final entry in outputDirectories.entries)
         entry.key.name: entry.value,

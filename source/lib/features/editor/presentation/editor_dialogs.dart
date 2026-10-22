@@ -325,7 +325,7 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
               ValueListenableBuilder<String>(
                 valueListenable: WhisperRuntime.backend,
                 builder: (context, value, _) => Text(
-                  'Transcritor: $value${WhisperRuntime.fallbackReason == null ? '' : '\n${WhisperRuntime.fallbackReason}'}',
+                  'Transcritor: ${WhisperRuntime.description}${WhisperRuntime.fallbackReason == null ? '' : '\n${WhisperRuntime.fallbackReason}'}',
                 ),
               ),
               DropdownButtonFormField<String>(

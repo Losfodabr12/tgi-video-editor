@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'whisper_vulkan_manifest.dart';
+import 'app_preferences_service.dart';
 
 class WhisperGpuDevice {
   const WhisperGpuDevice({
@@ -30,6 +31,25 @@ class WhisperGpuDevice {
       );
 }
 
+class WhisperExecution {
+  const WhisperExecution({
+    required this.backend,
+    required this.device,
+    required this.deviceId,
+    required this.model,
+    required this.fallback,
+  });
+  final String backend, device, deviceId, model;
+  final bool fallback;
+  Map<String, Object> toJson() => {
+    'backend': backend,
+    'device': device,
+    'device_id': deviceId,
+    'model': model,
+    'fallback': fallback,
+  };
+}
+
 abstract final class WhisperRuntime {
   static const version = '1.9.5';
   static const release = 'b5454';
@@ -40,6 +60,9 @@ abstract final class WhisperRuntime {
 
   static final backend = ValueNotifier<String>('Aguardando transcrição');
   static String? fallbackReason;
+  static final devices = ValueNotifier<List<WhisperGpuDevice>>(const []);
+  static String activeDevice = 'CPU';
+  static String get description => '${backend.value} — $activeDevice';
   static WhisperGpuDevice? selectedDevice;
   static bool usesCuda(String output) => RegExp(
     r'using (?:device CUDA|CUDA(?:\d+)? backend)',
@@ -125,28 +148,99 @@ abstract final class WhisperRuntime {
 
   static void useCpu({String? reason}) {
     selectedDevice = null;
+    activeDevice = 'CPU';
     fallbackReason = reason;
     backend.value = reason == null ? 'CPU' : 'CPU (fallback Vulkan)';
   }
 
-  static Future<String> preferExecutable(String cpu) async {
+  static Future<String> preferExecutable(
+    String cpu, {
+    String? preference,
+  }) async {
     useCpu();
     if (!Platform.isWindows ||
         Platform.environment['TGI_WHISPER_BACKEND'] == 'cpu') {
       return cpu;
     }
     try {
-      final devices = await probeDevices(cpu);
-      if (devices.isEmpty) {
+      final choice =
+          preference ??
+          (await AppPreferencesService.instance.load()).whisperDevice;
+      if (choice == 'cpu') return cpu;
+      final detected = await probeDevices(cpu);
+      devices.value = detected;
+      if (detected.isEmpty) {
         throw const FormatException('Nenhuma GPU Vulkan compatível detectada.');
       }
-      selectedDevice = devices.first;
+      selectedDevice = selectDevice(detected, choice);
+      if (selectedDevice == null) {
+        throw const FormatException('A GPU escolhida não está disponível.');
+      }
+      activeDevice = selectedDevice!.name;
       backend.value = 'Vulkan disponível; verificando inferência';
       return '${File(cpu).parent.parent.path}/vulkan/bin/whisper-cli.exe';
     } catch (error) {
       useCpu(reason: 'Vulkan indisponível: $error');
       return cpu;
     }
+  }
+
+  static WhisperGpuDevice? selectDevice(
+    List<WhisperGpuDevice> available,
+    String choice,
+  ) {
+    if (choice == 'cpu' || available.isEmpty) return null;
+    if (choice != 'auto') {
+      for (final device in available) {
+        if (device.id == choice) return device;
+      }
+      return null;
+    }
+    final ranked = [...available]
+      ..sort((a, b) {
+        if (a.discrete != b.discrete) return a.discrete ? -1 : 1;
+        final aRtx = a.name.toUpperCase().contains('RTX');
+        final bRtx = b.name.toUpperCase().contains('RTX');
+        if (aRtx != bRtx) return aRtx ? -1 : 1;
+        return b.freeBytes.compareTo(a.freeBytes);
+      });
+    return ranked.first;
+  }
+
+  static String? findCpuExecutable() {
+    final explicit =
+        Platform.environment['TGI_WHISPER_CPP_PATH'] ??
+        Platform.environment['TGI_WHISPER_CLI_PATH'];
+    if (explicit != null && File(explicit).existsSync()) return explicit;
+    for (final initial in [
+      Directory.current,
+      File(Platform.resolvedExecutable).parent,
+    ]) {
+      var root = initial;
+      for (var i = 0; i < 8; i++) {
+        for (final relative in [
+          'whisper/bin/whisper-cli.exe',
+          'tools/whisper/bin/whisper-cli.exe',
+          'source/tools/whisper/bin/whisper-cli.exe',
+        ]) {
+          final file = File('${root.path}/$relative');
+          if (file.existsSync()) return file.absolute.path;
+        }
+        if (root.parent.path == root.path) break;
+        root = root.parent;
+      }
+    }
+    return null;
+  }
+
+  static Future<List<WhisperGpuDevice>> refreshDevices() async {
+    try {
+      final cpu = findCpuExecutable();
+      devices.value = cpu == null ? const [] : await probeDevices(cpu);
+    } catch (_) {
+      devices.value = const [];
+    }
+    return devices.value;
   }
 
   static Future<void> verify(String executable) async {

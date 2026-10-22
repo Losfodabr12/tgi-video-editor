@@ -34,6 +34,7 @@ import '../../../services/editor_preset_service.dart';
 import '../../../services/export_destination_service.dart';
 import '../../../services/auto_caption_service.dart';
 import '../../../services/whisper_runtime.dart';
+import 'widgets/whisper_device_settings.dart';
 import '../../../services/ffmpeg_service.dart';
 import '../../../services/media_import_service.dart';
 import '../../../services/project_io_service.dart';
@@ -2564,6 +2565,10 @@ class _EditorScreenState extends State<EditorScreen> {
                       onDuplicate: _controller.duplicateSelectedTimelineClips,
                       onImportVideo: _controller.importVideo,
                       onOpenKeyboardSettings: _openKeyboardSettings,
+                      onOpenTranscriptionSettings: () => showDialog<void>(
+                        context: context,
+                        builder: (_) => const WhisperDeviceSettings(),
+                      ),
                       onOpenMcpSettings: () => unawaited(_openMcpSettings()),
                       aiRunning: _automation.running,
                       aiConnected: _automation.connectedClients > 0,

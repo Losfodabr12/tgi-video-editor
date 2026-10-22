@@ -632,3 +632,22 @@ A versão v14 e o catálogo MCP não foram alterados nesta etapa.
 Validação da etapa 1: analyze sem avisos; 276 testes passaram, 16 integrações
 condicionais ignoradas. Inclui integridade das DLLs, detecção sem falsa
 confirmação de GPU, fallback por runtime ausente, v14 e orçamento MCP.
+
+
+## Seleção de dispositivo — etapa 2
+
+Arquivo → Transcrição (GPU) lista as GPUs compatíveis vistas pelo próprio
+backend Vulkan, com memória livre/total informada pelo driver. Automático
+prioriza dedicada, depois RTX e memória livre; CPU e escolha manual de GPU
+ficam em configurações globais, pelo identificador PCI quando disponível.
+Uma GPU escolhida que desaparece usa CPU; a preferência não é redirecionada
+silenciosamente a outra GPU. A mudança vale para a próxima transcrição.
+
+Telas de legendas mostram backend e dispositivo da inferência. O resultado do
+job MCP `transcribe` inclui `backend`, `device`, `device_id`, `model` e `fallback`
+da execução concluída, sem depender de outro job que atualize o estado global.
+Nenhum campo foi adicionado aos schemas de entrada MCP nem ao projeto v14.
+
+Validação da etapa 2: analyze sem avisos; 279 testes passaram, 16 integrações
+condicionais ignoradas. Inclui troca na UI, persistência, prioridade RTX, GPU
+removida, v14 e os limites do catálogo MCP.

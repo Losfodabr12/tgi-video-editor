@@ -3,6 +3,7 @@ part of 'editor_screen.dart';
 class _EditorHeader extends StatelessWidget {
   const _EditorHeader({
     this.onOpenMcpSettings,
+    this.onOpenTranscriptionSettings,
     this.onEmergencyStop,
     this.aiRunning = false,
     this.aiConnected = false,
@@ -45,7 +46,9 @@ class _EditorHeader extends StatelessWidget {
     required this.onCancelExport,
   });
 
-  final VoidCallback? onOpenMcpSettings, onEmergencyStop;
+  final VoidCallback? onOpenMcpSettings,
+      onEmergencyStop,
+      onOpenTranscriptionSettings;
   final bool aiRunning, aiConnected;
   final VoidCallback? onToggleLibrary, onToggleInspector;
   final String projectName;
@@ -185,6 +188,7 @@ class _EditorHeader extends StatelessWidget {
                       item('watermark', 'Marca-d’água'),
                       item('shortcuts', 'Atalhos do teclado'),
                       item('mcp', 'Configurações de IA (MCP)'),
+                      item('transcription', 'Transcrição (GPU)'),
                     ],
                     (value) {
                       switch (value) {
@@ -198,6 +202,8 @@ class _EditorHeader extends StatelessWidget {
                           onWatermarkSettings();
                         case 'shortcuts':
                           onOpenKeyboardSettings();
+                        case 'transcription':
+                          onOpenTranscriptionSettings?.call();
                         case 'mcp':
                           onOpenMcpSettings?.call();
                       }

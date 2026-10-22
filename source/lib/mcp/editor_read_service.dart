@@ -7,7 +7,6 @@ import '../domain/models/project.dart';
 import '../domain/models/track.dart';
 import '../features/editor/application/editor_controller.dart';
 import '../services/auto_caption_service.dart';
-import '../services/whisper_runtime.dart';
 import '../services/ffmpeg_service.dart';
 import 'editor_jobs.dart';
 import 'project_reads.dart';
@@ -461,9 +460,10 @@ class EditorReadService {
       return {
         'media_id': id,
         'cue_count': cues.length,
-        'backend': service is LocalWhisperAutoCaptionService
-            ? WhisperRuntime.backend.value
-            : 'custom',
+        if (service is LocalWhisperAutoCaptionService)
+          ...?service.lastExecution?.toJson()
+        else
+          'backend': 'custom',
         'vad': vad ?? controller.transcripts.vad,
         'scope': 'source',
         'language': usedLanguage,
