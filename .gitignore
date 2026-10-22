@@ -28,3 +28,7 @@
 *.jks
 /.work/
 **/tools/.downloads/
+
+# Private transcription validation.
+/docs/validation/
+*.words.json

@@ -57,12 +57,17 @@ Write-Output $ffprobeVersion[0]
 
 if (-not $SkipWhisper) {
     $whisperBin = Join-Path $toolsPath 'whisper\bin'
-    if (-not (Test-Path -LiteralPath (Join-Path $whisperBin 'whisper-cli.exe'))) {
+    $pinnedCliHash = '331dba46d6427105d2b802cdbc7eae916ea1c5abf9b0d3b5cfe460d8db8e4366'
+    $installedCli = Join-Path $whisperBin 'whisper-cli.exe'
+    if (-not (Test-Path -LiteralPath $installedCli) -or (Get-FileHash -LiteralPath $installedCli -Algorithm SHA256).Hash -ne $pinnedCliHash) {
         $archive = Join-Path $downloadRoot 'whisper-b5454-x64.zip'
         Get-VerifiedFile -Uri 'https://github.com/ggml-org/whisper.cpp/releases/download/b5454/whisper-bin-x64.zip' -Path $archive -Sha256 '6ba69e3482d7826214f90a6a9c84ca07782aec1e1d0c6a7c30c994fd5d816ccb'
         Expand-VerifiedRuntime -Archive $archive -ExeName 'whisper-cli.exe' -Destination $whisperBin
         Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/ggml-org/whisper.cpp/b5454/LICENSE' -OutFile (Join-Path $toolsPath 'whisper\LICENSE') -UseBasicParsing
     }
+    if ((Get-FileHash -LiteralPath $installedCli -Algorithm SHA256).Hash -ne $pinnedCliHash) { throw 'Whisper CLI diverge do runtime fixado.' }
+    & $installedCli --version
+    if ($LASTEXITCODE -ne 0) { throw 'Whisper nao inicializou.' }
     $models = Join-Path $toolsPath 'whisper\models'
     New-Item -ItemType Directory -Path $models -Force | Out-Null
     Get-VerifiedFile -Uri 'https://huggingface.co/ggerganov/whisper.cpp/resolve/5359861c739e955e79d9a303bcbc70fb988958b1/ggml-base.bin' -Path (Join-Path $models 'ggml-base.bin') -Sha256 '60ed5bc3dd14eea856493d334349b405782ddcaf0028d4b5df4088345fba2efe'

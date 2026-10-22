@@ -28,7 +28,6 @@ class EditorReadService {
   final EditorJobs jobs;
   final AutoCaptionService? captions;
   final MediaPathCheck checkMedia;
-  final Map<String, List<CaptionCue>> _transcripts = {};
   static Future<String> _existingMedia(MediaItem item) async {
     final file = File(item.filePath);
     if (!await file.exists()) {
@@ -41,8 +40,6 @@ class EditorReadService {
     return file.resolveSymbolicLinks();
   }
 
-  String _key(TgiProject p, MediaItem item) =>
-      '${p.id}|${item.id}|${item.filePath}|${item.duration.inMicroseconds}';
   MediaItem media(String id, [TgiProject? project]) {
     final p = project ?? controller.project;
     return p.mediaItemById(id) ??
@@ -152,8 +149,8 @@ class EditorReadService {
 
   List<CaptionCue> transcriptCues(String mediaId, [TgiProject? project]) {
     final p = project ?? controller.project, item = media(mediaId, project);
-    final cached = _transcripts[_key(p, item)];
-    if (cached == null) {
+    final cached = controller.transcripts.cues(p.id, item.id);
+    if (cached.isEmpty) {
       throw const CommandError(
         'transcript_unavailable',
         'Execute transcribe e aguarde get_job antes de pedir a transcrição.',
@@ -164,7 +161,7 @@ class EditorReadService {
 
   List<CaptionCue> availableTranscript(String mediaId) {
     final p = controller.project, item = media(mediaId);
-    return _transcripts[_key(p, item)] ?? const [];
+    return controller.transcripts.cues(p.id, item.id);
   }
 
   Map<String, Object?> getTranscript({
@@ -186,6 +183,9 @@ class EditorReadService {
       'scope': mediaId == null ? 'timeline' : 'source',
       'media_id': mediaId,
       'total': cues.length,
+      'language': mediaId == null
+          ? controller.transcripts.language
+          : controller.transcripts.usedLanguage(mediaId),
       'cues': cues.skip(offset).take(limit).map((c) => c.toJson()).toList(),
       'next_offset': offset + limit < cues.length ? offset + limit : null,
     };
@@ -434,14 +434,28 @@ class EditorReadService {
         ffmpeg.cancelActiveTranscriptionPreparation();
       };
       ctx.check();
+      final usedLanguage = language?.trim().isNotEmpty == true
+          ? language!.trim()
+          : controller.transcripts.language;
       final cues = await service.generateCaptionsForMedia(
         item.copyWith(filePath: path),
-        languageCode: language,
+        languageCode: usedLanguage,
         onProgress: ctx.update,
       );
       ctx.check();
-      _transcripts[_key(p, item)] = List.unmodifiable(cues);
-      return {'media_id': id, 'cue_count': cues.length, 'scope': 'source'};
+      if (controller.project.id != p.id) {
+        throw const CommandError(
+          'stale_project',
+          'O projeto mudou durante a transcrição.',
+        );
+      }
+      await controller.transcripts.put(p, item, cues, language: usedLanguage);
+      return {
+        'media_id': id,
+        'cue_count': cues.length,
+        'scope': 'source',
+        'language': usedLanguage,
+      };
     });
   }
 

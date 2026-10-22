@@ -6,6 +6,7 @@ import 'dart:math' as math;
 import '../domain/models/media_item.dart';
 import 'app_component_paths.dart';
 import 'ffmpeg_service.dart';
+import 'whisper_runtime.dart';
 
 const defaultLocalWhisperModelName = 'base';
 const localWhisperModelNames = <String>[
@@ -359,6 +360,7 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       Platform.environment['TGI_WHISPER_MODEL'],
     );
     final executable = await _resolveWhisperExecutable();
+    await WhisperRuntime.verify(executable);
     final model = await _resolveWhisperModel(modelName);
     return _LocalWhisperConfig(
       executablePath: executable,
@@ -518,52 +520,118 @@ List<CaptionCue> segmentCaptionCues(
   List<CaptionCue> segments, {
   int maxCharsPerCue = 44,
 }) {
-  final safeMaxChars = maxCharsPerCue.clamp(24, 60).toInt();
-  final cues = <CaptionCue>[];
-  for (final segment in segments) {
-    final text = _normalizeCaptionText(segment.text);
-    if (text == null || text.isEmpty || segment.end <= segment.start) {
-      continue;
+  final words = segments.expand((c) => c.words).toList();
+  if (words.isNotEmpty) {
+    if (segments.any((c) => c.words.isEmpty)) {
+      throw const AutoCaptionException(
+        'Tempos incompletos em uma fala. Revise a transcrição antes de segmentar.',
+      );
     }
-    final chunks = _splitCaptionText(text, safeMaxChars);
-    if (chunks.isEmpty) {
-      continue;
-    }
-    final totalWords = chunks.fold<int>(
-      0,
-      (total, chunk) => total + _wordCount(chunk),
-    );
-    var cursor = segment.start;
-    for (var index = 0; index < chunks.length; index++) {
-      final isLast = index == chunks.length - 1;
-      final chunk = chunks[index];
-      final chunkWords = math.max(1, _wordCount(chunk));
-      final cueEnd = isLast || totalWords <= 0
-          ? segment.end
-          : cursor +
-                Duration(
-                  microseconds:
-                      (segment.duration.inMicroseconds *
-                              (chunkWords / totalWords))
-                          .round(),
-                );
-      if (cueEnd > cursor) {
-        cues.add(
-          CaptionCue(
-            start: cursor,
-            end: cueEnd,
-            text: _wrapCaptionText(chunk, safeMaxChars),
-            words: List.unmodifiable(
-              segment.words.where((w) => w.end > cursor && w.start < cueEnd),
-            ),
-          ),
-        );
+    return timedCaptionCues(words, maxCharsPerCue: maxCharsPerCue);
+  }
+  return segments; // Legacy envelopes: never invent word timestamps.
+}
+
+/// Every partition boundary is a real word boundary, including the final cue.
+List<CaptionCue> timedCaptionCues(
+  List<CaptionWord> input, {
+  int maxCharsPerCue = 44,
+  Duration minimumDuration = Duration.zero,
+}) {
+  final seen = <String>{};
+  final words =
+      input
+          .where(
+            (w) =>
+                w.end >= w.start &&
+                seen.add(
+                  '${w.start.inMicroseconds}|${w.end.inMicroseconds}|${w.text}',
+                ),
+          )
+          .toList()
+        ..sort((a, b) => a.start.compareTo(b.start));
+  final limit = maxCharsPerCue.clamp(24, 60);
+  final cost = List<double>.filled(words.length + 1, double.infinity);
+  final next = List<int>.filled(words.length, -1);
+  cost[words.length] = 0;
+  for (var i = words.length - 1; i >= 0; i--) {
+    var length = 0;
+    for (var j = i; j < words.length; j++) {
+      length += words[j].text.trim().length + (j == i ? 0 : 1);
+      if (length > limit) break;
+      if (words[j].end - words[i].start < minimumDuration) continue;
+      final pause = j + 1 < words.length
+          ? words[j + 1].start - words[j].end
+          : Duration.zero;
+      final boundary =
+          RegExp(r'[.!?]$').hasMatch(words[j].text) ||
+          pause > const Duration(milliseconds: 500);
+      final score =
+          cost[j + 1] + 1000 + (limit - length) * 0.01 - (boundary ? 2 : 0);
+      if (score < cost[i]) {
+        cost[i] = score;
+        next[i] = j + 1;
       }
-      cursor = cueEnd;
     }
   }
-  cues.sort((a, b) => a.start.compareTo(b.start));
-  return cues;
+  final result = <CaptionCue>[];
+  for (var i = 0; i < words.length;) {
+    final end = next[i];
+    if (end < 0) {
+      throw const AutoCaptionException(
+        'Não é possível alinhar a legenda com os limites de texto e duração. Revise este trecho.',
+      );
+    }
+    final group = words.sublist(i, end);
+    result.add(
+      CaptionCue(
+        start: group.first.start,
+        end: group.last.end,
+        text: _wrapCaptionText(
+          group.map((w) => w.text.trim()).join(' '),
+          limit.toInt(),
+        ),
+        words: group,
+      ),
+    );
+    i = end;
+  }
+  return result;
+}
+
+/// Repartition timed words; legacy final short envelopes merge backward.
+List<CaptionCue> minimumCaptionCues(List<CaptionCue> input) {
+  final words = input.expand((c) => c.words).toList();
+  if (words.isNotEmpty) {
+    return timedCaptionCues(words, minimumDuration: const Duration(seconds: 1));
+  }
+  final result = <CaptionCue>[];
+  for (var i = 0; i < input.length; i++) {
+    var cue = input[i];
+    while (cue.duration < const Duration(seconds: 1) && i + 1 < input.length) {
+      final other = input[++i];
+      cue = CaptionCue(
+        start: cue.start,
+        end: other.end,
+        text: '${cue.text} ${other.text}',
+      );
+    }
+    if (cue.duration < const Duration(seconds: 1) && result.isNotEmpty) {
+      final previous = result.removeLast();
+      cue = CaptionCue(
+        start: previous.start,
+        end: cue.end,
+        text: '${previous.text} ${cue.text}',
+      );
+    }
+    if (cue.duration < const Duration(seconds: 1)) {
+      throw const AutoCaptionException(
+        'Fala isolada abaixo de 1s: revise o agrupamento.',
+      );
+    }
+    result.add(cue);
+  }
+  return result;
 }
 
 String formatSubtitleCues(List<CaptionCue> cues, SubtitleExportFormat format) {
@@ -599,40 +667,6 @@ String formatSubtitleCues(List<CaptionCue> cues, SubtitleExportFormat format) {
       }
       return buffer.toString();
   }
-}
-
-List<String> _splitCaptionText(String text, int maxCharsPerCue) {
-  if (text.length <= maxCharsPerCue) {
-    return [text];
-  }
-  final words = text.split(' ');
-  final chunks = <String>[];
-  final current = <String>[];
-  var currentLength = 0;
-
-  for (final word in words) {
-    if (word.isEmpty) {
-      continue;
-    }
-    final projectedLength = current.isEmpty
-        ? word.length
-        : currentLength + 1 + word.length;
-    if (current.isNotEmpty && projectedLength > maxCharsPerCue) {
-      chunks.add(current.join(' '));
-      current
-        ..clear()
-        ..add(word);
-      currentLength = word.length;
-      continue;
-    }
-    current.add(word);
-    currentLength = projectedLength;
-  }
-
-  if (current.isNotEmpty) {
-    chunks.add(current.join(' '));
-  }
-  return chunks;
 }
 
 String _wrapCaptionText(String text, int maxCharsPerCue) {
@@ -747,7 +781,7 @@ List<CaptionWord> _whisperWords(Map<String, dynamic> entry, Duration offset) {
   void flush() {
     if (start != null &&
         end != null &&
-        end! > start! &&
+        end! >= start! &&
         text.trim().isNotEmpty) {
       words.add(
         CaptionWord(
@@ -931,13 +965,6 @@ String? _normalizeCaptionText(Object? value) {
   }
   final text = value.replaceAll(RegExp(r'\s+'), ' ').trim();
   return text.isEmpty ? null : text;
-}
-
-int _wordCount(String value) {
-  return value
-      .split(RegExp(r'\s+'))
-      .where((word) => word.trim().isNotEmpty)
-      .length;
 }
 
 String _formatSrtTime(Duration duration) {

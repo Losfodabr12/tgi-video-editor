@@ -18,6 +18,7 @@ class EditorCaptionTiming {
   Duration _maxDuration(Duration a, Duration b) => a > b ? a : b;
   double _maxDouble(double a, double b) => a > b ? a : b;
   CaptionCue alignCaptionCueToWaveform(CaptionCue cue, AudioWaveform waveform) {
+    if (cue.words.isNotEmpty) return cue;
     if (cue.end <= cue.start ||
         waveform.samples.isEmpty ||
         waveform.sampleInterval <= Duration.zero) {
@@ -129,6 +130,7 @@ class EditorCaptionTiming {
         }
         return a.end.compareTo(b.end);
       });
+    if (sorted.every((c) => c.words.isNotEmpty)) return sorted;
     final normalized = <CaptionCue>[];
     var previousEnd = Duration.zero;
 
@@ -154,7 +156,9 @@ class EditorCaptionTiming {
         continue;
       }
 
-      normalized.add(CaptionCue(start: start, end: end, text: cue.text));
+      normalized.add(
+        CaptionCue(start: start, end: end, text: cue.text, words: cue.words),
+      );
       previousEnd = end;
     }
 

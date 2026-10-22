@@ -358,6 +358,7 @@ class _EditorScreenState extends State<EditorScreen> {
         path,
         exportSettings: savedSettings,
       );
+      await _controller.transcripts.save(savedProject, path: path);
       await _recordVersion(savedProject, savedSettings, 'Salvamento manual');
       if (!mounted || sessionRevision != _projectSessionRevision) return false;
       _markProjectAsSaved(
@@ -419,6 +420,7 @@ class _EditorScreenState extends State<EditorScreen> {
       _projectSessionRevision++;
       _controller.synchronizeCommandExportSettings(_exportSettings);
       _controller.loadProjectFromData(result);
+      await _controller.transcripts.open(result.project, path: path);
       _markProjectAsSaved(path);
       await _clearOwnedRecoveryDraft();
       await _recentProjectService.recordProject(
@@ -654,6 +656,12 @@ class _EditorScreenState extends State<EditorScreen> {
       unawaited(_automation.load());
     }
     _currentProjectPath = widget.initialProjectPath;
+    unawaited(
+      _controller.transcripts.open(
+        _controller.project,
+        path: _currentProjectPath,
+      ),
+    );
     _lastSavedProjectSnapshot = _controller.project;
     _lastAutosaveObservedProject = _controller.project;
     _lastSavedExportSettings = _exportSettings;
@@ -1277,6 +1285,7 @@ class _EditorScreenState extends State<EditorScreen> {
         hasPaidPlan: _hasPaidPlan,
         onOpenDownloads: _openPlanDownloads,
         initialSettings: _lastAutoCaptionsSettings,
+        defaultLanguage: _controller.transcripts.language,
       ),
     );
     _restoreEditorShortcutFocus();
@@ -1284,6 +1293,9 @@ class _EditorScreenState extends State<EditorScreen> {
       return;
     }
     _lastAutoCaptionsSettings = result;
+    _controller.transcripts.language = result.languageCode ?? 'pt';
+    await _controller.transcripts.save(_controller.project);
+    if (!mounted) return;
     if (result.modelName == 'small' && !_hasPaidPlan) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(

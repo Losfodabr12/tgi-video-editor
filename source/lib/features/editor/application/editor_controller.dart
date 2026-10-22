@@ -1,5 +1,6 @@
 import '../../../domain/text_style_profile.dart';
 import '../../../services/subtitle_service.dart';
+import '../../../services/transcript_store.dart';
 import 'dart:async';
 import 'editor_caption_timing.dart';
 import 'editor_history.dart';
@@ -143,7 +144,9 @@ class EditorController extends ChangeNotifier {
     AutoCaptionService? autoCaptionService,
     AudioLevelService? audioLevelService,
     TgiProject? initialProject,
-  }) : ffmpegService = ffmpegService ?? mediaImportService.ffmpegService,
+    TranscriptStore? transcriptStore,
+  }) : transcripts = transcriptStore ?? TranscriptStore(),
+       ffmpegService = ffmpegService ?? mediaImportService.ffmpegService,
        audioWaveformService =
            audioWaveformService ??
            AudioWaveformService(
@@ -160,6 +163,7 @@ class EditorController extends ChangeNotifier {
        _projectValue =
            initialProject ?? TgiProject.empty(name: 'Projeto sem t\u00EDtulo');
 
+  final TranscriptStore transcripts;
   final MediaImportService mediaImportService;
   final FfmpegService ffmpegService;
   final AudioWaveformService audioWaveformService;
@@ -1602,9 +1606,12 @@ class EditorController extends ChangeNotifier {
       final uniqueMediaItems = mediaItemsById.values.toList(growable: false);
       for (var index = 0; index < uniqueMediaItems.length; index++) {
         final mediaItem = uniqueMediaItems[index];
+        final usedLanguage = languageCode?.trim().isNotEmpty == true
+            ? languageCode!.trim()
+            : transcripts.language;
         final sourceCues = await autoCaptionService.generateCaptionsForMedia(
           mediaItem,
-          languageCode: languageCode,
+          languageCode: usedLanguage,
           modelName: modelName,
           maxCharsPerCue: maxCharsPerCue,
           onProgress: (progress, message) {
@@ -1617,6 +1624,12 @@ class EditorController extends ChangeNotifier {
                 : 'Video ${index + 1}/${uniqueMediaItems.length}: $message';
             notifyListeners();
           },
+        );
+        await transcripts.put(
+          _project,
+          mediaItem,
+          sourceCues,
+          language: usedLanguage,
         );
         _captionProgressMessage = uniqueMediaItems.length == 1
             ? 'Alinhando legendas ao audio'
@@ -1637,10 +1650,13 @@ class EditorController extends ChangeNotifier {
           ),
         );
       }
-      final timelineCues = _captionTiming.resolveCaptionCueOverlaps(
+      final resolvedCues = _captionTiming.resolveCaptionCueOverlaps(
         mappedTimelineCues,
         timelineLimit: _project.timelineDuration,
       );
+      final timelineCues = resolvedCues.every((c) => c.words.isNotEmpty)
+          ? minimumCaptionCues(resolvedCues)
+          : resolvedCues;
       if (timelineCues.isEmpty) {
         _errorMessage =
             'A transcricao nao encontrou falas nos trechos selecionados.';
@@ -5328,7 +5344,30 @@ class EditorController extends ChangeNotifier {
         continue;
       }
       cues.add(
-        CaptionCue(start: timelineStart, end: timelineEnd, text: cue.text),
+        CaptionCue(
+          start: timelineStart,
+          end: timelineEnd,
+          text: cue.text,
+          words: [
+            for (final w in cue.words)
+              if (w.start >= clipSourceStart && w.end <= clipSourceEnd)
+                CaptionWord(
+                  start:
+                      timingClip.timelineStart +
+                      _timelineDurationForSource(
+                        w.start - clipSourceStart,
+                        timingClip.playbackSpeed,
+                      ),
+                  end:
+                      timingClip.timelineStart +
+                      _timelineDurationForSource(
+                        w.end - clipSourceStart,
+                        timingClip.playbackSpeed,
+                      ),
+                  text: w.text,
+                ),
+          ],
+        ),
       );
     }
     cues.sort((a, b) => a.start.compareTo(b.start));

@@ -104,8 +104,10 @@ class _AutoCaptionsDialog extends StatefulWidget {
     required this.hasPaidPlan,
     required this.onOpenDownloads,
     this.initialSettings,
+    this.defaultLanguage = 'pt',
   });
 
+  final String defaultLanguage;
   final bool hasPaidPlan;
   final VoidCallback onOpenDownloads;
   final _AutoCaptionsDialogResult? initialSettings;
@@ -210,7 +212,7 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
     super.initState();
     final initial = widget.initialSettings;
     _languageController = TextEditingController(
-      text: initial?.languageCode ?? 'pt',
+      text: initial?.languageCode ?? widget.defaultLanguage,
     );
     _modelName = initial?.modelName ?? defaultLocalWhisperModelName;
     _captionStyleLabel =

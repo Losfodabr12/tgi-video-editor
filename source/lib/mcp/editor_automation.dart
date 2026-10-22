@@ -152,6 +152,7 @@ class EditorAutomation extends ChangeNotifier {
     try {
       final token = await tokenForClipboard();
       await policy.trustProject(controller.project);
+      await controller.transcripts.ready;
       if (epoch != _epoch || _disposed) {
         return;
       }

@@ -43,6 +43,8 @@ try {
         'whisper\bin\whisper-cli.exe','whisper\models\ggml-base.bin','whisper\LICENSE')) {
         if (-not (Test-Path -LiteralPath (Join-Path $packagePath $required))) { throw ('Runtime incompleto: ' + $required) }
     }
+    $whisperCliHash = (Get-FileHash -LiteralPath (Join-Path $packagePath 'whisper\bin\whisper-cli.exe') -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($whisperCliHash -ne '331dba46d6427105d2b802cdbc7eae916ea1c5abf9b0d3b5cfe460d8db8e4366') { throw 'Whisper do ZIP difere do runtime testado.' }
     # App-local Microsoft CRT avoids requiring an online installer on a fresh PC.
     foreach ($dll in @('msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll')) {
         Copy-Item -LiteralPath (Join-Path $env:WINDIR ('System32\' + $dll)) -Destination $packagePath -Force

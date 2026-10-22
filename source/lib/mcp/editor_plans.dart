@@ -8,7 +8,6 @@ import '../core/commands/silence_options.dart';
 import '../domain/models/clip.dart';
 import '../domain/models/project.dart';
 import '../domain/models/track.dart';
-import '../features/editor/application/editor_caption_timing.dart';
 import '../features/editor/application/editor_controller.dart';
 import '../services/auto_caption_service.dart';
 import '../services/ffmpeg_export_settings.dart';
@@ -385,32 +384,22 @@ class EditorPlans {
                 start: Duration(microseconds: (range.$1 * 1e6).round()),
                 end: Duration(microseconds: (range.$2 * 1e6).round()),
                 text: cue.text,
+                words: [
+                  for (final w in cue.words)
+                    if (_timelineRange(clip, seconds(w.start), seconds(w.end))
+                        case (final a, final b))
+                      CaptionWord(
+                        start: Duration(microseconds: (a * 1e6).round()),
+                        end: Duration(microseconds: (b * 1e6).round()),
+                        text: w.text,
+                      ),
+                ],
               ),
             );
           }
         }
-        final cues = const EditorCaptionTiming().resolveCaptionCueOverlaps(
-          timeline,
-          timelineLimit: clip.timelineEnd,
-        );
-        for (var i = 0; i < cues.length; i++) {
-          var cue = cues[i];
-          while (cue.duration < const Duration(seconds: 1) &&
-              i + 1 < cues.length) {
-            i++;
-            cue = CaptionCue(
-              start: cue.start,
-              end: cues[i].end,
-              text: '${cue.text} ${cues[i].text}',
-            );
-          }
-          if (cue.duration < const Duration(seconds: 1)) {
-            // v14 text clips have a one second minimum. Report the limitation.
-            throw const CommandError(
-              'caption_too_short',
-              'A última legenda tem menos de 1s. Ajuste a transcrição ou a velocidade antes de gerar.',
-            );
-          }
+        final cues = minimumCaptionCues(timeline);
+        for (final cue in cues) {
           run('add_text', {
             'text': cue.text,
             'timeline_start': seconds(cue.start),
