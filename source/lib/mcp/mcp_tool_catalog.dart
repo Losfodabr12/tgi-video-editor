@@ -4,8 +4,6 @@ import 'compact_schema.dart';
 final revisionSchema = <String, dynamic>{
   'type': 'integer',
   'minimum': 0,
-  'description':
-      'Revisão atual de get_project; obrigatória para editar. Uma transação incrementa a revisão uma vez.',
 };
 final pageFields = <String, dynamic>{
   'offset': {'type': 'integer', 'minimum': 0},
@@ -75,36 +73,23 @@ final removeSilencesArguments = objectSchema(
     'mode': {
       ...stringSchema(['suave', 'normal', 'agressivo']),
       'default': 'normal',
-      'description':
-          'Preset de detecção/padding. Parâmetros explícitos prevalecem.',
+      'description': 'Preset; parâmetros explícitos prevalecem.',
     },
     'job_id': {
       ...stringSchema(),
       'description':
-          'Job detect_silence concluído na revisão atual. Sem job_id, inicia análise e devolve um job para consultar.',
+          'Job detect_silence desta revisão; ausente inicia análise.',
     },
     'threshold_db': {
-      ...numberSchema(
-        -80,
-        0,
-        'Limiar de silêncio em dB; deve coincidir com o job reutilizado.',
-      ),
+      ...numberSchema(-80, 0, 'Limiar dB; igual ao job.'),
       'default': -35,
     },
     'minimum': {
-      ...numberSchema(
-        0.1,
-        10,
-        'Duração mínima do silêncio, em segundos da fonte; deve coincidir com o job.',
-      ),
+      ...numberSchema(0.1, 10, 'Segundos da fonte; igual ao job.'),
       'default': 0.5,
     },
     'padding': {
-      ...numberSchema(
-        0,
-        1,
-        'Segundos da fonte preservados em cada borda do silêncio.',
-      ),
+      ...numberSchema(0, 1, 'Segundos da fonte por borda.'),
       'default': 0.08,
     },
     ...remapScopeFields,
@@ -119,26 +104,23 @@ final cutJoinFields = <String, dynamic>{
     'minimum': 0,
     'maximum': 10000,
     'default': 250,
-    'description':
-        'Funde trechos mantidos curtos restaurando o intervalo até o vizinho mais próximo; 0 desativa.',
+    'description': 'Funde trechos curtos; 0 desativa.',
   },
   'protect_words': {
     'type': 'boolean',
-    'description':
-        'Padrão true se há transcrição. Preserva palavras e margens; sem tempos de palavras remove_silences protege frases inteiras.',
+    'description': 'Protege palavras/frases se há transcrição; padrão ativo.',
   },
   'word_margin': {
     ...numberSchema(0, .5),
     'default': .05,
-    'description': 'Margem em segundos da fonte ao redor de cada palavra.',
+    'description': 'Margem de palavras na fonte (s).',
   },
   'join_fade_ms': {
     'type': 'integer',
     'minimum': 0,
     'maximum': 100,
     'default': 8,
-    'description':
-        'Micro-fade de áudio em cada emenda, em ms da timeline; 0 desativa.',
+    'description': 'Fade de áudio nas emendas (ms); 0 desativa.',
   },
 };
 
@@ -148,7 +130,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ))
     e.key: McpToolDefinition(
       e.key,
-      '${e.value.description} Exige base_revision. Se aprovação estiver ativa, devolve plano pendente para aprovação dentro do app.',
+      e.value.description,
       objectSchema(
         {
           ...e.value.schema['properties'] as Map<String, dynamic>,
@@ -160,7 +142,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
     ),
   'apply_commands': McpToolDefinition(
     'apply_commands',
-    'Aplica um lote atômico: todos os comandos são validados antes de publicar. Um Ctrl+Z desfaz o lote. Em modo de aprovação devolve um plano.',
+    'Aplica lote atômico com um undo; aprovação ativa devolve plano. Aceita tool/arguments e o alias legado command.',
     objectSchema(
       {
         'commands': commandListSchema,
@@ -173,7 +155,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'get_project': McpToolDefinition(
     'get_project',
-    'Resumo compacto do projeto aberto, pistas, marcadores e uma página de clipes. Use next_cursor; cursor fica inválido se a revisão mudar.',
+    'Lê resumo, revisão, pistas e página de clipes. Paginação por next_cursor; revisão alterada invalida cursor.',
     objectSchema({
       'cursor': stringSchema(),
       'limit': {'type': 'integer', 'minimum': 1, 'maximum': 100},
@@ -188,7 +170,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'get_transcript': McpToolDefinition(
     'get_transcript',
-    'Legendas da timeline, ou cues na fonte de media_id após um job transcribe concluído. Índices são offset + posição na página.',
+    'Lê legendas da timeline ou cues da fonte após transcribe. Índices: offset + posição.',
     objectSchema({'media_id': stringSchema(), ...pageFields}),
     readOnly: true,
   ),
@@ -200,13 +182,13 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'get_loudness': McpToolDefinition(
     'get_loudness',
-    'Mede LUFS integrado, LRA e true peak da fonte com FFmpeg ebur128. Não inclui ganho, efeitos ou mixagem da timeline.',
+    'Mede LUFS, LRA e true peak da fonte, sem efeitos/mixagem da timeline.',
     objectSchema({'media_id': stringSchema()}, ['media_id']),
     readOnly: true,
   ),
   'get_frames': McpToolDefinition(
     'get_frames',
-    'Miniaturas PNG até 320x180, 1–8 tempos. Com media_id os tempos são da fonte; sem ele são da timeline. São frames de fonte, sem composição de textos/efeitos.',
+    'Gera 1–8 PNGs 320x180 da fonte, sem composição. Tempos: fonte com media_id; timeline sem ele.',
     objectSchema(
       {
         'media_id': stringSchema(),
@@ -245,7 +227,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'transcribe': McpToolDefinition(
     'transcribe',
-    'Inicia transcrição local com Whisper instalado. Retorna job_id. Ao concluir, leia cues com get_transcript. Não adiciona legendas automaticamente.',
+    'Job Whisper local; guarda transcrição para get_transcript, sem criar legendas.',
     objectSchema(
       {'media_id': stringSchema(), 'language': stringSchema()},
       ['media_id'],
@@ -254,7 +236,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'export': McpToolDefinition(
     'export',
-    'Exporta snapshot da revisão indicada usando as configurações atuais. Apenas filename .mp4/.wav, sem diretórios. O usuário precisa escolher a pasta no app. Não sobrescreve arquivo.',
+    'Job de exportação .mp4/.wav na pasta escolhida, com configurações atuais. Grava arquivo novo; não sobrescreve.',
     objectSchema(
       {'filename': stringSchema(), 'base_revision': revisionSchema},
       ['filename', 'base_revision'],
@@ -273,7 +255,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'preview_plan': McpToolDefinition(
     'preview_plan',
-    'Prévia de commands ou macro="remove_silences" + arguments. Retorna antes/depois e plan_id sem editar; sem job_id inicia análise. Plano expira em 15 min ou ao mudar a revisão.',
+    'Planeja commands (tool/arguments) ou macro="remove_silences" sem editar. Retorna plan_id; expira em 15 min/revisão alterada. Macro sem job_id inicia análise.',
     {
       'type': 'object',
       'additionalProperties': false,
@@ -298,7 +280,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'apply_plan': McpToolDefinition(
     'apply_plan',
-    'Aplica o plano exato em uma transação. Se aprovação estiver ativa, precisa de aprovação humana no app. Uma IA não pode conceder aprovação.',
+    'Aplica snapshot exato em uma transação/undo; respeita aprovação humana no app. IA não concede aprovação.',
     objectSchema(
       {'plan_id': stringSchema(), 'base_revision': revisionSchema},
       ['plan_id', 'base_revision'],
@@ -307,7 +289,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'remove_silences': McpToolDefinition(
     'remove_silences',
-    'Prévia: clip_id, mode, protect_words, join_fade_ms e min_keep_ms. Sem job_id inicia análise; com job pronto retorna cortes/durações e remapeia camadas. scope=all_tracks; bloqueios falham. Aplicar: apply_plan; um undo.',
+    'Planeja cortes de silêncio, protegendo fala/fades. Sem job_id inicia análise; com job pronto retorna plano. Remapeia camadas; bloqueios falham. Aplicar: apply_plan.',
     objectSchema(
       {
         ...removeSilencesArguments['properties'] as Map<String, dynamic>,
@@ -319,7 +301,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'cut_by_transcript': McpToolDefinition(
     'cut_by_transcript',
-    'Prévia: clip_id, keep_cue_indices, protect_words, join_fade_ms e min_keep_ms. Mantém falas escolhidas e remapeia camadas; retorna métricas, falha em bloqueios. Aplicar: apply_plan; um undo.',
+    'Planeja manter cues escolhidos, protegendo palavras/fades e remapeando camadas. Falha em bloqueios. Aplicar: apply_plan.',
     objectSchema(
       {
         'clip_id': clipIdSchema,
@@ -338,7 +320,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'auto_captions': McpToolDefinition(
     'auto_captions',
-    'Prévia: clip_id com transcrição pronta. Acrescenta legendas brancas sincronizadas com trim/speed/reverso; agrupa falas abaixo de 1s quando possível. Pode criar camadas. Aplicar: apply_plan.',
+    'Planeja legendas brancas sincronizadas; exige transcrição pronta. Pode criar camadas. Aplicar: apply_plan.',
     objectSchema(
       {'clip_id': clipIdSchema, 'base_revision': revisionSchema},
       ['clip_id', 'base_revision'],
@@ -347,7 +329,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'reframe_9x16': McpToolDefinition(
     'reframe_9x16',
-    'Prévia: clip_id de vídeo/imagem com dimensões conhecidas. Recorta ao centro e muda a saída do projeto para 1080x1920. Crop e resolução são desfeitos juntos. Aplicar: apply_plan.',
+    'Planeja crop central e saída 1080x1920 para vídeo/imagem. Crop/resolução compartilham undo. Aplicar: apply_plan.',
     objectSchema(
       {'clip_id': clipIdSchema, 'base_revision': revisionSchema},
       ['clip_id', 'base_revision'],
@@ -356,7 +338,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
 };
 
-/// Stable discovery order: intent-level macros before individual edit tools.
+/// Intent-level tools stay ahead of individual edits.
 const macroToolNames = [
   'remove_silences',
   'cut_by_transcript',
@@ -365,30 +347,61 @@ const macroToolNames = [
   'preview_plan',
   'apply_plan',
 ];
+const mcpToolOrder = [
+  'get_project',
+  ...macroToolNames,
+  'split_clip',
+  'trim_clip',
+  'delete_clip',
+  'move_clip',
+  'set_clip_speed',
+  'add_text',
+  'set_caption_style',
+  'apply_effect',
+  'set_keyframe',
+  'add_transition',
+  'set_volume',
+  'add_marker',
+  'undo',
+  'redo',
+  'apply_commands',
+  'get_clip',
+  'get_transcript',
+  'list_media',
+  'get_loudness',
+  'get_frames',
+  'detect_silence',
+  'detect_scenes',
+  'transcribe',
+  'get_job',
+  'cancel_job',
+  'export_cut_check',
+  'export',
+];
 final mcpToolCatalog = <String, McpToolDefinition>{
-  for (final name in macroToolNames) name: _mcpToolDefinitions[name]!,
-  for (final entry in _mcpToolDefinitions.entries)
-    if (!macroToolNames.contains(entry.key)) entry.key: entry.value,
+  for (final name in mcpToolOrder)
+    if (_mcpToolDefinitions.containsKey(name)) name: _mcpToolDefinitions[name]!,
 };
 
 /// Original public catalog remains stable for consumers of the base tool set.
 /// The server advertises this full registry, including file-output readers.
-final mcpRuntimeToolCatalog = <String, McpToolDefinition>{
-  for (final name in macroToolNames) name: mcpToolCatalog[name]!,
-  'export_cut_check': McpToolDefinition(
-    'export_cut_check',
-    'Ouve antes de aprovar: plan_id, filename .mp4/.wav e base_revision. Exporta ~1s ao redor dos 10 primeiros cortes simulados na pasta escolhida; retorna job_id. Não edita o projeto; não sobrescreve arquivos.',
-    objectSchema(
-      {
-        'plan_id': stringSchema(),
-        'filename': stringSchema(),
-        'base_revision': revisionSchema,
-      },
-      ['plan_id', 'filename', 'base_revision'],
-    ),
-    readOnly: true,
-    idempotent: false,
+final _cutCheckDefinition = McpToolDefinition(
+  'export_cut_check',
+  'Job de amostra .mp4/.wav dos 10 primeiros cortes do plano. Grava arquivo novo na pasta escolhida; não edita/aprova o projeto nem sobrescreve.',
+  objectSchema(
+    {
+      'plan_id': stringSchema(),
+      'filename': stringSchema(),
+      'base_revision': revisionSchema,
+    },
+    ['plan_id', 'filename', 'base_revision'],
   ),
-  for (final entry in mcpToolCatalog.entries)
-    if (!macroToolNames.contains(entry.key)) entry.key: entry.value,
+  readOnly: true,
+  idempotent: false,
+);
+final mcpRuntimeToolCatalog = <String, McpToolDefinition>{
+  for (final name in mcpToolOrder)
+    name: name == 'export_cut_check'
+        ? _cutCheckDefinition
+        : mcpToolCatalog[name]!,
 };

@@ -186,13 +186,13 @@ a revisão de exemplo. O catálogo exato de campos, limites e enums fica em
 
 | Tool | Comportamento | Exemplo de argumentos |
 | --- | --- | --- |
+| `get_project` | Resumo paginado, revisão, pistas, clipes, marcadores, transições e resolução. | `{"limit":20}`; próxima: `{"cursor":"7:20","limit":20}` |
 | `remove_silences` | Analisa ou cria prévia de remoção com remapeamento; padrão todas as camadas e falha em bloqueios. | `{"clip_id":"video_1","job_id":"job_1","padding":0.12,"scope":"all_tracks","locked_tracks":"fail","base_revision":7}` |
 | `cut_by_transcript` | Prévia mantendo cues escolhidos e remapeando todas as camadas; falha em bloqueios. | `{"clip_id":"video_1","keep_cue_indices":[0,2,3],"base_revision":7}` |
 | `auto_captions` | Preview de legendas para o clipe usando transcrição já concluída. | `{"clip_id":"video_1","base_revision":7}` |
 | `reframe_9x16` | Preview de crop central estático e saída 1080×1920; resolução entra no mesmo undo. | `{"clip_id":"video_1","base_revision":7}` |
 | `preview_plan` | Prévia de lote ou da macro remove_silences, sem editar. | `{"macro":"remove_silences","arguments":{"clip_id":"video_1","job_id":"job_1","padding":0.12},"base_revision":7}` |
 | `apply_plan` | Aplica snapshot aprovado na mesma revisão, em uma transação. | `{"plan_id":"plan_1","base_revision":7}` |
-| `export_cut_check` | Job de amostra dos dez primeiros cortes do plano, sem editar. Pasta de export escolhida; não sobrescreve. | `{"plan_id":"plan_1","filename":"ouvir-cortes.wav","base_revision":7}` |
 | `split_clip` | Divide vídeo/áudio/texto/imagem e vínculos; o tempo deve estar dentro do clipe. IDs mudam. | `{"clip_id":"video_1","at":4.5,"base_revision":7}` |
 | `trim_clip` | Ajusta fonte de vídeo/áudio; mínimo 0,1 s na timeline; respeita espaço e bloqueios. | `{"clip_id":"video_1","source_start":1,"source_duration":6,"base_revision":7}` |
 | `delete_clip` | Exclui grupo; ripple fecha espaço e ajusta marcadores/transições. | `{"clip_id":"video_1","ripple":true,"base_revision":7}` |
@@ -207,8 +207,7 @@ a revisão de exemplo. O catálogo exato de campos, limites e enums fica em
 | `add_marker` | Marcador nomeado na timeline. | `{"at":5,"name":"Revisar fala","base_revision":7}` |
 | `undo` | Desfaz a última transação compartilhada. | `{"base_revision":7}` |
 | `redo` | Refaz a última transação desfeita. | `{"base_revision":8}` |
-| `apply_commands` | Lote atômico; em modo de aprovação retorna plano. Não mistura undo/redo. | `{"base_revision":7,"commands":[{"command":"add_marker","arguments":{"at":1,"name":"Início"}}]}` |
-| `get_project` | Resumo paginado, revisão, pistas, clipes, marcadores, transições e resolução. | `{"limit":20}`; próxima: `{"cursor":"7:20","limit":20}` |
+| `apply_commands` | Lote atômico; em modo de aprovação retorna plano. Não mistura undo/redo. | `{"base_revision":7,"commands":[{"tool":"add_marker","arguments":{"at":1,"name":"Início"}}]}` |
 | `get_clip` | Tempos, grupo, pista, estilo, efeitos e keyframes. | `{"clip_id":"video_1"}` |
 | `get_transcript` | Sem mídia: legendas da timeline. Com mídia: transcrição concluída na fonte. | `{"media_id":"media_1","offset":0,"limit":50}` |
 | `list_media` | Metadados das mídias importadas, sem caminhos. | `{"offset":0,"limit":50}` |
@@ -217,9 +216,10 @@ a revisão de exemplo. O catálogo exato de campos, limites e enums fica em
 | `detect_silence` | Job de silêncio; intervalos em segundos da fonte. | `{"media_id":"media_1","threshold_db":-35,"minimum":0.5}` |
 | `detect_scenes` | Job de mudanças de cena na fonte. | `{"media_id":"media_1","threshold":0.3}` |
 | `transcribe` | Job Whisper local; disponibiliza cues para get_transcript/macros. | `{"media_id":"media_1","language":"pt"}` |
-| `export` | Job de exportação do snapshot/revisão, com configurações atuais do app. | `{"filename":"resultado.mp4","base_revision":7}` |
 | `get_job` | Status, progresso, resultado ou erro. | `{"job_id":"job_1"}` |
 | `cancel_job` | Cancela análise/exportação; resultado cancelado não é publicado. | `{"job_id":"job_1"}` |
+| `export_cut_check` | Job de amostra dos dez primeiros cortes do plano, sem editar. Pasta de export escolhida; não sobrescreve. | `{"plan_id":"plan_1","filename":"ouvir-cortes.wav","base_revision":7}` |
+| `export` | Job de exportação do snapshot/revisão, com configurações atuais do app. | `{"filename":"resultado.mp4","base_revision":7}` |
 
 Tools trazem `readOnlyHint`, `destructiveHint`, `idempotentHint` e
 `openWorldHint`. Previews e análises não alteram o projeto. Exportação escreve

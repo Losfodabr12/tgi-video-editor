@@ -29,12 +29,11 @@ Map<String, dynamic> stringSchema([List<String>? values]) => {
 final secondsSchema = numberSchema(
   0,
   86400 * 30,
-  'Tempo em segundos; timeline salvo quando indicado como source.',
+  'Segundos da timeline/fonte.',
 );
 final clipIdSchema = {
   ...stringSchema(),
-  'description':
-      'ID de clipe retornado por get_project/get_clip. Grupos vinculados são preservados.',
+  'description': 'ID de get_project/get_clip.',
 };
 final styleFields = <String, dynamic>{
   'font_family': stringSchema(),
@@ -63,13 +62,13 @@ final remapScopeFields = <String, dynamic>{
     ...stringSchema(['all_tracks', 'main_track_only']),
     'default': 'all_tracks',
     'description':
-        'all_tracks remapeia todas as camadas; main_track_only inclui a principal e seus vínculos, preservando tempos das demais.',
+        'all_tracks remapeia tudo; main_track_only preserva outras pistas.',
   },
   'locked_tracks': {
     ...stringSchema(['fail', 'skip', 'unlock']),
     'default': 'fail',
     'description':
-        'fail lista bloqueios e cancela antes de editar; skip preserva camadas bloqueadas e seus vínculos; unlock as desbloqueia na mesma transação.',
+        'fail rejeita; skip preserva bloqueadas; unlock destrava no lote.',
   },
 };
 

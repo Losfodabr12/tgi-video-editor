@@ -102,7 +102,11 @@ void main() {
         expect(definition['annotations']['idempotentHint'], false);
         expect(
           tools.indexOf(definition),
-          lessThan(tools.indexWhere((t) => t['name'] == 'split_clip')),
+          greaterThan(tools.indexWhere((t) => t['name'] == 'cancel_job')),
+        );
+        expect(
+          tools.indexOf(definition),
+          lessThan(tools.indexWhere((t) => t['name'] == 'export')),
         );
         final analysis = reads.jobs.start(
           'detect_silence',

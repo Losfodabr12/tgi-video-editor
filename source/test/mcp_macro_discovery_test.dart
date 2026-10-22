@@ -15,7 +15,8 @@ void main() {
               )
               as List;
       final names = tools.map((t) => t['name']).toList();
-      expect(names.take(6), [
+      expect(names.take(7), [
+        'get_project',
         'remove_silences',
         'cut_by_transcript',
         'auto_captions',
@@ -24,15 +25,27 @@ void main() {
         'apply_plan',
       ]);
       expect(names.toSet(), hasLength(33));
-      for (final macro in tools.take(5)) {
+      for (final macro in tools.take(6)) {
         expect(macro['annotations']['readOnlyHint'], true);
-        expect((macro['description'] as String).length, lessThan(300));
+        expect(
+          utf8.encode(macro['description'] as String).length,
+          lessThan(300),
+        );
       }
-      expect(tools[5]['annotations']['destructiveHint'], true);
+      expect(tools[6]['annotations']['destructiveHint'], true);
       expect(
         names.indexOf('apply_plan'),
         lessThan(names.indexOf('split_clip')),
       );
+      final runtime = mcpRuntimeToolCatalog.keys.toList();
+      expect(runtime, mcpToolOrder);
+      expect(runtime.take(8).last, 'split_clip');
+      expect(runtime.sublist(runtime.length - 4), [
+        'get_job',
+        'cancel_job',
+        'export_cut_check',
+        'export',
+      ]);
     },
   );
   test(
