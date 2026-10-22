@@ -420,7 +420,7 @@ pesquisados pelo aplicativo. Tempos e memória acima são de CPU, inclusive nas
 tentativas CUDA; tempo/RAM/VRAM de inferência GPU não estão disponíveis.
 Nenhuma comparação de qualidade é derivada desses tempos.
 
-### Scorer fornecido e rascunho aguardando revisão
+### Scorer fornecido e preparação do rascunho
 
 O código fornecido foi salvo literalmente em `tools/wer.dart`, sem extrair
 ou reescrever a lógica. Linha de comando preservada:
@@ -444,9 +444,9 @@ sem timestamps nem correções lexicais, e salva em
 Logs, JSON e proveniência ficam privados em `.work/wer-validation/`.
 
 **O rascunho foi gerado por Small e favorece Small na comparação.**
-A referência precisa ser corrigida por uma pessoa ouvindo o recorte antes de
-comparar modelos. Não foi criado `referencia-1min.txt`; WER/CER dos modelos
-aguardam essa revisão. Os cinco testes usam somente textos sintéticos.
+Na preparação do rascunho ainda não havia `referencia-1min.txt`; as métricas
+da referência recebida depois constam na seção seguinte, com a limitação
+de sua origem. Os cinco testes usam somente textos sintéticos.
 `.work/` e os dois arquivos de referência estão explicitamente no `.gitignore`;
 a regra preexistente para a pasta de validação também foi preservada.
 
@@ -454,3 +454,64 @@ Validação local desta etapa: `dart analyze tools/wer.dart` e `flutter analyze`
 sem problemas; suite completa com **273 testes passando**, **16 ignorados**,
 incluindo os cinco testes da CLI. O código do scorer foi conferido byte a byte
 contra o texto fornecido, e o áudio foi validado como PCM16 mono/16 kHz, 60 s.
+
+## WER/CER das 12 hipóteses com a referência fornecida (22/10/2026)
+
+**Todas as 12 execuções rodaram efetivamente em CPU.** As seis tentativas
+com o CLI CUDA terminaram em fallback CPU; os logs registram backend CPU e
+`no GPU found`, sem confirmação de inferência CUDA. Não há medição de GPU
+ativa nem de VRAM atribuída ao Whisper nesta rodada.
+
+Foram avaliados todos os modelos de transcrição encontrados nas instalações
+locais: Base e Small multilíngues, deduplicando as cópias de Base. Small
+permanece no projeto TGI original e foi lido sem baixar ou instalar pesos
+adicionais. Silero é VAD e não foi contado como modelo de transcrição.
+
+O recorte privado de 0:00 a 1:00 tem 60,000 s, mono, 16 kHz, PCM16.
+As hipóteses desta série foram geradas com whisper.cpp 1.9.5/b5454,
+idioma `pt`, 4 threads, **sem VAD**, três processos sequenciais por combinação
+modelo/backend solicitado. Esta série é distinta da tabela anterior com VAD.
+CPU foi forçada com `-ng`; a tentativa CUDA usou o CLI CUDA sem esse argumento.
+O tempo inclui inicialização, carregamento, inferência e escrita do JSON;
+extração, exportação da hipótese textual e scorer ficam fora do cronômetro.
+
+Tempo e memória abaixo são medianas **separadas** de três execuções por
+linha. Memória é o pico de working set/RSS do processo, em MiB
+(1.048.576 bytes), consultado via GetProcessMemoryInfo a cada 20 ms;
+não inclui VRAM nem memória do editor. Os picos de commit também estão nos
+artefatos privados. Cache do sistema e outros aplicativos não foram isolados.
+
+| Modelo | Backend efetivo (solicitação) | Tempo mediano (s) | Memória mediana do pico RSS (MiB) | WER | CER |
+|---|---|---:|---:|---:|---:|
+| Base | CPU (-ng) | 5,875 | 367,109 | 17,95% | 11,95% |
+| Base | CPU (CUDA solicitada; fallback) | 6,017 | 367,973 | 17,95% | 11,95% |
+| Small | CPU (-ng) | 15,828 | 865,566 | 0,00% | 0,00% |
+| Small | CPU (CUDA solicitada; fallback) | 16,144 | 865,281 | 0,00% | 0,00% |
+
+Cada uma das 12 hipóteses foi pontuada por `tools/wer.dart`, sem modificar
+seu código, contra `docs/validation/referencia-1min.txt` (156 palavras
+após normalização). Os três WER/CER de cada linha foram idênticos;
+por isso a mediana dos percentuais coincide com cada resultado individual.
+Maiúsculas/pontuação são ignoradas, acentos são preservados e CER inclui
+os espaços normalizados, conforme o scorer fornecido.
+
+As 12 hipóteses `.hypothesis.txt`, resultados individuais `.wer.txt`, JSON,
+logs, tempos, contadores de memória e a cópia da referência usada ficam em
+`.work/accuracy-measured-20261022-081525/`, fora do Git. Nenhum conteúdo do vídeo
+foi incluído nesta atualização do relatório.
+
+### Recomendação e limites desta comparação
+
+A referência fornecida é **idêntica byte a byte ao rascunho gerado por
+Small**. Isso favorece Small: seus 0% medem concordância com o rascunho do
+próprio modelo, e não demonstram superioridade em uma referência independente.
+Diferenças de Base em relação a esse rascunho não foram classificadas por
+avaliação auditiva independente. A amostra tem somente um minuto de um
+vídeo, com modelos e idioma fixos; não representa um corpus de português
+nem mede alinhamento temporal, inserções em silêncio ou desempenho de GPU.
+
+Recomendo **manter Base para priorizar tempo e RAM nesta CPU**: na condição
+CPU explícita, 5,875 s e 367,109 MiB, contra 15,828 s e 865,566 MiB de Small.
+Small é uma opção para avaliar com referências independentes e mais áudios
+antes de recomendar uma troca por qualidade. **O modelo padrão permanece Base;
+nenhuma configuração do aplicativo foi alterada.**
