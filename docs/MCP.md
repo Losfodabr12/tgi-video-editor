@@ -118,8 +118,8 @@ precisam terminar antes de aplicar comandos externos.
     "base_revision": 7,
     "label": "Cortar e ajustar áudio",
     "commands": [
-      {"command": "set_volume", "arguments": {"clip_id": "audio_1", "volume": 0.7}},
-      {"command": "split_clip", "arguments": {"clip_id": "video_1", "at": 4.5}}
+      {"tool": "set_volume", "arguments": {"clip_id": "audio_1", "volume": 0.7}},
+      {"tool": "split_clip", "arguments": {"clip_id": "video_1", "at": 4.5}}
     ]
   }
 }
@@ -148,6 +148,37 @@ transação da IA ainda no topo do histórico. Edições posteriores exigem nave
 no histórico com Ctrl+Z. A aprovação e o desfazer humanos entram na auditoria.
 
 ## Tools e exemplos
+
+### Decisão de compatibilidade: lotes e planos
+
+O fluxo recomendado é `preview_plan → apply_plan`: primeiro se inspeciona o
+snapshot e depois se aplica exatamente o resultado, com a aprovação local
+existente. `apply_commands` permanece como atalho de compatibilidade: com
+aprovação ligada cria um plano; desligada executa o lote atômico imediatamente.
+Há sobreposição na entrada dos comandos, mas a interação tem efeitos diferentes.
+Remover ou transformar esse atalho em uma aplicação automática de planos mudaria
+o comportamento de clientes existentes e a política de aprovação. Não faremos
+essa mudança nesta versão. Uma futura API pode concentrar a documentação no
+fluxo de planos e manter `apply_commands` como adaptador, sem retirar seu nome.
+
+Já foram unificados o formato de entrada e os validadores: ambos aceitam
+`commands: [{"tool": "add_marker", "arguments": {"at": 1, "name": "Fala"}}]`.
+`tool` é o nome de uma ferramenta de edição anunciada, excluindo `undo`/`redo`.
+O alias legado `command` continua aceito, inclusive para os lotes antigos com
+`remap_timeline`; não combine `tool` e `command` no mesmo item. A resposta dos
+planos mantém `command` para não quebrar leitores existentes.
+
+`arguments` é um objeto aberto apenas no envelope compacto. O servidor valida
+cada item com o mesmo schema e os mesmos validadores das edições individuais;
+campos desconhecidos, tipos, limites, IDs, bloqueios e revisões seguem rejeitados.
+Erros preservam `code`, `message` e os detalhes anteriores e acrescentam
+`details.expected_schema` e `details.example` (item mínimo), além de
+`command_index` quando disponível. IDs/textos do exemplo são placeholders: use
+os IDs reais de `get_project`. Falhas não publicam parte do lote nem criam undo.
+O alias `preview_plan` com `macro="remove_silences"` também permanece aceito,
+validando os argumentos pelo schema da macro. Schemas repetidos são anunciados
+por `$defs`/`$ref` locais ao respectivo `inputSchema`; não há referência externa.
+Nenhuma dessas alterações acrescenta campos ou muda o formato de projeto v14.
 
 Os exemplos abaixo são objetos `arguments` para `tools/call`. Substitua os IDs e
 a revisão de exemplo. O catálogo exato de campos, limites e enums fica em
