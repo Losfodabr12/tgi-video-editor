@@ -607,3 +607,28 @@ fixados anteriormente, e **o padrão Base permanece intacto**.
 Validação local: analyze sem problemas e **273 testes passando**, com
 16 ignorados. O teste do catálogo confere o rótulo Preciso (turbo), seu
 identificador, tamanho e presença do SHA-256 fixado.
+
+
+## Integração Vulkan no aplicativo — etapa 1
+
+Runtime whisper.cpp 1.9.5/b5454 compilado da mesma revisão fixada, com
+`GGML_VULKAN=ON`, CUDA desativado e sem alteração do código upstream.
+`tool/build_whisper_vulkan.py` verifica SHA-256 dos quatro arquivos baixados
+(fonte, Vulkan-Headers, SPIRV-Headers e shaderc), mede cada executável/DLL real
+e gera o manifesto incorporado à aplicação por `tool/editor_paths.ps1`.
+O app verifica todos os sete binários antes de executar o detector ou o CLI.
+O driver fornece o loader Vulkan; não é necessário instalar o SDK no usuário.
+
+Acréscimo medido: **48.947.200 bytes (48,95 MB)**, sete arquivos; ZIP isolado
+**15.192.213 bytes**. Está abaixo de ~50 MB e segue no ZIP, sem download de
+pacote de aceleração. O pacote CUDA incompleto deixou de ser distribuído.
+Detecção executa em subprocesso limitado a oito segundos; erro, ausência ou
+incompatibilidade do driver/GPU usa CPU. Durante inferência, falta de saída por
+45 segundos encerra o subprocesso e tenta CPU uma vez; cancelamento continua
+cancelando, e trechos seguintes não repetem uma GPU que já falhou.
+Backend GPU só é confirmado pela mensagem de seleção efetiva do engine.
+A versão v14 e o catálogo MCP não foram alterados nesta etapa.
+
+Validação da etapa 1: analyze sem avisos; 276 testes passaram, 16 integrações
+condicionais ignoradas. Inclui integridade das DLLs, detecção sem falsa
+confirmação de GPU, fallback por runtime ausente, v14 e orçamento MCP.

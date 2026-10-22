@@ -239,7 +239,10 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
           'Nenhuma fala foi detectada na transcricao.',
         );
       }
-      onProgress?.call(1, 'Legendas geradas — ${WhisperRuntime.backend.value}');
+      onProgress?.call(
+        1,
+        'Legendas geradas — ${WhisperRuntime.backend.value}',
+      );
       return cues;
     } finally {
       unawaited(
@@ -262,7 +265,7 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
     try {
       return await _runTranscribeChunk(
         chunk,
-        config: config,
+        config: config.gpuFailed ? config.cpu() : config,
         languageCode: languageCode,
         vocabulary: vocabulary,
         vadModel: vadModel,
@@ -273,9 +276,11 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       );
     } catch (error) {
       _checkCancelled();
-      if (config.executablePath == config.cpuExecutablePath) rethrow;
-      WhisperRuntime.fallbackReason = error.toString();
-      WhisperRuntime.backend.value = 'CPU (fallback CUDA)';
+      if (config.executablePath == config.cpuExecutablePath || config.gpuFailed) {
+        rethrow;
+      }
+      config.gpuFailed = true;
+      WhisperRuntime.useCpu(reason: 'Vulkan falhou; retomando na CPU: $error');
       final cpu = _LocalWhisperConfig(
         executablePath: config.cpuExecutablePath,
         cpuExecutablePath: config.cpuExecutablePath,
@@ -322,6 +327,7 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       outputPrefix,
       '-pp',
       if (config.executablePath == config.cpuExecutablePath) '-ng',
+      if (config.device != null) ...['-dev', config.device!.index.toString()],
     ];
 
     arguments.addAll(
@@ -355,7 +361,22 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       process.kill();
     }
 
+    // Kill a stalled driver in its subprocess so the app can retry on CPU.
+    var gpuStalled = false;
+    var finished = false;
+    Timer? gpuWatchdog;
+    void armWatchdog() {
+      if (config.device == null || finished) return;
+      gpuWatchdog?.cancel();
+      gpuWatchdog = Timer(const Duration(seconds: 45), () {
+        gpuStalled = true;
+        process.kill();
+      });
+    }
+
+    armWatchdog();
     void handleOutput(String chunkOutput) {
+      armWatchdog();
       output.write(chunkOutput);
       final normalizedLocalProgress = _parseWhisperProgressRatio(
         chunkOutput,
@@ -383,15 +404,21 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
         .listen(handleOutput)
         .asFuture<void>();
 
-    final exitCode = await _waitForWhisperExitCode(process);
-    _activeWhisper = null;
+    final int exitCode;
+    try {
+      exitCode = await _waitForWhisperExitCode(process);
+    } finally {
+      finished = true;
+      gpuWatchdog?.cancel();
+      _activeWhisper = null;
+    }
     _checkCancelled();
     await Future.wait([
       stdoutDone,
       stderrDone,
     ]).timeout(const Duration(seconds: 5), onTimeout: () => const []);
 
-    if (exitCode != 0) {
+    if (gpuStalled || exitCode != 0) {
       throw AutoCaptionException(
         'Falha ao transcrever com whisper.cpp local.',
         _lastOutputLines(output.toString()),
@@ -406,18 +433,17 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       );
     }
 
-    final gpuUsed = WhisperRuntime.usesCuda(output.toString());
-    if (config.executablePath != config.cpuExecutablePath && !gpuUsed) {
-      throw AutoCaptionException(
-        'CUDA não foi ativado pelo engine.',
-        _lastOutputLines(output.toString()),
+    final engine = WhisperRuntime.vulkanEngine(output.toString());
+    if (config.device != null && engine != config.device!.engine) {
+      throw const AutoCaptionException(
+        'Vulkan não foi ativado no dispositivo selecionado.',
       );
     }
-    WhisperRuntime.backend.value = gpuUsed
-        ? 'CUDA'
-        : WhisperRuntime.fallbackReason == null
-        ? 'CPU'
-        : 'CPU (fallback CUDA)';
+    WhisperRuntime.backend.value = engine == null
+        ? (WhisperRuntime.fallbackReason == null
+              ? 'CPU'
+              : 'CPU (fallback Vulkan)')
+        : 'Vulkan';
     final body = await jsonFile.readAsString();
     return _captionCuesFromWhisperJson(body, chunk);
   }
@@ -445,6 +471,7 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
     final model = await _resolveWhisperModel(modelName);
     return _LocalWhisperConfig(
       executablePath: selected,
+      device: WhisperRuntime.selectedDevice,
       cpuExecutablePath: executable,
       modelPath: model,
       modelName: modelName,
@@ -603,12 +630,13 @@ Future<List<String>> availableLocalWhisperModelNames() async {
 }
 
 class _LocalWhisperConfig {
-  const _LocalWhisperConfig({
+  _LocalWhisperConfig({
     required this.executablePath,
     required this.cpuExecutablePath,
     required this.modelPath,
     required this.modelName,
     required this.threads,
+    this.device,
   });
 
   final String executablePath;
@@ -616,6 +644,15 @@ class _LocalWhisperConfig {
   final String modelPath;
   final String modelName;
   final int? threads;
+  final WhisperGpuDevice? device;
+  bool gpuFailed = false;
+  _LocalWhisperConfig cpu() => _LocalWhisperConfig(
+    executablePath: cpuExecutablePath,
+    cpuExecutablePath: cpuExecutablePath,
+    modelPath: modelPath,
+    modelName: modelName,
+    threads: threads,
+  );
 }
 
 List<CaptionCue> segmentCaptionCues(
@@ -1310,7 +1347,9 @@ List<String> whisperSpeechArguments({
   String? vadModel,
 }) {
   if (vocabulary.length > 2000) {
-    throw const AutoCaptionException('Vocabulário: máximo de 2000 caracteres.');
+    throw const AutoCaptionException(
+      'Vocabulário: máximo de 2000 caracteres.',
+    );
   }
   return [
     if (vocabulary.trim().isNotEmpty) ...['--prompt', vocabulary.trim()],

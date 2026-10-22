@@ -34,7 +34,7 @@ try {
         # The runtime directories contain binaries, model, documentation and licenses.
         # Download caches and preview caches are never part of the release.
         foreach ($entry in Get-ChildItem -LiteralPath $runtimeSource -Force) {
-            if ($entry.Name -notin @('.downloads','cache') -and $entry.Name -notlike '*.zip') {
+            if ($entry.Name -notin @('.downloads','cache','cuda') -and $entry.Name -notlike '*.zip') {
                 Copy-Item -LiteralPath $entry.FullName -Destination $runtimeTarget -Recurse -Force
             }
         }
@@ -45,8 +45,12 @@ try {
     }
     $whisperCliHash = (Get-FileHash -LiteralPath (Join-Path $packagePath 'whisper\bin\whisper-cli.exe') -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($whisperCliHash -ne '331dba46d6427105d2b802cdbc7eae916ea1c5abf9b0d3b5cfe460d8db8e4366') { throw 'Whisper do ZIP difere do runtime testado.' }
-    $cudaCliHash = (Get-FileHash -LiteralPath (Join-Path $packagePath 'whisper\cuda\bin\whisper-cli.exe') -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($cudaCliHash -ne '80fe839a13f5fd70d7511e6f714498de12522e59da2a5333c6efea40fe05ee51') { throw 'Whisper CUDA do ZIP difere do runtime testado.' }
+    $manifestSource = Join-Path $ToolsRoot 'whisper\vulkan\manifest.json'
+    $manifest = Get-Content -LiteralPath $manifestSource -Raw | ConvertFrom-Json
+    foreach ($entry in $manifest.PSObject.Properties) {
+        $binary = Join-Path $packagePath ('whisper\vulkan\bin\' + $entry.Name)
+        if ((Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.Value) { throw ('Vulkan do ZIP diverge: ' + $entry.Name) }
+    }
     # App-local Microsoft CRT avoids requiring an online installer on a fresh PC.
     foreach ($dll in @('msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll')) {
         Copy-Item -LiteralPath (Join-Path $env:WINDIR ('System32\' + $dll)) -Destination $packagePath -Force

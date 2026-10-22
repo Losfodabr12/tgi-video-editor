@@ -36,3 +36,5 @@
 /source/tools/whisper/cuda/
 docs/validation/referencia-1min.txt
 docs/validation/referencia-1min.rascunho.txt
+
+/source/tools/whisper/vulkan/

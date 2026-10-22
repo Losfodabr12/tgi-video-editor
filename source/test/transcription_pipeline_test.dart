@@ -181,8 +181,8 @@ void main() {
     expect(await cli.exists(), isTrue, reason: 'Run tool/setup_tools.ps1.');
     await WhisperRuntime.verify(cli.path);
     final cuda = File('tools/whisper/cuda/bin/whisper-cli.exe');
-    expect(await cuda.exists(), isTrue);
-    await WhisperRuntime.verify(cuda.path);
+    if (await cuda.exists()) await WhisperRuntime.verify(cuda.path);
+    await WhisperRuntime.verifyVulkan('tools/whisper/vulkan/bin');
     expect(
       WhisperRuntime.usesCuda('whisper_backend_init_gpu: using CUDA backend'),
       isTrue,

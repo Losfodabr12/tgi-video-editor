@@ -26,7 +26,7 @@ jobs:
           path: |
             source/tools/ffmpeg
             source/tools/whisper
-          key: windows-media-tools-ffmpeg-8.1.2-whisper-b5454-cuda118-vad-v3
+          key: windows-media-tools-ffmpeg-8.1.2-whisper-b5454-vulkan-vad-v4
       - name: Install local runtimes
         run: ./tool/setup_tools.ps1
       - name: Pub get, analyze, tests and release build

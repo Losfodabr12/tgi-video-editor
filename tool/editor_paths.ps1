@@ -32,6 +32,13 @@ function Invoke-EditorFlutter {
         $flutterPath = Join-Path $env:FLUTTER_ROOT 'bin\flutter.bat'
     }
     else { throw 'Flutter nao encontrado no PATH ou em FLUTTER_ROOT.' }
+    if ($Arguments[0] -in @('test','build','run')) {
+        $manifestPath = Join-Path $PSScriptRoot '..\source\tools\whisper\vulkan\manifest.json'
+        if (Test-Path -LiteralPath $manifestPath) {
+            $encoded = [Convert]::ToBase64String([IO.File]::ReadAllBytes($manifestPath))
+            $Arguments += ('--dart-define=TGI_VULKAN_MANIFEST=' + $encoded)
+        }
+    }
     # PowerShell 5 treats native stderr as ErrorRecord. Exit code is authoritative.
     $ErrorActionPreference = 'Continue'
     & $flutterPath @Arguments

@@ -68,18 +68,20 @@ if (-not $SkipWhisper) {
     if ((Get-FileHash -LiteralPath $installedCli -Algorithm SHA256).Hash -ne $pinnedCliHash) { throw 'Whisper CLI diverge do runtime fixado.' }
     & $installedCli --version
     if ($LASTEXITCODE -ne 0) { throw 'Whisper nao inicializou.' }
-    $cudaBin = Join-Path $toolsPath 'whisper\cuda\bin'
-    $cudaCli = Join-Path $cudaBin 'whisper-cli.exe'
-    $cudaHash = '80fe839a13f5fd70d7511e6f714498de12522e59da2a5333c6efea40fe05ee51'
-    if (-not (Test-Path -LiteralPath $cudaCli) -or (Get-FileHash -LiteralPath $cudaCli -Algorithm SHA256).Hash -ne $cudaHash) {
-        $cudaArchive = Join-Path $downloadRoot 'whisper-b5454-cuda118.zip'
-        Get-VerifiedFile -Uri 'https://github.com/ggml-org/whisper.cpp/releases/download/b5454/whisper-bin-win-cuda-11.8.0-x64.zip' -Path $cudaArchive -Sha256 'e81c86c542be6e3d7b7245392d4e1c52ab6e5c61dbe38721754bc0ab59d4d027'
-        Expand-VerifiedRuntime -Archive $cudaArchive -ExeName 'whisper-cli.exe' -Destination $cudaBin
+    $vulkanManifest = Join-Path $toolsPath 'whisper\vulkan\manifest.json'
+    $vulkanReady = $false
+    if (Test-Path -LiteralPath $vulkanManifest) {
+        $vulkanReady = $true
+        $entries = Get-Content -LiteralPath $vulkanManifest -Raw | ConvertFrom-Json
+        foreach ($entry in $entries.PSObject.Properties) {
+            $binary = Join-Path $toolsPath ('whisper\vulkan\bin\' + $entry.Name)
+            if (-not (Test-Path -LiteralPath $binary) -or (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLowerInvariant() -ne $entry.Value) { $vulkanReady = $false; break }
+        }
     }
-    if ((Get-FileHash -LiteralPath $cudaCli -Algorithm SHA256).Hash -ne $cudaHash) { throw 'CUDA CLI diverge do runtime fixado.' }
-    # Keep only inference dependencies, excluding unrelated samples and DLLs.
-    $keepCuda = @('whisper-cli.exe','whisper.dll','ggml.dll','ggml-base.dll','ggml-cuda.dll','cudart64_110.dll','nvrtc64_112_0.dll','nvrtc-builtins64_118.dll')
-    Get-ChildItem -LiteralPath $cudaBin -File | Where-Object { $_.Name -notin $keepCuda -and $_.Name -notlike 'ggml-cpu-*.dll' } | Remove-Item -Force
+    if (-not $vulkanReady) {
+        & python (Join-Path $PSScriptRoot 'build_whisper_vulkan.py') --tools-root $toolsPath
+        if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar Vulkan fixado.' }
+    }
     $models = Join-Path $toolsPath 'whisper\models'
     New-Item -ItemType Directory -Path $models -Force | Out-Null
     Get-VerifiedFile -Uri 'https://huggingface.co/ggml-org/whisper-vad/resolve/9ffd54a1e1ee413ddf265af9913beaf518d1639b/ggml-silero-v5.1.2.bin' -Path (Join-Path $models 'ggml-silero-v5.1.2.bin') -Sha256 '29940d98d42b91fbd05ce489f3ecf7c72f0a42f027e4875919a28fb4c04ea2cf'
