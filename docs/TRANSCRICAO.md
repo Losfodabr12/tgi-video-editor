@@ -420,10 +420,37 @@ pesquisados pelo aplicativo. Tempos e memória acima são de CPU, inclusive nas
 tentativas CUDA; tempo/RAM/VRAM de inferência GPU não estão disponíveis.
 Nenhuma comparação de qualidade é derivada desses tempos.
 
-### Referência e ferramenta de acurácia pendentes
+### Scorer fornecido e rascunho aguardando revisão
 
-`tools/wer.dart`, que será fornecido pelo usuário, e a referência revisada
-`docs/validation/referencia-1min.txt` ainda não estão presentes nesta rodada.
-WER/CER não foram calculados e o teste da ferramenta aguarda sua interface real.
-O arquivo `referencia-1min.rascunho.txt` não foi usado como referência revisada;
-o scorer solicitado não foi recriado nem substituído.
+O código fornecido foi salvo literalmente em `tools/wer.dart`, sem extrair
+ou reescrever a lógica. Linha de comando preservada:
+`dart tools/wer.dart referencia.txt hipotese.txt`.
+A normalização ignora maiúsculas e pontuação, preserva acentos e compacta
+espaços; CER usa code points Unicode, incluindo os espaços normalizados.
+
+`source/test/wer_tool_test.dart` executa a CLI com cinco pares sintéticos e
+confere as duas linhas de saída, as contagens e os percentuais esperados:
+textos iguais (0%), palavra trocada (WER 50%), palavra omitida (WER 50%),
+apenas acento (WER 100%, CER 25%) e apenas caixa/pontuação (0%).
+
+Rascunho regenerado diretamente de 0:00 a 1:00 do vídeo original do projeto,
+com **Small multilíngue**, whisper.cpp **1.9.5/b5454**, português `pt`,
+**CPU**, 4 threads, sem VAD. O recorte em
+`.work/validation/referencia-1min.wav` tem exatamente 960.000 amostras:
+60,000 s, mono, 16 kHz, PCM16. Não inclui o padding da amostra de 300 s.
+A hipótese completa foi agrupada por pontuação em uma frase por linha,
+sem timestamps nem correções lexicais, e salva em
+`docs/validation/referencia-1min.rascunho.txt`.
+Logs, JSON e proveniência ficam privados em `.work/wer-validation/`.
+
+**O rascunho foi gerado por Small e favorece Small na comparação.**
+A referência precisa ser corrigida por uma pessoa ouvindo o recorte antes de
+comparar modelos. Não foi criado `referencia-1min.txt`; WER/CER dos modelos
+aguardam essa revisão. Os cinco testes usam somente textos sintéticos.
+`.work/` e os dois arquivos de referência estão explicitamente no `.gitignore`;
+a regra preexistente para a pasta de validação também foi preservada.
+
+Validação local desta etapa: `dart analyze tools/wer.dart` e `flutter analyze`
+sem problemas; suite completa com **273 testes passando**, **16 ignorados**,
+incluindo os cinco testes da CLI. O código do scorer foi conferido byte a byte
+contra o texto fornecido, e o áudio foi validado como PCM16 mono/16 kHz, 60 s.
