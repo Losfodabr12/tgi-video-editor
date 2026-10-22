@@ -422,6 +422,7 @@ class EditorReadService {
     String id, {
     String? language,
     String? vocabulary,
+    String? model,
     bool? vad,
   }) {
     final p = controller.project, item = media(id, p);
@@ -442,9 +443,14 @@ class EditorReadService {
       final usedLanguage = language?.trim().isNotEmpty == true
           ? language!.trim()
           : controller.transcripts.language;
+      await controller.transcripts.ready;
+      if (model?.trim().isNotEmpty == true) {
+        controller.transcripts.modelName = model!.trim();
+      }
       final cues = await service.generateCaptionsForMedia(
         item.copyWith(filePath: path),
         languageCode: usedLanguage,
+        modelName: controller.transcripts.modelName ?? '',
         vocabulary: vocabulary ?? controller.transcripts.vocabulary,
         vad: vad ?? controller.transcripts.vad,
         onProgress: ctx.update,
@@ -455,6 +461,9 @@ class EditorReadService {
           'stale_project',
           'O projeto mudou durante a transcrição.',
         );
+      }
+      if (service is LocalWhisperAutoCaptionService) {
+        controller.transcripts.lastModelName = service.lastExecution?.model;
       }
       await controller.transcripts.put(p, item, cues, language: usedLanguage);
       return {

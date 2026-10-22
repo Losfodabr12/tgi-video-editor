@@ -229,6 +229,18 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
       {
         'media_id': stringSchema(),
         'language': stringSchema(),
+        'model': {
+          'type': 'string',
+          'enum': [
+            'tiny',
+            'base',
+            'small',
+            'medium',
+            'large-v3',
+            'large-v3-turbo-q5_0',
+            'large-v3-q5_0',
+          ],
+        },
         'vocabulary': {'type': 'string', 'maxLength': 2000},
         'vad': {'type': 'boolean'},
       },

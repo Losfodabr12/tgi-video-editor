@@ -13,6 +13,8 @@ class TranscriptStore {
   final String? directoryOverride;
   String language = 'pt';
   String vocabulary = '';
+  String? modelName;
+  String? lastModelName;
   bool vad = true;
   String? projectPath;
   String? _projectId;
@@ -37,16 +39,26 @@ class TranscriptStore {
           '${sha256.convert(utf8.encode(project.id))}.words.json',
         ])
       : '$path.words.json';
-  Future<void> open(TgiProject project, {String? path}) {
-    return ready = _open(project, path);
+  Future<void> open(
+    TgiProject project, {
+    String? path,
+    bool isNewProject = false,
+  }) {
+    return ready = _open(project, path, isNewProject);
   }
 
-  Future<void> _open(TgiProject project, String? path) async {
+  Future<void> _open(
+    TgiProject project,
+    String? path,
+    bool isNewProject,
+  ) async {
     _bound = true;
     _projectId = project.id;
     projectPath = path;
     language = 'pt';
     vocabulary = '';
+    modelName = isNewProject ? null : 'base';
+    lastModelName = null;
     vad = true;
     _entries.clear();
     final file = File(_path(project, path));
@@ -55,6 +67,7 @@ class TranscriptStore {
       final data =
           jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       if (data['schema'] != 1 || data['project_id'] != project.id) return;
+      modelName = data['model'] as String? ?? modelName;
       language = data['language'] as String? ?? 'pt';
       vocabulary = data['vocabulary'] as String? ?? '';
       vad = data['vad'] as bool? ?? true;
@@ -106,6 +119,8 @@ class TranscriptStore {
     // No sidecar is needed for an untouched project using built-in defaults.
     // In particular, ordinary v14 saves must not add an unnecessary disk write.
     if (_entries.isEmpty &&
+        (modelName == null || modelName == 'base') &&
+        lastModelName == null &&
         language == 'pt' &&
         vocabulary.isEmpty &&
         vad &&
@@ -121,6 +136,7 @@ class TranscriptStore {
         'schema': 1,
         'project_id': project.id,
         'language': language,
+        if (modelName ?? lastModelName case final String model) 'model': model,
         'vocabulary': vocabulary,
         'vad': vad,
         'media': _entries.values.toList(),

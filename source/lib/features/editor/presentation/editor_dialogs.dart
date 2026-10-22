@@ -104,11 +104,13 @@ class _AutoCaptionsDialog extends StatefulWidget {
     required this.hasPaidPlan,
     required this.onOpenDownloads,
     this.initialSettings,
+    this.defaultModelName,
     this.defaultLanguage = 'pt',
     this.defaultVocabulary = '',
     this.defaultVad = true,
   });
 
+  final String? defaultModelName;
   final String defaultLanguage;
   final String defaultVocabulary;
   final bool defaultVad;
@@ -123,10 +125,7 @@ class _AutoCaptionsDialog extends StatefulWidget {
 class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
   static final _allModelOptions = [
     for (final info in whisperModelCatalog.where((m) => m.name != 'tiny'))
-      _WhisperModelOption(
-        value: info.name,
-        label: info.name == 'base' ? 'Base (padrão)' : info.label,
-      ),
+      _WhisperModelOption(value: info.name, label: info.label),
   ];
 
   static const _fontFamilies = EditorFontService.families;
@@ -201,6 +200,7 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
   late final TextEditingController _vocabularyController;
   late bool _vad;
   late String _modelName;
+  bool _manualModel = false;
   List<_WhisperModelOption> _modelOptions = const [
     _WhisperModelOption(value: 'base', label: 'Equilibrado recomendado'),
     _WhisperModelOption(value: 'small', label: 'Melhor qualidade - Plano'),
@@ -227,7 +227,9 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
       text: initial?.vocabulary ?? widget.defaultVocabulary,
     );
     _vad = initial?.vad ?? widget.defaultVad;
-    _modelName = initial?.modelName ?? defaultLocalWhisperModelName;
+    final previous = initial?.modelName ?? widget.defaultModelName;
+    _manualModel = previous?.isNotEmpty == true;
+    _modelName = _manualModel ? previous! : defaultLocalWhisperModelName;
     _captionStyleLabel =
         _captionStylePresets.any(
           (preset) => preset.label == initial?.styleLabel,
@@ -265,12 +267,21 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
 
   Future<void> _loadInstalledWhisperModels() async {
     final installedModels = await availableLocalWhisperModelNames();
+    final preferences = await AppPreferencesService.instance.load();
+    final devices = Platform.environment.containsKey('FLUTTER_TEST')
+        ? WhisperRuntime.devices.value
+        : await WhisperRuntime.refreshDevices();
+    final gpu = Platform.environment['TGI_WHISPER_BACKEND'] == 'cpu'
+        ? null
+        : WhisperRuntime.selectDevice(devices, preferences.whisperDevice);
+    final suggested = WhisperModelPolicy.choose(gpu: gpu).model;
     if (!mounted) {
       return;
     }
     final installedSet = installedModels.toSet();
     setState(() {
       _modelOptions = _allModelOptions;
+      if (!_manualModel) _modelName = suggested;
       _installedModelNames = installedSet;
       if (!_modelOptions.any((option) => option.value == _modelName)) {
         _modelName = _preferredWhisperModelName(_modelOptions);
@@ -305,7 +316,7 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
       _modelOptions,
     );
     final modelHelpText = selectedModelName == 'medium'
-        ? 'Modelo pesado: use quando puder esperar. Base e o recomendado.'
+        ? 'Modelo pesado: use quando puder esperar.'
         : _modelHelpText;
     final modelOptionsKey = _modelOptions
         .map((option) => option.value)
@@ -344,13 +355,9 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
                       child: Row(
                         children: [
                           Expanded(child: Text(option.label)),
-                          if (option.value == 'small' &&
-                              (!widget.hasPaidPlan ||
-                                  !_installedModelNames.contains('small')))
-                            Icon(
-                              widget.hasPaidPlan
-                                  ? Icons.download_for_offline_outlined
-                                  : Icons.lock_outline,
+                          if (!_installedModelNames.contains(option.value))
+                            const Icon(
+                              Icons.download_for_offline_outlined,
                               size: 17,
                               color: TgiColors.textSecondary,
                             ),
@@ -362,7 +369,10 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
                   if (value == null) {
                     return;
                   }
-                  setState(() => _modelName = value);
+                  setState(() {
+                    _modelName = value;
+                    _manualModel = true;
+                  });
                 },
               ),
               const SizedBox(height: TgiSpacing.md),
@@ -542,7 +552,9 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
   void _submit() {
     Navigator.of(context).pop(
       _AutoCaptionsDialogResult(
-        modelName: _selectedWhisperModelName(_modelName, _modelOptions),
+        modelName: _manualModel
+            ? _selectedWhisperModelName(_modelName, _modelOptions)
+            : '',
         languageCode: _languageController.text.trim().isEmpty
             ? null
             : _languageController.text.trim(),

@@ -145,7 +145,10 @@ class EditorController extends ChangeNotifier {
     AudioLevelService? audioLevelService,
     TgiProject? initialProject,
     TranscriptStore? transcriptStore,
-  }) : transcripts = transcriptStore ?? TranscriptStore(),
+  }) : transcripts =
+           transcriptStore ??
+           (TranscriptStore()
+             ..modelName = initialProject == null ? null : 'base'),
        ffmpegService = ffmpegService ?? mediaImportService.ffmpegService,
        audioWaveformService =
            audioWaveformService ??
@@ -1598,6 +1601,9 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
 
     try {
+      await transcripts.ready;
+      if (modelName.trim().isNotEmpty) transcripts.modelName = modelName.trim();
+      final requestedModel = transcripts.modelName ?? '';
       final mediaItemsById = <String, MediaItem>{
         for (final source in captionSources)
           source.mediaItem.id: source.mediaItem,
@@ -1614,7 +1620,7 @@ class EditorController extends ChangeNotifier {
           languageCode: usedLanguage,
           vocabulary: transcripts.vocabulary,
           vad: transcripts.vad,
-          modelName: modelName,
+          modelName: requestedModel,
           maxCharsPerCue: maxCharsPerCue,
           onProgress: (progress, message) {
             _captionProgress =
@@ -1627,6 +1633,10 @@ class EditorController extends ChangeNotifier {
             notifyListeners();
           },
         );
+        final service = autoCaptionService;
+        if (service is LocalWhisperAutoCaptionService) {
+          transcripts.lastModelName = service.lastExecution?.model;
+        }
         await transcripts.put(
           _project,
           mediaItem,

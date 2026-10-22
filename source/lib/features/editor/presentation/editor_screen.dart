@@ -34,6 +34,7 @@ import '../../../services/editor_preset_service.dart';
 import '../../../services/export_destination_service.dart';
 import '../../../services/auto_caption_service.dart';
 import '../../../services/whisper_runtime.dart';
+import '../../../services/whisper_model_policy.dart';
 import 'widgets/whisper_device_settings.dart';
 import '../../../services/ffmpeg_service.dart';
 import '../../../services/media_import_service.dart';
@@ -423,6 +424,7 @@ class _EditorScreenState extends State<EditorScreen> {
           );
       _projectSessionRevision++;
       _controller.synchronizeCommandExportSettings(_exportSettings);
+      _lastAutoCaptionsSettings = null;
       _controller.loadProjectFromData(result);
       await _controller.transcripts.open(result.project, path: path);
       _markProjectAsSaved(path);
@@ -664,6 +666,7 @@ class _EditorScreenState extends State<EditorScreen> {
       _controller.transcripts.open(
         _controller.project,
         path: _currentProjectPath,
+        isNewProject: widget.initialProject == null && !widget.isRecoveredDraft,
       ),
     );
     _lastSavedProjectSnapshot = _controller.project;
@@ -1289,6 +1292,7 @@ class _EditorScreenState extends State<EditorScreen> {
         hasPaidPlan: _hasPaidPlan,
         onOpenDownloads: _openPlanDownloads,
         initialSettings: _lastAutoCaptionsSettings,
+        defaultModelName: _controller.transcripts.modelName,
         defaultLanguage: _controller.transcripts.language,
         defaultVocabulary: _controller.transcripts.vocabulary,
         defaultVad: _controller.transcripts.vad,
@@ -1304,16 +1308,6 @@ class _EditorScreenState extends State<EditorScreen> {
     _controller.transcripts.vad = result.vad;
     await _controller.transcripts.save(_controller.project);
     if (!mounted) return;
-    if (result.modelName == 'small' && !_hasPaidPlan) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'O modelo de legendas de alta qualidade requer um plano ativo.',
-          ),
-        ),
-      );
-      return;
-    }
     await _controller.generateAutomaticCaptions(
       languageCode: result.languageCode,
       modelName: result.modelName,

@@ -7,9 +7,10 @@ import '../domain/models/media_item.dart';
 import 'app_component_paths.dart';
 import 'ffmpeg_service.dart';
 import 'whisper_runtime.dart';
+import 'whisper_model_policy.dart';
 import 'package:crypto/crypto.dart';
 
-const defaultLocalWhisperModelName = 'base';
+const defaultLocalWhisperModelName = 'small';
 const localWhisperModelNames = <String>[
   'tiny',
   'base',
@@ -280,13 +281,22 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       }
       config.gpuFailed = true;
       WhisperRuntime.useCpu(reason: 'Vulkan falhou; retomando na CPU: $error');
-      final cpu = _LocalWhisperConfig(
-        executablePath: config.cpuExecutablePath,
-        cpuExecutablePath: config.cpuExecutablePath,
-        modelPath: config.modelPath,
-        modelName: config.modelName,
-        threads: config.threads,
-      );
+      var cpu = config.cpu();
+      if (config.automaticModel && config.modelName == 'large-v3-turbo-q5_0') {
+        try {
+          cpu = _LocalWhisperConfig(
+            executablePath: config.cpuExecutablePath,
+            cpuExecutablePath: config.cpuExecutablePath,
+            modelPath: await _resolveWhisperModel('small'),
+            modelName: 'small',
+            threads: config.threads,
+          );
+        } on AutoCaptionException {
+          // An unavailable optional model never prevents CPU recovery with
+          // the already installed model used by this request.
+        }
+      }
+      config.cpuFallback = cpu;
       return _runTranscribeChunk(
         chunk,
         config: cpu,
@@ -469,17 +479,27 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
   }
 
   Future<_LocalWhisperConfig> _resolveConfig(String requestedModelName) async {
-    final modelName = _normalizeModelName(
+    final executable = await _resolveWhisperExecutable();
+    await WhisperRuntime.verify(executable);
+    var selected = await WhisperRuntime.preferExecutable(executable);
+    final requested = _firstNonBlank(
       requestedModelName,
       Platform.environment['TGI_WHISPER_MODEL'],
     );
-    final executable = await _resolveWhisperExecutable();
-    await WhisperRuntime.verify(executable);
-    final selected = await WhisperRuntime.preferExecutable(executable);
+    final decision = WhisperModelPolicy.choose(
+      requested: requested ?? '',
+      gpu: WhisperRuntime.selectedDevice,
+    );
+    final modelName = _normalizeModelName(decision.model, null);
+    if (decision.forceCpu) {
+      selected = executable;
+      WhisperRuntime.useCpu(reason: WhisperRuntime.fallbackReason);
+    }
     final model = await _resolveWhisperModel(modelName);
     return _LocalWhisperConfig(
       executablePath: selected,
       device: WhisperRuntime.selectedDevice,
+      automaticModel: requested == null,
       cpuExecutablePath: executable,
       modelPath: model,
       modelName: modelName,
@@ -645,6 +665,7 @@ class _LocalWhisperConfig {
     required this.modelName,
     required this.threads,
     this.device,
+    this.automaticModel = false,
   });
 
   final String executablePath;
@@ -653,14 +674,18 @@ class _LocalWhisperConfig {
   final String modelName;
   final int? threads;
   final WhisperGpuDevice? device;
+  final bool automaticModel;
   bool gpuFailed = false;
-  _LocalWhisperConfig cpu() => _LocalWhisperConfig(
-    executablePath: cpuExecutablePath,
-    cpuExecutablePath: cpuExecutablePath,
-    modelPath: modelPath,
-    modelName: modelName,
-    threads: threads,
-  );
+  _LocalWhisperConfig? cpuFallback;
+  _LocalWhisperConfig cpu() =>
+      cpuFallback ??
+      _LocalWhisperConfig(
+        executablePath: cpuExecutablePath,
+        cpuExecutablePath: cpuExecutablePath,
+        modelPath: modelPath,
+        modelName: modelName,
+        threads: threads,
+      );
 }
 
 List<CaptionCue> segmentCaptionCues(

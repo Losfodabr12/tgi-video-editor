@@ -101,7 +101,7 @@ class _WhisperModelsDialogState extends State<WhisperModelsDialog> {
               builder: (_, value, _) => Text('Backend: $value'),
             ),
             const Text(
-              'Base continua como padrão. Modelos opcionais, baixados somente ao clicar. Qualidade aguarda medição de WER.',
+              'Novas transcrições: Preciso (turbo) com GPU e VRAM suficiente; Small na CPU. A escolha manual vence. Downloads somente ao clicar.',
             ),
             if (_message != null) SelectableText(_message!),
             for (final info in whisperModelCatalog.where(

@@ -468,7 +468,7 @@ class WhisperModelService {
       info: infoForModel('small') ?? whisperModelCatalog[2],
       memoryBytes: memoryBytes,
       reason:
-          'RAM ≥16 GiB: Small é candidato para medição. Não muda o padrão Base.',
+          'RAM ≥16 GiB: Small é candidato para medição. O padrão depende da GPU; sua escolha manual prevalece.',
     );
   }
 

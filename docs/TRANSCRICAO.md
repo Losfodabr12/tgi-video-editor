@@ -651,3 +651,27 @@ Nenhum campo foi adicionado aos schemas de entrada MCP nem ao projeto v14.
 Validação da etapa 2: analyze sem avisos; 279 testes passaram, 16 integrações
 condicionais ignoradas. Inclui troca na UI, persistência, prioridade RTX, GPU
 removida, v14 e os limites do catálogo MCP.
+
+
+## Política para novas transcrições — etapa 3
+
+Sem escolha explícita e sem modelo herdado de projeto: GPU Vulkan selecionada,
+com **≥2 GiB livres e ≥3 GiB totais** informados pelo backend, usa
+`Preciso (turbo)` (`large-v3-turbo-q5_0`). Sem essa folga, usa **Small na CPU**.
+Os limites são uma margem conservadora, não uma garantia contra variações de
+memória ou falhas do driver. A execução confirma o backend; falha ainda tenta
+CPU. Para escolha automática, tenta Small instalado na recuperação; se faltar,
+recupera com o modelo já carregado/instalado em vez de perder a transcrição.
+
+Escolha manual no diálogo ou parâmetro opcional `model` de `transcribe` sempre
+vence a heurística. Projetos anteriores sem modelo no auxiliar continuam Base;
+modelos registrados ficam no auxiliar privado e são preservados ao reabrir.
+O arquivo de projeto permanece v14. O resultado MCP informa o modelo efetivo.
+O gerenciador mantém downloads por ação explícita: um modelo ausente deve ser
+instalado ali. Small instalado não tem mais o antigo bloqueio de plano, pois
+agora é o padrão CPU solicitado. Pesos extras não entram no limite de 50 MB
+do runtime; não foram adicionados downloads silenciosos.
+
+Validação da etapa 3: analyze sem avisos; 283 testes passaram, 16 integrações
+condicionais ignoradas; release Windows compilado. Testados limites de VRAM,
+precedência manual via MCP, persistência e reabertura sem mudar o v14.

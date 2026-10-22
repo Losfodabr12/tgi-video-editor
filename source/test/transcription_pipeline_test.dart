@@ -13,6 +13,7 @@ import 'support/silence_project.dart';
 
 class RecordingCaptions implements AutoCaptionService {
   String? used;
+  String? usedModel;
   String? prompt;
   bool? usedVad;
   @override
@@ -26,6 +27,7 @@ class RecordingCaptions implements AutoCaptionService {
     AutoCaptionProgressCallback? onProgress,
   }) async {
     used = languageCode;
+    usedModel = modelName;
     prompt = vocabulary;
     usedVad = vad;
     return const [
@@ -130,12 +132,13 @@ void main() {
       final fake = RecordingCaptions();
       final reads = EditorReadService(c, captions: fake);
       addTearDown(reads.dispose);
-      var job = reads.transcribe('speech');
+      var job = reads.transcribe('speech', model: 'medium');
       while (!job.finished) {
         await Future<void>.delayed(const Duration(milliseconds: 1));
       }
       expect(job.status, 'completed', reason: job.error.toString());
       expect(fake.used, 'pt');
+      expect(fake.usedModel, 'medium');
       expect((job.result as Map)['language'], 'pt');
       expect(fake.usedVad, isTrue);
       store.language = 'es';
@@ -169,6 +172,7 @@ void main() {
       expect(result['language'], 'es');
       expect(restored.vocabulary, 'Roblox, Arsenal');
       expect(restored.vad, isFalse);
+      expect(restored.modelName, 'medium');
       expect(((result['cues'] as List).single as Map)['words'], hasLength(2));
       await mediaFile.writeAsBytes([5, 6, 7, 8]);
       await restored.open(reopened, path: projectPath);
