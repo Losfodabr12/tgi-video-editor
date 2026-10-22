@@ -33,6 +33,7 @@ import '../../../services/project_collection_service.dart';
 import '../../../services/editor_preset_service.dart';
 import '../../../services/export_destination_service.dart';
 import '../../../services/auto_caption_service.dart';
+import '../../../services/whisper_runtime.dart';
 import '../../../services/ffmpeg_service.dart';
 import '../../../services/media_import_service.dart';
 import '../../../services/project_io_service.dart';

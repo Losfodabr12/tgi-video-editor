@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../services/whisper_runtime.dart';
 
 import '../../../../app/theme/design_tokens.dart';
 import '../../../../domain/models/clip.dart';
@@ -40,6 +41,13 @@ class CaptionsPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        ValueListenableBuilder<String>(
+          valueListenable: WhisperRuntime.backend,
+          builder: (context, value, _) => Text(
+            'Transcritor: $value',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ),
         Wrap(
           spacing: TgiSpacing.sm,
           runSpacing: TgiSpacing.sm,

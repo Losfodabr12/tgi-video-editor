@@ -316,3 +316,20 @@ O padrão foi ativado conforme solicitado após essa verificação operacional.
 WER permanece pendente de referência humana; nenhum ganho de qualidade é afirmado.
 
 Etapa 2 validada: analyze sem problemas; 263 testes passaram, 16 ignorados; orçamento MCP aprovado nos testes.
+
+## Implementação — etapa 3: backends e medição 1.9.5
+Release b5454 oferece CPU x64 e CUDA 11.8/12.4 x64; não oferece Vulkan x64 pronto. CUDA 11.8 foi selecionado para avaliação pelo menor asset (284.761.231 bytes, contra 684.913.404 do 12.4). Nenhum build alternativo foi compilado. [Assets oficiais](https://github.com/ggml-org/whisper.cpp/releases/tag/b5454).
+CUDA 11.8 ZIP SHA-256 e81c86c542be6e3d7b7245392d4e1c52ab6e5c61dbe38721754bc0ab59d4d027; CLI SHA-256 80fe839a13f5fd70d7511e6f714498de12522e59da2a5333c6efea40fe05ee51. CLI informa 1.9.5. Runtime separado em whisper/cuda/bin, CPU permanece em whisper/bin. Setup e empacotamento verificam ambos os CLIs; o app detecta NVIDIA localmente e só confirma backend pelo log de inferência. Configuração TGI_WHISPER_BACKEND=cpu força CPU. Interface mostra backend; MCP retorna backend efetivo.
+**GPU não funcionou nesta máquina.** RTX 3050 6.144 MiB, driver 621.01 detectado pelo nvidia-smi. Import table de ggml-cuda.dll exige cublas64_11.dll; arquivo ausente no asset oficial e nos caminhos de carregamento locais. LoadLibraryExW com LOAD_WITH_ALTERED_SEARCH_PATH retornou NULL, erro Windows 126. Logs de todas as tentativas: loaded CPU backend / no GPU found; nenhuma alocação CUDA do modelo. Não instalei cuBLAS/Toolkit, não tentei outro backend para contornar. App detecta essa dependência ausente antes da transcrição e faz fallback CPU; falha posterior do CUDA também retorna a CPU com motivo visível.
+### 300 s privados, três execuções por condição
+Mesmo WAV SHA-256 16533371c7cdb2117f672491366fd90b313c497217e472a5fa76bb1c3cf0690c (293,547 s originais + 6,453 s silêncio); pt, 4 threads, beam/best-of 5, temperatura 0 e fallback 0,2, VAD Silero ligado, prompt vazio. Cronômetro inclui carga/inferência e JSON; exclui extração. RSS/commit pico nativos Windows amostrados a cada 20 ms; não são memória total da máquina. Sem aquecimento descartado; execução sequencial. Small CPU terceira execução apresentou maior tempo; mantida na amostra, sem exclusão.
+| Modelo | Solicitado → efetivo | Tempo s (1 / 2 / 3) | RSS pico MiB (1 / 2 / 3) | Commit pico MiB (1 / 2 / 3) |
+|---|---|---|---|---|
+| base | cpu → CPU | 27.518 / 27.189 / 27.066 | 477.184 / 478.469 / 475.582 | 957.203 / 958.508 / 955.480 |
+| small | cpu → CPU | 71.319 / 70.516 / 85.371 | 940.711 / 941.523 / 942.512 | 1421.004 / 1421.621 / 1423.070 |
+| base | cuda → CPU | 27.515 / 27.595 / 27.209 | 476.527 / 474.527 / 474.348 | 955.887 / 954.531 / 954.375 |
+| small | cuda → CPU | 71.913 / 71.361 / 71.839 | 946.270 / 937.094 / 942.074 | 1426.559 / 1421.922 / 1422.168 |
+
+As linhas CUDA são **tentativas com fallback CPU**, não benchmarks GPU. Tempo, RAM e WER de GPU efetiva: indisponíveis. nvidia-smi mediu memória do dispositivo inteiro incluindo outros aplicativos; não atribuí esses valores ao Whisper. A ferramenta tool/benchmark_transcription.py preserva os logs e reporta backend solicitado/efetivo. Os arquivos brutos permanecem em .work/benchmark-b5454, privados. Nenhum ganho de qualidade nem troca do modelo padrão foi derivado desses tempos.
+
+Etapa 3: analyze sem problemas; 263 testes passaram, 16 ignorados. GPU efetiva indisponível conforme diagnóstico acima.

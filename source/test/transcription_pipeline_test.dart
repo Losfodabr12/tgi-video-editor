@@ -180,6 +180,19 @@ void main() {
     final cli = File('tools/whisper/bin/whisper-cli.exe');
     expect(await cli.exists(), isTrue, reason: 'Run tool/setup_tools.ps1.');
     await WhisperRuntime.verify(cli.path);
+    final cuda = File('tools/whisper/cuda/bin/whisper-cli.exe');
+    expect(await cuda.exists(), isTrue);
+    await WhisperRuntime.verify(cuda.path);
+    expect(
+      WhisperRuntime.usesCuda('whisper_backend_init_gpu: using CUDA backend'),
+      isTrue,
+    );
+    expect(
+      WhisperRuntime.usesCuda(
+        'whisper_init_with_params_no_state: no GPU found',
+      ),
+      isFalse,
+    );
     final version = await Process.run(cli.path, ['--version']);
     expect(version.exitCode, 0);
     expect(version.stdout.toString(), contains(WhisperRuntime.version));

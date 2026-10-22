@@ -237,7 +237,7 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
           'Nenhuma fala foi detectada na transcricao.',
         );
       }
-      onProgress?.call(1, 'Legendas geradas');
+      onProgress?.call(1, 'Legendas geradas — ${WhisperRuntime.backend.value}');
       return cues;
     } finally {
       unawaited(
@@ -247,6 +247,55 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
   }
 
   Future<List<CaptionCue>> _transcribeChunk(
+    FfmpegAudioChunk chunk, {
+    required _LocalWhisperConfig config,
+    required String? languageCode,
+    required String vocabulary,
+    required String? vadModel,
+    required Directory outputDirectory,
+    required int chunkIndex,
+    required int chunkCount,
+    required AutoCaptionProgressCallback? onProgress,
+  }) async {
+    try {
+      return await _runTranscribeChunk(
+        chunk,
+        config: config,
+        languageCode: languageCode,
+        vocabulary: vocabulary,
+        vadModel: vadModel,
+        outputDirectory: outputDirectory,
+        chunkIndex: chunkIndex,
+        chunkCount: chunkCount,
+        onProgress: onProgress,
+      );
+    } catch (error) {
+      _checkCancelled();
+      if (config.executablePath == config.cpuExecutablePath) rethrow;
+      WhisperRuntime.fallbackReason = error.toString();
+      WhisperRuntime.backend.value = 'CPU (fallback CUDA)';
+      final cpu = _LocalWhisperConfig(
+        executablePath: config.cpuExecutablePath,
+        cpuExecutablePath: config.cpuExecutablePath,
+        modelPath: config.modelPath,
+        modelName: config.modelName,
+        threads: config.threads,
+      );
+      return _runTranscribeChunk(
+        chunk,
+        config: cpu,
+        languageCode: languageCode,
+        vocabulary: vocabulary,
+        vadModel: vadModel,
+        outputDirectory: outputDirectory,
+        chunkIndex: chunkIndex,
+        chunkCount: chunkCount,
+        onProgress: onProgress,
+      );
+    }
+  }
+
+  Future<List<CaptionCue>> _runTranscribeChunk(
     FfmpegAudioChunk chunk, {
     required _LocalWhisperConfig config,
     required String? languageCode,
@@ -270,6 +319,7 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       '-of',
       outputPrefix,
       '-pp',
+      if (config.executablePath == config.cpuExecutablePath) '-ng',
     ];
 
     arguments.addAll(
@@ -354,6 +404,18 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
       );
     }
 
+    final gpuUsed = WhisperRuntime.usesCuda(output.toString());
+    if (config.executablePath != config.cpuExecutablePath && !gpuUsed) {
+      throw AutoCaptionException(
+        'CUDA não foi ativado pelo engine.',
+        _lastOutputLines(output.toString()),
+      );
+    }
+    WhisperRuntime.backend.value = gpuUsed
+        ? 'CUDA'
+        : WhisperRuntime.fallbackReason == null
+        ? 'CPU'
+        : 'CPU (fallback CUDA)';
     final body = await jsonFile.readAsString();
     return _captionCuesFromWhisperJson(body, chunk);
   }
@@ -377,9 +439,11 @@ class LocalWhisperAutoCaptionService implements AutoCaptionService {
     );
     final executable = await _resolveWhisperExecutable();
     await WhisperRuntime.verify(executable);
+    final selected = await WhisperRuntime.preferExecutable(executable);
     final model = await _resolveWhisperModel(modelName);
     return _LocalWhisperConfig(
-      executablePath: executable,
+      executablePath: selected,
+      cpuExecutablePath: executable,
       modelPath: model,
       modelName: modelName,
       threads: _resolveThreadCount(modelName),
@@ -539,12 +603,14 @@ Future<List<String>> availableLocalWhisperModelNames() async {
 class _LocalWhisperConfig {
   const _LocalWhisperConfig({
     required this.executablePath,
+    required this.cpuExecutablePath,
     required this.modelPath,
     required this.modelName,
     required this.threads,
   });
 
   final String executablePath;
+  final String cpuExecutablePath;
   final String modelPath;
   final String modelName;
   final int? threads;

@@ -32,3 +32,5 @@
 # Private transcription validation.
 /docs/validation/
 *.words.json
+
+/source/tools/whisper/cuda/

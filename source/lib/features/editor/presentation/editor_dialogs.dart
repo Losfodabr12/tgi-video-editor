@@ -319,6 +319,12 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              ValueListenableBuilder<String>(
+                valueListenable: WhisperRuntime.backend,
+                builder: (context, value, _) => Text(
+                  'Transcritor: $value${WhisperRuntime.fallbackReason == null ? '' : '\n${WhisperRuntime.fallbackReason}'}',
+                ),
+              ),
               DropdownButtonFormField<String>(
                 key: ValueKey(
                   'caption-model-$selectedModelName-$modelOptionsKey',
