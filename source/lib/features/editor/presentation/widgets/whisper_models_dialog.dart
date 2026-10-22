@@ -37,7 +37,8 @@ class _WhisperModelsDialogState extends State<WhisperModelsDialog> {
     if (!mounted) return;
     setState(() {
       _installed = models;
-      _recommendation = '${recommendation.info.name}: ${recommendation.reason}';
+      _recommendation =
+          '${recommendation.info.label}: ${recommendation.reason}';
     });
   }
 
@@ -59,7 +60,7 @@ class _WhisperModelsDialogState extends State<WhisperModelsDialog> {
         },
       );
       if (mounted) {
-        setState(() => _message = '${info.name}: SHA-256 verificado.');
+        setState(() => _message = '${info.label}: SHA-256 verificado.');
       }
     } catch (e) {
       if (mounted) {
@@ -134,7 +135,7 @@ class _WhisperModelsDialogState extends State<WhisperModelsDialog> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  '${info.name} — ${(info.sizeBytes / 1000000).toStringAsFixed(1)} MB',
+                  '${info.label} — ${(info.sizeBytes / 1000000).toStringAsFixed(1)} MB',
                 ),
                 Text(
                   found == null

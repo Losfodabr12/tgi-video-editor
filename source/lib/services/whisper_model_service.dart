@@ -41,7 +41,7 @@ const whisperModelCatalog = <WhisperModelInfo>[
   ),
   WhisperModelInfo(
     name: 'large-v3-turbo-q5_0',
-    label: 'large-v3-turbo-q5_0',
+    label: 'Preciso (turbo)',
     quality: 'Não medida',
     speed: 'Medir nesta máquina',
     sizeBytes: 574041195,

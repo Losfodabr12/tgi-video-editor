@@ -147,6 +147,13 @@ void main() {
           contains('/5359861c739e955e79d9a303bcbc70fb988958b1/'),
         );
       }
+      final turbo = whisperModelCatalog.singleWhere(
+        (info) => info.name == 'large-v3-turbo-q5_0',
+      );
+      expect(turbo.label, 'Preciso (turbo)');
+      expect(turbo.fileName, 'ggml-large-v3-turbo-q5_0.bin');
+      expect(turbo.sizeBytes, 574041195);
+      expect(turbo.sha256, isNotNull);
       expect(
         WhisperModelService.recommendationForMemory(
           32 * 1024 * 1024 * 1024,

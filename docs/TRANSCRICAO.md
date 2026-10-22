@@ -515,3 +515,95 @@ CPU explícita, 5,875 s e 367,109 MiB, contra 15,828 s e 865,566 MiB de Small.
 Small é uma opção para avaliar com referências independentes e mais áudios
 antes de recomendar uma troca por qualidade. **O modelo padrão permanece Base;
 nenhuma configuração do aplicativo foi alterada.**
+
+## Preciso (turbo): modelo verificado e candidato Vulkan (22/10/2026)
+
+O gerenciador e o seletor apresentam **Preciso (turbo)** para
+`large-v3-turbo-q5_0` (Large-v3-turbo quantizado Q5_0). O identificador interno
+permanece o mesmo. O modelo foi instalado no diretório de componentes do
+usuário, detectado pelo gerenciador, sem selecionar automaticamente o modelo.
+**Base permanece como modelo padrão.**
+
+### Origem e verificação do SHA-256
+
+O SHA-256 do catálogo foi comparado com o campo `lfs.oid` dos
+[metadados oficiais do repositório ggerganov/whisper.cpp](https://huggingface.co/api/models/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1?recursive=false&expand=false),
+na revisão imutável já fixada pelo catálogo. Depois foi conferido contra
+os bytes de um **download real** da mesma revisão. As duas verificações
+coincidiram: **574.041.195 bytes**, SHA-256
+`394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2`.
+O arquivo instalado é
+`%LOCALAPPDATA%/TGI_VIDEO_EDITOR/components/whisper/models/ggml-large-v3-turbo-q5_0.bin`.
+Metadados e recibo da verificação estão em
+`.work/turbo-evaluation/official-model-metadata.json` e `model-install.json`.
+
+### Três transcrições por backend efetivo
+
+Recorte privado de 60,000 s em `.work/validation/referencia-1min.wav`,
+português `pt`, 4 threads, sem VAD, mesmo modelo Q5_0. O runtime CPU é o
+1.9.5/b5454 fixado pelo projeto. O candidato Vulkan foi compilado do mesmo
+[b5454, em commit fixado](https://github.com/ggml-org/whisper.cpp/tree/d1be6fde11ac6e0407606b4e42fe72d34add8037),
+com `GGML_VULKAN=ON`, `GGML_CUDA=OFF`, `GGML_NATIVE=OFF`,
+`GGML_BACKEND_DL=ON` e `WHISPER_BUILD_IS_DEV=OFF`; o CLI final informa **1.9.5**.
+Cada execução cria um processo novo. Tempo inclui carregar o modelo,
+transcrever e gravar JSON; extração e conversão para texto ficam de fora.
+
+| Modelo | Backend realmente usado | Execuções 1 / 2 / 3 (s) | Tempo mediano (s) | Pico RSS mediano (MiB) |
+|---|---|---|---:|---:|
+| Preciso (turbo) | CPU (-ng) | 54,175 / 52,554 / 53,367 | 53,367 | 883,086 |
+| Preciso (turbo) | Vulkan / RTX 3050 | 3,617 / 3,637 / 3,473 | 3,617 | 271,957 |
+
+O log das três execuções Vulkan identifica **NVIDIA GeForce RTX 3050** e
+`whisper_backend_init_gpu: using Vulkan0 backend`, com pesos no dispositivo.
+**Vulkan usou a GPU; CPU foi usada nas três execuções forçadas com -ng.**
+RSS é memória residente do processo no host, medida a cada 20 ms, e não VRAM.
+
+As seis saídas finais, JSON, logs e métricas estão em
+`.work/turbo-evaluation/measurements/`: `turbo-cpu-1..3` e
+`turbo-vulkan-release-1..3`, incluindo `.hypothesis.txt`, fora do Git.
+Não há conteúdo do vídeo nesta atualização.
+
+Os caches do sistema e do driver não foram limpos. O build Vulkan final foi
+medido com cache de shaders já aquecido: uma execução exploratória anterior
+levou 12,761 s na inicialização fria. As medianas representam esta máquina e
+este recorte; a primeira execução em outra instalação pode levar mais tempo.
+
+### Causa exata do fallback CUDA e proposta de menor pacote
+
+A auditoria da tabela de imports PE encontrou dependência direta de
+`cublas64_11.dll` em `ggml-cuda.dll`. A DLL não existe na pasta CUDA,
+System32 ou PATH pesquisados. `LoadLibraryExW` falha com **erro Windows 126**
+para ela e, consequentemente, para `ggml-cuda.dll`. O probe do CLI CUDA
+termina em CPU com `no GPU found`, apesar da RTX 3050 e do driver NVIDIA
+621.01 presentes. O loader Vulkan existente reconhece Vulkan 1.4.357.
+A lista de arquivos preservados pelo setup atual também não inclui CuBLAS;
+uma correção CUDA precisaria tratar essa dependência e sua preservação.
+Evidências privadas: `cuda-dependency-audit.json`, `cuda-loader-probe.log`
+e `vulkan-summary.log` no diretório desta avaliação.
+
+**Proposta: integrar o runtime Vulkan validado**, o menor pacote GPU
+funcional entre os candidatos avaliados nesta máquina. Ele ocupa
+**48,92 MB** (48,919,552 bytes sem compressão)
+e **15,18 MB em ZIP** (15,182,626 bytes).
+Os seis arquivos são CLI, whisper.dll, ggml.dll, ggml-base.dll,
+ggml-cpu.dll e ggml-vulkan.dll; o loader Vulkan vem do driver já instalado.
+Pesos, driver e SDK de compilação ficam fora desses tamanhos.
+
+O menor [asset CUDA oficial de b5454](https://github.com/ggml-org/whisper.cpp/releases/tag/b5454)
+é o CUDA 11.8 de 284.761.231 bytes; o CUDA 12.4 tem 684.913.404 bytes.
+A distribuição CuBLAS 11.8 para Windows x64 tem mais 420.850.025 bytes,
+conforme o [manifesto oficial NVIDIA](https://developer.download.nvidia.com/compute/cuda/redist/redistrib_11.8.0.json).
+A comparação usa esses assets oficiais e o pacote mínimo Vulkan compilado,
+sem afirmar um mínimo absoluto entre todos os builds customizados possíveis.
+
+O candidato testado está em `.work/turbo-evaluation/vulkan-runtime/`;
+o ZIP e `vulkan-build-provenance.json` registram seus componentes e a origem
+dos headers Khronos e do compilador glslc Google. O script local
+`.work/build_vulkan_candidate.py` reproduz a compilação. Esta validação usa
+CLI local; a integração ao resolver, download e empacotamento do app é a
+proposta decorrente. O código do app continua aceitando os runtimes CPU/CUDA
+fixados anteriormente, e **o padrão Base permanece intacto**.
+
+Validação local: analyze sem problemas e **273 testes passando**, com
+16 ignorados. O teste do catálogo confere o rótulo Preciso (turbo), seu
+identificador, tamanho e presença do SHA-256 fixado.

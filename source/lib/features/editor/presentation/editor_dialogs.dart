@@ -125,7 +125,7 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
     for (final info in whisperModelCatalog.where((m) => m.name != 'tiny'))
       _WhisperModelOption(
         value: info.name,
-        label: info.name == 'base' ? 'Base (padrão)' : info.name,
+        label: info.name == 'base' ? 'Base (padrão)' : info.label,
       ),
   ];
 
