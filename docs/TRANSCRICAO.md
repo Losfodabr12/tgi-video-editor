@@ -333,3 +333,39 @@ Mesmo WAV SHA-256 16533371c7cdb2117f672491366fd90b313c497217e472a5fa76bb1c3cf069
 As linhas CUDA são **tentativas com fallback CPU**, não benchmarks GPU. Tempo, RAM e WER de GPU efetiva: indisponíveis. nvidia-smi mediu memória do dispositivo inteiro incluindo outros aplicativos; não atribuí esses valores ao Whisper. A ferramenta tool/benchmark_transcription.py preserva os logs e reporta backend solicitado/efetivo. Os arquivos brutos permanecem em .work/benchmark-b5454, privados. Nenhum ganho de qualidade nem troca do modelo padrão foi derivado desses tempos.
 
 Etapa 3: analyze sem problemas; 263 testes passaram, 16 ignorados. GPU efetiva indisponível conforme diagnóstico acima.
+
+## Implementação — etapa 4: gerenciador sob demanda
+
+Interface: Legendas automáticas → Gerenciar modelos. Base permanece padrão.
+Small, Medium, Large-v3-turbo q5_0 e Large-v3 q5_0 estão no catálogo selecionável;
+nenhum desses pesos foi baixado automaticamente nesta implementação.
+Downloads exigem ação explícita (também protegida na API por userInitiated),
+têm progresso, pausa, retomada via Range/Content-Range, tratamento de servidor
+que responde 200 em vez de 206, checagem prévia de espaço (restante + 64 MiB)
+e tamanho/SHA-256 final. Erro de rede/pausa preserva parcial; hash incorreto o
+descarta. Modelo só recebe nome definitivo após validação.
+Remoção alcança os modelos baixados pelo gerenciador e parciais; modelos incluídos
+no pacote são identificados e preservados.
+
+Origem: [GGML oficial](https://huggingface.co/ggerganov/whisper.cpp/tree/5359861c739e955e79d9a303bcbc70fb988958b1),
+revisão fixada 5359861c739e955e79d9a303bcbc70fb988958b1, sem consulta de catálogo
+remoto em runtime. Caminhos de modelos são compartilhados com o transcritor,
+incluindo TGI_WHISPER_MODELS_PATH.
+
+| Modelo | Bytes | SHA-256 |
+|---|---:|---|
+| small | 487601967 | 1be3a9b2063867b937e64e2ec7483364a79917e157fa98c5d94b5c1fffea987b |
+| medium | 1533763059 | 6c14d5adee5f86394037b4e4e8b59f1673b6cee10e3cf0b11bbdbee79c156208 |
+| large-v3-turbo-q5_0 | 574041195 | 394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2 |
+| large-v3-q5_0 | 1081140203 | d75795ecff3f83b5faa89d1900604ad8c780abd5739fae406de19f23ecd98ad1 |
+
+Sugestão de capacidade usa RAM e, quando GPU Whisper foi confirmada ativa,
+VRAM. É heurística de recursos, não classificação de qualidade, e não muda
+o padrão. Sem WER revisado não se afirma ganho por escolher modelo maior.
+
+Testes locais usam servidor HTTP de loopback com payload sintético, sem baixar
+pesos: retomada 206, reinício correto com 200, SHA inválido, espaço insuficiente
+antes da requisição, cancelamento preservando parcial, bloqueio sem ação explícita,
+remoção e catálogo/heurística de RAM/GPU.
+
+Etapa 4: analyze sem problemas; 268 testes passaram, 16 ignorados. Nenhum peso opcional baixado.

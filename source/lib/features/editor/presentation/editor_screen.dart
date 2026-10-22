@@ -49,6 +49,8 @@ import 'widgets/mascot_notification.dart';
 import 'widgets/audio_tool_panel.dart';
 import 'widgets/advanced_speed_panel.dart';
 import 'widgets/captions_panel.dart';
+import 'widgets/whisper_models_dialog.dart';
+import '../../../services/whisper_model_service.dart';
 import 'widgets/chroma_key_panel.dart';
 import 'widgets/mask_tracking_panel.dart';
 import 'widgets/media_pool_list.dart';

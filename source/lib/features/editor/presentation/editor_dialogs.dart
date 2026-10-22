@@ -121,9 +121,12 @@ class _AutoCaptionsDialog extends StatefulWidget {
 }
 
 class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
-  static const _allModelOptions = [
-    _WhisperModelOption(value: 'base', label: 'Equilibrado recomendado'),
-    _WhisperModelOption(value: 'small', label: 'Melhor qualidade'),
+  static final _allModelOptions = [
+    for (final info in whisperModelCatalog.where((m) => m.name != 'tiny'))
+      _WhisperModelOption(
+        value: info.name,
+        label: info.name == 'base' ? 'Base (padrão)' : info.name,
+      ),
   ];
 
   static const _fontFamilies = EditorFontService.families;
@@ -273,7 +276,7 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
         _modelName = _preferredWhisperModelName(_modelOptions);
       }
       _modelHelpText = installedSet.isEmpty
-          ? 'Whisper Base gratuito; alta qualidade disponivel nos Downloads.'
+          ? 'Nenhum modelo instalado. Use Gerenciar modelos.'
           : 'Disponiveis nesta instalacao: '
                 '${installedSet.join(', ')}';
     });
@@ -359,16 +362,21 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
                   if (value == null) {
                     return;
                   }
-                  if (value == 'small' &&
-                      (!widget.hasPaidPlan ||
-                          !_installedModelNames.contains('small'))) {
-                    widget.onOpenDownloads();
-                    return;
-                  }
                   setState(() => _modelName = value);
                 },
               ),
               const SizedBox(height: TgiSpacing.md),
+              TextButton.icon(
+                onPressed: () async {
+                  await showDialog<void>(
+                    context: context,
+                    builder: (_) => const WhisperModelsDialog(),
+                  );
+                  await _loadInstalledWhisperModels();
+                },
+                icon: const Icon(Icons.download_outlined),
+                label: const Text('Gerenciar modelos'),
+              ),
               TextField(
                 controller: _languageController,
                 autofocus: true,

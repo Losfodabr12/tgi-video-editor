@@ -16,6 +16,8 @@ const localWhisperModelNames = <String>[
   'small',
   'medium',
   'large-v3',
+  'large-v3-turbo-q5_0',
+  'large-v3-q5_0',
 ];
 
 const _defaultCaptionChunkDuration = Duration(minutes: 5);
@@ -591,7 +593,7 @@ Future<List<String>> availableLocalWhisperModelNames() async {
         continue;
       }
       final modelName = _modelNameFromPath(entry.path);
-      if (modelName != null) {
+      if (modelName != null && localWhisperModelNames.contains(modelName)) {
         found.add(modelName);
       }
     }
@@ -1146,6 +1148,10 @@ Iterable<String> _whisperExecutableCandidates() sync* {
 }
 
 Iterable<String> _whisperModelCandidates(String modelName) sync* {
+  final configured = Platform.environment['TGI_WHISPER_MODELS_PATH']?.trim();
+  if (configured != null && configured.isNotEmpty) {
+    yield _join(configured, 'ggml-$modelName.bin');
+  }
   yield joinPlatformPath([
     tgiAppComponentsRoot(),
     'whisper',
@@ -1160,6 +1166,8 @@ Iterable<String> _whisperModelCandidates(String modelName) sync* {
 }
 
 Iterable<String> _whisperModelDirectories() sync* {
+  final configured = Platform.environment['TGI_WHISPER_MODELS_PATH']?.trim();
+  if (configured != null && configured.isNotEmpty) yield configured;
   yield joinPlatformPath([tgiAppComponentsRoot(), 'whisper', 'models']);
   for (final root in _candidateRootDirectories()) {
     for (final relative in _whisperModelRelativeDirectories) {

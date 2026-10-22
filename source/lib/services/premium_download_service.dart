@@ -150,6 +150,7 @@ class PremiumDownloadService implements PremiumDownloadManager {
     try {
       await _whisperService.installModel(
         info,
+        userInitiated: true,
         onProgress: onProgress,
         cancellationToken: whisperToken,
       );
