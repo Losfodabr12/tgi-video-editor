@@ -1,7 +1,8 @@
 # Relatório de alterações
 
-A revisão mais recente está em [Release 0.4.0](#release-040),
-com a versão, verificações e evidências da publicação. Os resultados das etapas
+A revisão mais recente está em [Compactação do catálogo MCP](#mcp-catalog-compact).
+A [Release 0.4.0](#release-040) registra as evidências da última publicação.
+Os resultados das etapas
 anteriores permanecem como histórico, vinculados aos respectivos commits.
 
 O texto completo, incluindo os resultados remotos da release 0.3.0, está
@@ -1034,3 +1035,104 @@ o resultado está em
 [RELEASE_0.4.0_GENERATED_FILES_RESULT.json](docs/validation/RELEASE_0.4.0_GENERATED_FILES_RESULT.json).
 A tag e os assets publicados foram preservados durante o registro posterior
 destas evidências; este registro documental identifica o commit de release acima.
+
+<a id="mcp-catalog-compact"></a>
+
+## Compactação do catálogo MCP — 22/10/2026
+
+Sete etapas com commits separados; formato v14 e política de aprovação
+preservados. Catálogo medido no HTTP: **75.308 → 24.358 bytes (-67.66%)**,
+34 tools. `preview_plan`: schema **32.519 → 1.080**; `apply_commands`:
+**13.742 → 877 bytes**. Descrições: máximo **166 bytes**.
+
+| Etapa | Commit | analyze | test executado |
+| --- | --- | --- | --- |
+| 1 — lotes compactos e validadores | d0d058d | limpo | 255 aprovados / 16 opcionais ignorados |
+| 2 — refs locais | b4dd1b0 | limpo | 256 aprovados / 16 opcionais ignorados |
+| 3 — decisão de compatibilidade | 9598597 | limpo | 256 aprovados / 16 opcionais ignorados |
+| 4 — ordem e descrições | f0a8ae1 | limpo | 256 aprovados / 16 opcionais ignorados |
+| 5 — orçamentos | fa01ee8 | limpo | 258 aprovados / 16 opcionais ignorados |
+| 6 — SDK/Inspector e arquivo real | 549811e | limpo | 275 aprovados / zero ignorados, FFmpeg habilitado |
+| 7 — medições/documentação | commit desta seção | limpo | 259 aprovados / 16 opcionais ignorados |
+
+Foram executados `flutter analyze --no-pub` e `flutter test --no-pub
+--concurrency=1 --reporter=expanded` ao fim de cada etapa; na etapa 6 também
+`--dart-define=TGI_RUN_FFMPEG_INTEGRATION_TESTS=true`. Logs locais:
+`.work/catalog-stage-N-analyze.log` e `.work/catalog-stage-N-test.log`.
+Falhas intermediárias: lints/tipos corrigidos antes dos commits, teste novo
+de compartilhamento de cores ajustado e expectativa antiga de ordem de
+`export_cut_check` atualizada para a ordem pedida. Todos os resultados da tabela
+são as execuções finais, após as correções.
+
+`commands` anuncia `tool/arguments`, com `command` legado aceito; cada item
+passa pelos validadores das tools individuais. Erros mantêm detalhes existentes
+e incluem o schema esperado e exemplo mínimo, inclusive quando a forma do item
+é inválida. Lotes seguem atômicos. `$defs/$ref` são locais a cada schema.
+As únicas alterações em testes anteriores foram expectativas da forma/ordem
+do catálogo; testes de segurança, aprovação, persistência e formato foram
+preservados. Não houve alteração de ProjectIOService.
+
+Decisão: manter `apply_commands` como atalho compatível e recomendar o fluxo
+`preview_plan → apply_plan`; a entrada e a validação foram unificadas.
+Não remover ferramentas nem mudar aplicação/aprovação de clientes existentes.
+Detalhes e exemplos em [docs/MCP.md](docs/MCP.md#decisão-de-compatibilidade-lotes-e-planos).
+
+SDK **1.32.1**, Inspector **2.11.0** e compilação das 34 entradas como JSON
+Schema 2020-12 aprovados; `tools/list --strict` e leitura sem avisos.
+O plano compacto aplicou marker/volume e foi desfeito via HTTP real. O host
+Flutter isolado salvou antes/depois por ProjectIOService: **5.896 bytes**,
+iguais byte a byte e com o mesmo SHA-256. Também passou o alias legado de lote.
+O projeto aberto do usuário não foi usado na validação. Evidências:
+[cliente](docs/validation/MCP_COMPACT_CLIENT_RESULT.json),
+[arquivo restaurado](docs/validation/MCP_COMPACT_ROUNDTRIP_RESULT.json) e
+[medições completas](docs/validation/MCP_COMPACT_CATALOG_SIZE_RESULT.json).
+
+Tamanhos medidos por tool, em bytes UTF-8 de JSON compacto:
+
+| Tool | Tool antes | Tool depois | Schema antes | Schema depois |
+| --- | ---: | ---: | ---: | ---: |
+| `get_project` | 483 | 458 | 187 | 187 |
+| `remove_silences` | 2861 | 2135 | 2478 | 1807 |
+| `cut_by_transcript` | 1572 | 1151 | 1216 | 867 |
+| `auto_captions` | 780 | 519 | 427 | 251 |
+| `reframe_9x16` | 770 | 526 | 427 | 251 |
+| `preview_plan` | 32857 | 1400 | 32519 | 1080 |
+| `apply_plan` | 632 | 476 | 327 | 207 |
+| `split_clip` | 959 | 642 | 568 | 357 |
+| `trim_clip` | 1046 | 729 | 678 | 467 |
+| `delete_clip` | 820 | 538 | 455 | 279 |
+| `move_clip` | 1163 | 846 | 768 | 557 |
+| `set_clip_speed` | 868 | 586 | 490 | 314 |
+| `add_text` | 1365 | 1110 | 1019 | 870 |
+| `set_caption_style` | 1254 | 978 | 911 | 741 |
+| `apply_effect` | 2174 | 1681 | 1812 | 1425 |
+| `set_keyframe` | 1251 | 969 | 871 | 695 |
+| `add_transition` | 1388 | 1127 | 1021 | 866 |
+| `set_volume` | 833 | 551 | 491 | 315 |
+| `add_marker` | 787 | 526 | 462 | 307 |
+| `undo` | 583 | 357 | 257 | 137 |
+| `redo` | 552 | 326 | 257 | 137 |
+| `apply_commands` | 14046 | 1153 | 13742 | 877 |
+| `get_clip` | 476 | 420 | 244 | 188 |
+| `get_transcript` | 521 | 479 | 229 | 229 |
+| `list_media` | 410 | 410 | 168 | 168 |
+| `get_loudness` | 421 | 374 | 146 | 146 |
+| `get_frames` | 654 | 552 | 333 | 298 |
+| `detect_silence` | 529 | 529 | 266 | 266 |
+| `detect_scenes` | 448 | 448 | 205 | 205 |
+| `transcribe` | 512 | 444 | 207 | 207 |
+| `get_job` | 397 | 397 | 142 | 142 |
+| `cancel_job` | 378 | 378 | 142 | 142 |
+| `export_cut_check` | 770 | 585 | 399 | 279 |
+| `export` | 669 | 479 | 329 | 209 |
+
+Os testes impõem 30.000 bytes por resposta JSON-RPC, 4.000 por inputSchema e
+descrições <300 bytes; adicionalmente preservam as metas <25.000 e <3.000 para
+os dois lotes. `tool/mcp_catalog_sizes.dart` reproduz a comparação das capturas
+HTTP e rejeita uma captura posterior diferente do código atual.
+
+O push desta sequência usa o workflow Windows existente, que executa analyze,
+testes padrão/FFmpeg, build release e empacotamento. O relatório do artefato do CI
+registra o SHA exato executado e o link do run; nenhuma tag/release é alterada.
+
+A ferramenta de medição também passou em `dart analyze tool/mcp_catalog_sizes.dart`.

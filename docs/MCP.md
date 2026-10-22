@@ -239,7 +239,7 @@ Erros de tools usam `isError: true`, com o mesmo objeto no texto e em
 
 ## Remoção de silêncios por remapeamento
 
-As seis primeiras tools na descoberta MCP são as quatro macros, `preview_plan`
+`get_project` abre a descoberta MCP, seguido das quatro macros, `preview_plan`
 e `apply_plan`. Para remover silêncios, escolha o vídeo/áudio principal e leia a
 revisão atual. Limiar e duração mínima são parâmetros da análise da fonte:
 
@@ -418,8 +418,8 @@ calculada de 2,999916 s, dentro de um frame a 20 fps:
 [REMOVE_SILENCES_FFMPEG_RESULT.json](validation/REMOVE_SILENCES_FFMPEG_RESULT.json).
 
 MCP Inspector 2.11.0 passou novamente em `tools/list --strict` e `get_project`,
-sem avisos; SDK 1.32.1 passou no smoke independente. A ordem real das seis
-primeiras tools está registrada em
+sem avisos; SDK 1.32.1 passou no smoke independente. A ordem histórica das seis
+primeiras tools, anterior à compactação, está registrada em
 [REMOVE_SILENCES_INSPECTOR_RESULT.json](validation/REMOVE_SILENCES_INSPECTOR_RESULT.json).
 O Inspector verifica catálogo/leitura; os contratos de remoção e undo foram
 executados separadamente pelo cliente MCP de teste, incluindo a cópia real.
@@ -453,3 +453,106 @@ Na verificação final desta correção: `flutter analyze --no-pub` sem problema
 `--dart-define=TGI_RUN_FFMPEG_INTEGRATION_TESTS=true`. Os testes anteriores
 permaneceram sem edição. Contagens e evidências:
 [REMOVE_SILENCES_VALIDATION.json](validation/REMOVE_SILENCES_VALIDATION.json).
+
+## Catálogo compacto — 22/10/2026
+
+Medição real do corpo JSON-RPC de `tools/list`, salvo diretamente de HTTP:
+**75.308 → 24.358 bytes UTF-8**, redução de **67.66%**, mantendo as
+**34 tools**. O `inputSchema` de `preview_plan` caiu de **32.519 para 1.080 bytes**;
+`apply_commands`, de **13.742 para 877 bytes**. As descrições têm no máximo
+**166 bytes**. Não houve alteração no formato v14 nem no arquivo ProjectIOService.
+
+A ordem atual começa por `get_project`, quatro macros, `preview_plan`,
+`apply_plan` e `split_clip`. Depois vêm as demais edições, leituras auxiliares,
+jobs e exports. Os nomes e aliases antigos permanecem disponíveis.
+
+Os valores abaixo são bytes UTF-8: tool completa com nome/descrição/schema/
+annotations, e apenas `inputSchema`, serializados por `jsonEncode` compacto.
+A soma das tools mais o envelope/pontuação corresponde ao corpo HTTP.
+As duas capturas usam IDs de requisição com um dígito. Descrições individuais e
+valores completos estão em [MCP_COMPACT_CATALOG_SIZE_RESULT.json](validation/MCP_COMPACT_CATALOG_SIZE_RESULT.json).
+
+| Tool | Tool antes | Tool depois | Schema antes | Schema depois |
+| --- | ---: | ---: | ---: | ---: |
+| `get_project` | 483 | 458 | 187 | 187 |
+| `remove_silences` | 2861 | 2135 | 2478 | 1807 |
+| `cut_by_transcript` | 1572 | 1151 | 1216 | 867 |
+| `auto_captions` | 780 | 519 | 427 | 251 |
+| `reframe_9x16` | 770 | 526 | 427 | 251 |
+| `preview_plan` | 32857 | 1400 | 32519 | 1080 |
+| `apply_plan` | 632 | 476 | 327 | 207 |
+| `split_clip` | 959 | 642 | 568 | 357 |
+| `trim_clip` | 1046 | 729 | 678 | 467 |
+| `delete_clip` | 820 | 538 | 455 | 279 |
+| `move_clip` | 1163 | 846 | 768 | 557 |
+| `set_clip_speed` | 868 | 586 | 490 | 314 |
+| `add_text` | 1365 | 1110 | 1019 | 870 |
+| `set_caption_style` | 1254 | 978 | 911 | 741 |
+| `apply_effect` | 2174 | 1681 | 1812 | 1425 |
+| `set_keyframe` | 1251 | 969 | 871 | 695 |
+| `add_transition` | 1388 | 1127 | 1021 | 866 |
+| `set_volume` | 833 | 551 | 491 | 315 |
+| `add_marker` | 787 | 526 | 462 | 307 |
+| `undo` | 583 | 357 | 257 | 137 |
+| `redo` | 552 | 326 | 257 | 137 |
+| `apply_commands` | 14046 | 1153 | 13742 | 877 |
+| `get_clip` | 476 | 420 | 244 | 188 |
+| `get_transcript` | 521 | 479 | 229 | 229 |
+| `list_media` | 410 | 410 | 168 | 168 |
+| `get_loudness` | 421 | 374 | 146 | 146 |
+| `get_frames` | 654 | 552 | 333 | 298 |
+| `detect_silence` | 529 | 529 | 266 | 266 |
+| `detect_scenes` | 448 | 448 | 205 | 205 |
+| `transcribe` | 512 | 444 | 207 | 207 |
+| `get_job` | 397 | 397 | 142 | 142 |
+| `cancel_job` | 378 | 378 | 142 | 142 |
+| `export_cut_check` | 770 | 585 | 399 | 279 |
+| `export` | 669 | 479 | 329 | 209 |
+
+`test/mcp_catalog_budget_test.dart` falha acima de **30.000 bytes** na resposta
+JSON-RPC, **4.000 por schema** e em descrições com **300 bytes ou mais**.
+Um segundo teste preserva as metas desta entrega: total **<25.000** e schemas de
+`preview_plan`/`apply_commands` **<3.000**. Não há limite sobre uma versão
+pretty-printed do catálogo; a medição é da resposta HTTP compacta real.
+
+### Clientes externos e arquivo restaurado
+
+SDK oficial **1.32.1** e MCP Inspector **2.11.0** executados contra um host Flutter
+isolado que usa servidor, roteador, controlador e persistência de produção, com
+mídia A/V criada por FFmpeg. As 34 entradas também compilaram como JSON Schema
+2020-12, incluindo os refs locais. Inspector `tools/list --strict` e
+`get_project` terminaram com exit 0 e sem avisos:
+[MCP_COMPACT_CLIENT_RESULT.json](validation/MCP_COMPACT_CLIENT_RESULT.json).
+
+O SDK executou `preview_plan → apply_plan → undo` com `tool/arguments`, conferiu
+o volume alterado e a revisão preservada pelo preview, testou os erros com schema
+e exemplo (inclusive `arguments` de tipo inválido), e executou o alias legado de
+`apply_commands` seguido de undo. O host salvou arquivos v14 antes e depois:
+**5.896 bytes em ambos**, comparação byte a byte aprovada e SHA-256 igual.
+A aprovação é desativada apenas nesse host de teste; as regras do app e o projeto
+aberto do usuário são preservados:
+[MCP_COMPACT_ROUNDTRIP_RESULT.json](validation/MCP_COMPACT_ROUNDTRIP_RESULT.json).
+
+Referências dos clientes: [SDK oficial](https://ts.sdk.modelcontextprotocol.io/client)
+e [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector).
+
+Para reproduzir, instale as versões indicadas conforme a seção de validação,
+prepare uma pasta nova ignorada em `.work/`, defina `MCP_VALIDATION_DIR` para ela
+e inicie, em `source/` pelo caminho curto do projeto:
+
+```powershell
+flutter test --no-pub --reporter=expanded tool/mcp_inspector_host_test.dart
+```
+
+Após o host escrever `session.json`, execute na raiz, em outro terminal:
+
+```powershell
+node tool/mcp_catalog_smoke.mjs '<pasta de validação>' '.work/mcp-client/node_modules'
+dart tool/mcp_catalog_sizes.dart '<captura HTTP anterior>' '<pasta de validação>/tools-list-after.json' '.work/catalog-sizes.json'
+```
+
+O script de medição lê as capturas brutas, confere que a captura posterior
+coincide com o catálogo do código atual e calcula tamanhos por tool/schema.
+O host compara os arquivos e grava `roundtrip.json`; o cliente grava
+`report.json`, captura o catálogo sem despejá-lo no terminal e sinaliza a parada.
+Credenciais temporárias e arquivos de mídia/projeto ficam apenas em `.work/`.

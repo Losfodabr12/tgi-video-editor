@@ -1,0 +1,326 @@
+{
+  "unit": "UTF-8 bytes; JSON compacted with Dart jsonEncode for each tool/schema",
+  "envelope": "raw JSON-RPC tools/list response saved from HTTP, one-digit request id",
+  "tool_count": 34,
+  "before_bytes": 75308,
+  "after_bytes": 24358,
+  "reduction_percent": 67.66,
+  "first_eight": [
+    "get_project",
+    "remove_silences",
+    "cut_by_transcript",
+    "auto_captions",
+    "reframe_9x16",
+    "preview_plan",
+    "apply_plan",
+    "split_clip"
+  ],
+  "tools": [
+    {
+      "name": "get_project",
+      "before_bytes": 483,
+      "after_bytes": 458,
+      "before_description_bytes": 138,
+      "after_description_bytes": 113,
+      "before_input_schema_bytes": 187,
+      "after_input_schema_bytes": 187
+    },
+    {
+      "name": "remove_silences",
+      "before_bytes": 2861,
+      "after_bytes": 2135,
+      "before_description_bytes": 221,
+      "after_description_bytes": 166,
+      "before_input_schema_bytes": 2478,
+      "after_input_schema_bytes": 1807
+    },
+    {
+      "name": "cut_by_transcript",
+      "before_bytes": 1572,
+      "after_bytes": 1151,
+      "before_description_bytes": 192,
+      "after_description_bytes": 120,
+      "before_input_schema_bytes": 1216,
+      "after_input_schema_bytes": 867
+    },
+    {
+      "name": "auto_captions",
+      "before_bytes": 780,
+      "after_bytes": 519,
+      "before_description_bytes": 193,
+      "after_description_bytes": 108,
+      "before_input_schema_bytes": 427,
+      "after_input_schema_bytes": 251
+    },
+    {
+      "name": "reframe_9x16",
+      "before_bytes": 770,
+      "after_bytes": 526,
+      "before_description_bytes": 184,
+      "after_description_bytes": 116,
+      "before_input_schema_bytes": 427,
+      "after_input_schema_bytes": 251
+    },
+    {
+      "name": "preview_plan",
+      "before_bytes": 32857,
+      "after_bytes": 1400,
+      "before_description_bytes": 177,
+      "after_description_bytes": 159,
+      "before_input_schema_bytes": 32519,
+      "after_input_schema_bytes": 1080
+    },
+    {
+      "name": "apply_plan",
+      "before_bytes": 632,
+      "after_bytes": 476,
+      "before_description_bytes": 147,
+      "after_description_bytes": 111,
+      "before_input_schema_bytes": 327,
+      "after_input_schema_bytes": 207
+    },
+    {
+      "name": "split_clip",
+      "before_bytes": 959,
+      "after_bytes": 642,
+      "before_description_bytes": 232,
+      "after_description_bytes": 126,
+      "before_input_schema_bytes": 568,
+      "after_input_schema_bytes": 357
+    },
+    {
+      "name": "trim_clip",
+      "before_bytes": 1046,
+      "after_bytes": 729,
+      "before_description_bytes": 211,
+      "after_description_bytes": 105,
+      "before_input_schema_bytes": 678,
+      "after_input_schema_bytes": 467
+    },
+    {
+      "name": "delete_clip",
+      "before_bytes": 820,
+      "after_bytes": 538,
+      "before_description_bytes": 206,
+      "after_description_bytes": 100,
+      "before_input_schema_bytes": 455,
+      "after_input_schema_bytes": 279
+    },
+    {
+      "name": "move_clip",
+      "before_bytes": 1163,
+      "after_bytes": 846,
+      "before_description_bytes": 237,
+      "after_description_bytes": 131,
+      "before_input_schema_bytes": 768,
+      "after_input_schema_bytes": 557
+    },
+    {
+      "name": "set_clip_speed",
+      "before_bytes": 868,
+      "after_bytes": 586,
+      "before_description_bytes": 215,
+      "after_description_bytes": 109,
+      "before_input_schema_bytes": 490,
+      "after_input_schema_bytes": 314
+    },
+    {
+      "name": "add_text",
+      "before_bytes": 1365,
+      "after_bytes": 1110,
+      "before_description_bytes": 189,
+      "after_description_bytes": 83,
+      "before_input_schema_bytes": 1019,
+      "after_input_schema_bytes": 870
+    },
+    {
+      "name": "set_caption_style",
+      "before_bytes": 1254,
+      "after_bytes": 978,
+      "before_description_bytes": 177,
+      "after_description_bytes": 71,
+      "before_input_schema_bytes": 911,
+      "after_input_schema_bytes": 741
+    },
+    {
+      "name": "apply_effect",
+      "before_bytes": 2174,
+      "after_bytes": 1681,
+      "before_description_bytes": 201,
+      "after_description_bytes": 95,
+      "before_input_schema_bytes": 1812,
+      "after_input_schema_bytes": 1425
+    },
+    {
+      "name": "set_keyframe",
+      "before_bytes": 1251,
+      "after_bytes": 969,
+      "before_description_bytes": 219,
+      "after_description_bytes": 113,
+      "before_input_schema_bytes": 871,
+      "after_input_schema_bytes": 695
+    },
+    {
+      "name": "add_transition",
+      "before_bytes": 1388,
+      "after_bytes": 1127,
+      "before_description_bytes": 204,
+      "after_description_bytes": 98,
+      "before_input_schema_bytes": 1021,
+      "after_input_schema_bytes": 866
+    },
+    {
+      "name": "set_volume",
+      "before_bytes": 833,
+      "after_bytes": 551,
+      "before_description_bytes": 183,
+      "after_description_bytes": 77,
+      "before_input_schema_bytes": 491,
+      "after_input_schema_bytes": 315
+    },
+    {
+      "name": "add_marker",
+      "before_bytes": 787,
+      "after_bytes": 526,
+      "before_description_bytes": 166,
+      "after_description_bytes": 60,
+      "before_input_schema_bytes": 462,
+      "after_input_schema_bytes": 307
+    },
+    {
+      "name": "undo",
+      "before_bytes": 583,
+      "after_bytes": 357,
+      "before_description_bytes": 174,
+      "after_description_bytes": 68,
+      "before_input_schema_bytes": 257,
+      "after_input_schema_bytes": 137
+    },
+    {
+      "name": "redo",
+      "before_bytes": 552,
+      "after_bytes": 326,
+      "before_description_bytes": 143,
+      "after_description_bytes": 37,
+      "before_input_schema_bytes": 257,
+      "after_input_schema_bytes": 137
+    },
+    {
+      "name": "apply_commands",
+      "before_bytes": 14046,
+      "after_bytes": 1153,
+      "before_description_bytes": 142,
+      "after_description_bytes": 114,
+      "before_input_schema_bytes": 13742,
+      "after_input_schema_bytes": 877
+    },
+    {
+      "name": "get_clip",
+      "before_bytes": 476,
+      "after_bytes": 420,
+      "before_description_bytes": 77,
+      "after_description_bytes": 77,
+      "before_input_schema_bytes": 244,
+      "after_input_schema_bytes": 188
+    },
+    {
+      "name": "get_transcript",
+      "before_bytes": 521,
+      "after_bytes": 479,
+      "before_description_bytes": 131,
+      "after_description_bytes": 89,
+      "before_input_schema_bytes": 229,
+      "after_input_schema_bytes": 229
+    },
+    {
+      "name": "list_media",
+      "before_bytes": 410,
+      "after_bytes": 410,
+      "before_description_bytes": 85,
+      "after_description_bytes": 85,
+      "before_input_schema_bytes": 168,
+      "after_input_schema_bytes": 168
+    },
+    {
+      "name": "get_loudness",
+      "before_bytes": 421,
+      "after_bytes": 374,
+      "before_description_bytes": 116,
+      "after_description_bytes": 69,
+      "before_input_schema_bytes": 146,
+      "after_input_schema_bytes": 146
+    },
+    {
+      "name": "get_frames",
+      "before_bytes": 654,
+      "after_bytes": 552,
+      "before_description_bytes": 164,
+      "after_description_bytes": 97,
+      "before_input_schema_bytes": 333,
+      "after_input_schema_bytes": 298
+    },
+    {
+      "name": "detect_silence",
+      "before_bytes": 529,
+      "after_bytes": 529,
+      "before_description_bytes": 102,
+      "after_description_bytes": 102,
+      "before_input_schema_bytes": 266,
+      "after_input_schema_bytes": 266
+    },
+    {
+      "name": "detect_scenes",
+      "before_bytes": 448,
+      "after_bytes": 448,
+      "before_description_bytes": 83,
+      "after_description_bytes": 83,
+      "before_input_schema_bytes": 205,
+      "after_input_schema_bytes": 205
+    },
+    {
+      "name": "transcribe",
+      "before_bytes": 512,
+      "after_bytes": 444,
+      "before_description_bytes": 148,
+      "after_description_bytes": 80,
+      "before_input_schema_bytes": 207,
+      "after_input_schema_bytes": 207
+    },
+    {
+      "name": "get_job",
+      "before_bytes": 397,
+      "after_bytes": 397,
+      "before_description_bytes": 101,
+      "after_description_bytes": 101,
+      "before_input_schema_bytes": 142,
+      "after_input_schema_bytes": 142
+    },
+    {
+      "name": "cancel_job",
+      "before_bytes": 378,
+      "after_bytes": 378,
+      "before_description_bytes": 77,
+      "after_description_bytes": 77,
+      "before_input_schema_bytes": 142,
+      "after_input_schema_bytes": 142
+    },
+    {
+      "name": "export_cut_check",
+      "before_bytes": 770,
+      "after_bytes": 585,
+      "before_description_bytes": 207,
+      "after_description_bytes": 142,
+      "before_input_schema_bytes": 399,
+      "after_input_schema_bytes": 279
+    },
+    {
+      "name": "export",
+      "before_bytes": 669,
+      "after_bytes": 479,
+      "before_description_bytes": 185,
+      "after_description_bytes": 115,
+      "before_input_schema_bytes": 329,
+      "after_input_schema_bytes": 209
+    }
+  ]
+}
