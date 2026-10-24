@@ -9,6 +9,7 @@ import 'editor_read_service.dart';
 import 'mcp_audit.dart';
 import 'mcp_path_policy.dart';
 import 'mcp_import_paths.dart';
+import 'mcp_media_import.dart';
 import 'mcp_settings.dart';
 import 'mcp_tool_router.dart';
 
@@ -56,6 +57,7 @@ class EditorAutomation extends ChangeNotifier {
         await policy.authorizeProject(project);
       },
       onActivity: _activity,
+      imports: McpMediaImport(importPaths, reads.ffmpeg),
     );
   }
   final EditorController controller;
@@ -297,10 +299,10 @@ class EditorAutomation extends ChangeNotifier {
     _activity('undo (app)', {}, result, before, controller.projectRevision);
   }
 
-  void approveAndApply(String id) {
+  Future<void> approveAndApply(String id) async {
     plans.approve(id);
     final before = controller.projectRevision;
-    final result = plans.apply(id, baseRevision: before);
+    final result = await plans.applyChecked(id, baseRevision: before);
     _activity(
       'apply_plan (app)',
       {'plan_id': id},

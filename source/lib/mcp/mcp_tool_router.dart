@@ -9,6 +9,8 @@ import 'editor_plans.dart';
 import 'mcp_tool_catalog.dart';
 import 'cut_check.dart';
 import 'mcp_command_input.dart';
+import 'mcp_media_import.dart';
+import '../core/commands/prepared_media_import.dart';
 
 typedef McpActivityCallback =
     void Function(
@@ -26,12 +28,45 @@ class McpToolRouter {
     this.resolveExport,
     this.authorizeExport,
     this.onActivity,
+    this.imports,
   });
   final EditorReadService reads;
   final EditorPlans plans;
   final Future<String> Function(String filename)? resolveExport;
   final Future<void> Function(TgiProject project, String path)? authorizeExport;
   final McpActivityCallback? onActivity;
+  final McpMediaImport? imports;
+
+  Future<List<EditorCommand>> _prepare(
+    List<EditorCommand> commands,
+    int revision,
+  ) async {
+    checkRevision(revision, reads.controller.projectRevision);
+    final prepared = <EditorCommand>[];
+    for (final command in commands) {
+      if (command.baseRevision != null) {
+        checkRevision(command.baseRevision, revision);
+      }
+      if (command.name == 'import_media') {
+        if (imports == null) {
+          throw const CommandError(
+            'path_not_allowed',
+            'Nenhuma pasta de importação autorizada.',
+          );
+        }
+        prepared.add(
+          await imports!.prepare(
+            (command.arguments['paths'] as List).cast<String>(),
+          ),
+        );
+      } else {
+        prepared.add(command);
+      }
+    }
+    checkRevision(revision, reads.controller.projectRevision);
+    return prepared;
+  }
+
   List<Map<String, Object?>> listTools() =>
       mcpRuntimeToolCatalog.values.map((t) => t.toJson()).toList();
   Future<Map<String, Object?>> call(
@@ -156,6 +191,17 @@ class McpToolRouter {
     if (commandCatalog.containsKey(name)) {
       final revision = a.remove('base_revision') as int;
       final cmd = EditorCommand(name, a, baseRevision: revision);
+      if (name == 'import_media') {
+        final prepared = await _prepare([cmd], revision);
+        final plan = plans.previewCommands(
+          prepared,
+          baseRevision: revision,
+          label: 'IA: import_media',
+        );
+        return plans.requireApproval
+            ? plan.toJson()
+            : await plans.applyChecked(plan.id, baseRevision: revision);
+      }
       if (plans.requireApproval) {
         return plans
             .previewCommands([cmd], baseRevision: revision, label: 'IA: $name')
@@ -228,17 +274,29 @@ class McpToolRouter {
         await reads.jobs.cancel(a['job_id'] as String);
         return reads.jobs.get(a['job_id'] as String).toJson();
       case 'apply_commands':
+        final revision = a['base_revision'] as int;
+        final prepared = await _prepare(commands(), revision);
+        if (prepared.any((c) => c is PreparedMediaImport)) {
+          final plan = plans.previewCommands(
+            prepared,
+            baseRevision: revision,
+            label: a['label'] as String? ?? 'IA: lote',
+          );
+          return plans.requireApproval
+              ? plan.toJson()
+              : await plans.applyChecked(plan.id, baseRevision: revision);
+        }
         if (plans.requireApproval) {
           return plans
               .previewCommands(
-                commands(),
+                prepared,
                 baseRevision: a['base_revision'] as int,
                 label: a['label'] as String? ?? 'IA: lote',
               )
               .toJson();
         }
         return c.executeCommands(
-          commands(),
+          prepared,
           baseRevision: a['base_revision'] as int,
           label: 'IA: ${a['label'] ?? 'lote'}',
         );
@@ -251,13 +309,13 @@ class McpToolRouter {
         }
         return plans
             .previewCommands(
-              commands(),
+              await _prepare(commands(), a['base_revision'] as int),
               baseRevision: a['base_revision'] as int,
               label: a['label'] as String? ?? 'IA: lote',
             )
             .toJson();
       case 'apply_plan':
-        return plans.apply(
+        return plans.applyChecked(
           a['plan_id'] as String,
           baseRevision: a['base_revision'] as int,
         );

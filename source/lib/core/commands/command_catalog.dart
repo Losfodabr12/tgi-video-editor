@@ -73,6 +73,20 @@ final remapScopeFields = <String, dynamic>{
 };
 
 final commandCatalog = <String, CommandDefinition>{
+  'import_media': CommandDefinition(
+    'Importa arquivos de pastas autorizadas após ffprobe. Limite 512 MiB/arquivo e 2 GiB/lote. Retorna IDs, duração e tipo; um undo desfaz o lote.',
+    objectSchema(
+      {
+        'paths': {
+          'type': 'array',
+          'minItems': 1,
+          'maxItems': 32,
+          'items': {'type': 'string', 'minLength': 1, 'maxLength': 4096},
+        },
+      },
+      ['paths'],
+    ),
+  ),
   'remap_timeline': CommandDefinition(
     'Remove intervalos absolutos da timeline em uma única transformação. Remapeia camadas, vínculos A/V, keyframes, marcadores e transições; all_tracks por padrão. Bloqueios falham antes de editar, salvo skip/unlock explícito.',
     objectSchema(

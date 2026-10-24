@@ -6,6 +6,7 @@ import '../../domain/models/timeline_transition.dart';
 import 'command_catalog.dart';
 import 'timeline_time_map.dart';
 import 'editor_command.dart';
+import 'prepared_media_import.dart';
 
 export 'command_catalog.dart';
 export 'editor_command.dart';
@@ -60,6 +61,16 @@ class CommandEngine {
     }
     final before = project;
     switch (command.name) {
+      case 'import_media':
+        if (command is! PreparedMediaImport) {
+          throw const CommandError(
+            'import_preflight_required',
+            'Importação exige validação de caminhos e ffprobe pelo MCP.',
+          );
+        }
+        for (final media in command.media) {
+          project = project.addMediaItem(media);
+        }
       case 'remap_timeline':
         final ranges = <(int, int)>[];
         for (final raw in a['removed_ranges'] as List) {

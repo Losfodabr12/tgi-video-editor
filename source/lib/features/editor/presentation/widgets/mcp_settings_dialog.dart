@@ -487,11 +487,12 @@ class _McpSettingsDialogState extends State<McpSettingsDialog> {
               onPressed:
                   plan.applied || plan.revision != a.controller.projectRevision
                   ? null
-                  : () {
+                  : () async {
                       try {
-                        a.approveAndApply(plan.id);
-                        Navigator.pop(context);
+                        await a.approveAndApply(plan.id);
+                        if (context.mounted) Navigator.pop(context);
                       } catch (e) {
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(
                           context,
                         ).showSnackBar(SnackBar(content: Text(e.toString())));
