@@ -1185,3 +1185,50 @@ habilitado, 300 testes aprovados. Build Windows Release concluído. ZIP local
 gerado e inspecionado: sete binários Vulkan com SHA-256 conferido e cinco avisos
 upstream presentes; nenhum arquivo de .work/, referência privada ou runtime
 CUDA no pacote. A sonda Vulkan também detectou a RTX 3050 no runtime final.
+
+## Importação autorizada e overlays MCP — 23/10/2026
+
+Implementação em seis etapas, com um commit por etapa:
+
+1. Configurações com pastas autorizadas inicialmente vazias, seletor, remoção e
+   botão explícito para criar/autorizar `Desktop/FrameStudio_Assets`. Permissões
+   persistidas fora do projeto. Bloqueio de caminhos externos, relativos, `..`,
+   symlinks, junctions, rede e streams alternativos do Windows.
+2. `import_media`: oito extensões, ffprobe com demuxer/protocolo restritos e
+   limites de tempo/saída; 512 MiB por arquivo, 2 GiB e 32 caminhos por lote.
+   Metadados retornam ID/duração/tipo. Hashes e permissões revalidados na aplicação.
+   Conteúdo de mídia não é executado nem alterado.
+3. `add_clip` e `add_clips_sequence`: intervalos da fonte, pista existente,
+   vínculos A/V e validação atômica de colisões/bloqueios.
+4. `add_image_overlay` e `add_video_overlay`: nova camada acima do vídeo,
+   posição/escala, alpha original, fades e volume do áudio vinculado.
+5. Contratos, segurança e exportação real por HTTP MCP/FFmpeg; medidor de catálogo
+   integrado ao CI. Novas operações usam `base_revision`, `preview_plan` e
+   `apply_plan`, rótulos `IA: ...` e uma entrada de undo por lote.
+6. Documentação de limites, argumentos, coordenadas, aprovações e exemplos em
+   [docs/MCP.md](docs/MCP.md). Relatório remoto registra também a checagem do catálogo.
+
+Validações executadas após as correções: `flutter analyze --no-pub` sem problemas;
+suíte principal com **302 testes aprovados** e **16 integrações desativadas** nessa
+rodada; **13 testes direcionados** de pastas, importação, UI e exportação aprovados.
+Segunda rodada completa, com `TGI_RUN_FFMPEG_INTEGRATION_TESTS=true`: **318 testes
+aprovados**. Comando completo: `tool/test_editor.ps1 -Integration -Build`;
+log local em `.work/mcp-media-verified-validation.log` (não versionado).
+Build Windows Release concluído com exit 0 (148,3 s).
+`dart analyze tool/mcp_catalog_metrics.dart` também terminou sem problemas.
+
+O teste de exportação mede pixels de PNG transparente/semitransparente/opaco,
+fades de imagem e vídeo e ganho de áudio no arquivo realmente renderizado.
+Compara o SHA-256 do PNG original e faz roundtrip v14 byte a byte e undo do lote.
+Testes de segurança cobrem também script disfarçado de imagem (sem executar),
+substituição por symlink após a prévia, revogação de pasta e revisão obsoleta.
+
+Medição executada: **39 tools**, **29.102 bytes UTF-8** no envelope JSON-RPC
+compacto; maior schema, `remove_silences`, com **1.807 bytes**. Limites automáticos:
+catálogo <30.000 e cada schema <4.000 bytes. Formato **v14 preservado**.
+
+A validação encontrou expectativas antigas da quantidade de tools e esperas
+assíncronas curtas em testes; foram corrigidas. O primeiro CI rejeitou nomes 8.3
+do diretório temporário do Windows como redirecionamentos. A checagem agora
+inspeciona links em todos os ancestrais e compara contenção canônica, mantendo
+a rejeição de symlinks e junctions, verificada por testes com links reais.

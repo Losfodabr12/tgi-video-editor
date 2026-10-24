@@ -1,8 +1,120 @@
 # MCP do editor
 
-O app expõe **34 tools** e o resource `editor://project/summary` para editar o
+O app expõe **39 tools** e o resource `editor://project/summary` para editar o
 projeto aberto. Funciona inteiramente local, com FFmpeg e Whisper já usados pelo
 editor. Não precisa de chave de API de IA no aplicativo.
+
+## Pastas autorizadas e importação de assets
+
+Em **Arquivo → Configurações de IA (MCP)**, a lista de pastas de importação
+começa **vazia**, inclusive ao carregar configurações antigas. Só o usuário
+pode adicionar/remover pastas nessa tela. **Adicionar pasta** abre o seletor;
+**Adicionar Desktop\\FrameStudio_Assets** cria essa pasta após o clique, se
+necessário, e a autoriza. Nenhuma pasta é criada ou autorizada ao abrir o app.
+As permissões ficam em `mcp_settings.json`, fora do projeto v14.
+
+`import_media` aceita apenas caminhos locais absolutos dentro das pastas
+autorizadas. Rejeita caminhos relativos, componentes `.`/`..`, rede/URL/UNC,
+streams alternativos do Windows, links simbólicos e junctions, inclusive em
+qualquer diretório ancestral ou na própria raiz autorizada. Um prefixo parecido
+com a pasta autorizada não concede acesso a uma pasta irmã.
+Raízes autorizadas com nomes curtos 8.3 do Windows são resolvidas para o caminho
+canônico, que pode ser revalidado ao aplicar o plano; junctions continuam proibidas.
+
+Limites de cada chamada de importação:
+
+- **32 caminhos**, **512 MiB por arquivo**, **2 GiB no conjunto**; arquivo vazio
+  é rejeitado. MiB/GiB usam potências de 1024.
+- Formatos: **png, jpg, webp, mp4, mov, webm, mp3, wav**. O tipo de stream precisa
+  corresponder ao formato informado pela extensão.
+- ffprobe executa antes de aceitar a mídia, com demuxer escolhido pela extensão,
+  somente protocolo local `file`, limite de análise/saída e timeout de **15 s**.
+  O arquivo de entrada nunca é executado como programa ou script.
+- Imagens recebem duração inicial de **5 s**, com dimensões detectadas e arquivo
+  original preservado. Vídeo/áudio recebem a duração retornada pelo ffprobe.
+- Uma falha em qualquer item rejeita o lote inteiro. A prévia guarda os hashes;
+  ao aplicar, os arquivos e as permissões são conferidos novamente. Revogação,
+  substituição por link, remoção ou mudança do conteúdo impedem a aplicação.
+
+Exemplo, depois de autorizar a pasta e ler a revisão em `get_project`:
+
+```json
+{
+  "tool": "import_media",
+  "arguments": {
+    "paths": ["C:/Users/voce/Desktop/FrameStudio_Assets/mascote.png"],
+    "base_revision": 0
+  }
+}
+```
+
+A resposta inclui `imported_media`, com `media_id`, `duration` em segundos e
+`type`. Com aprovação ativa, esses IDs são **prospectivos** até `apply_plan`:
+a biblioteca e o histórico permanecem intactos durante a prévia. Os IDs são
+estáveis para o mesmo caminho/conteúdo, permitindo preparar um segundo plano
+que combine importação e inserção. Não é permitido fornecer metadados de mídia
+por JSON para pular o ffprobe. Mídias já importadas pela interface continuam
+seguindo as autorizações de leitura do projeto; essas novas pastas controlam
+as **novas importações pela IA**.
+
+## Inserção e sobreposições transacionais
+
+As cinco tools novas aceitam `base_revision`, entram em `preview_plan` e
+`apply_commands`, respeitam a aprovação no app e usam rótulos `IA: ...`.
+`apply_plan` aplica o snapshot exato em uma transação. **Um Ctrl+Z** restaura
+a biblioteca e todos os clipes do lote, sem excluir os arquivos de origem.
+O formato de projeto continua **v14**, com os campos de clipe já existentes.
+
+| Tool | Argumentos específicos |
+| --- | --- |
+| `import_media` | `paths`: lista de caminhos autorizados |
+| `add_clip` | `media_id`, `track`, `at`, `in`, `out` |
+| `add_clips_sequence` | `media_ids`, `track`, `at` |
+| `add_image_overlay` | `media_id`, `at`, `duration`, `position`, `scale`; fades/volume opcionais |
+| `add_video_overlay` | Mesmos argumentos de overlay; cria o áudio vinculado quando existe |
+
+`track` é um ID de pista **existente**, retornado por `get_project`, não seu
+rótulo visual. `at` é a posição absoluta na timeline; `in` e `out` são os limites
+da fonte, intervalo `[in,out)`, todos em segundos. O trecho precisa ter pelo
+menos 0,1 s e caber na fonte. `add_clips_sequence` insere as mídias completas,
+na ordem recebida, sem espaços. Bloqueios, pista incompatível ou colisões
+rejeitam o lote inteiro. Vídeo com áudio preserva o grupo A/V vinculado.
+
+Overlays criam uma **nova camada visual acima das anteriores**, incluindo a
+trilha principal. Imagens preservam o alpha original; não são achatadas sobre
+um fundo. Parâmetros:
+
+- `position={"x":1,"y":1}` alinha ao canto inferior direito; cada coordenada
+  varia de 0 a 1 no espaço livre do quadro. `0,0` é o canto superior esquerdo.
+- `scale` varia de **0,1 a 1** e define uma caixa proporcional ao quadro:
+  `0.18` usa até 18% da largura/altura, mantendo a proporção da mídia.
+- `duration` tem mínimo de 0,1 s; para vídeo, não excede a fonte. Imagens podem
+  permanecer por uma duração diferente dos 5 s iniciais da biblioteca.
+- `fade_in_ms` e `fade_out_ms`: inteiros de **0 a 60.000**, padrão **0**.
+  A soma não pode exceder a duração. Usam os fades nativos de vídeo/alpha e áudio.
+- `volume`: **0 a 2**, padrão **0**; no vídeo, também configura seu áudio
+  vinculado. Imagens não possuem áudio.
+
+Exemplo de lote, usando IDs recebidos anteriormente:
+
+```json
+{
+  "base_revision": 3,
+  "label": "IA: sequência e mascote",
+  "commands": [
+    {"tool":"add_clips_sequence","arguments":{"media_ids":["media_1","media_2"],"track":"track_default_video","at":0}},
+    {"tool":"add_image_overlay","arguments":{"media_id":"media_mascote","at":2,"duration":3,"position":{"x":1,"y":1},"scale":0.18,"fade_in_ms":200,"fade_out_ms":200}}
+  ]
+}
+```
+
+Esse objeto é passado a `preview_plan`; revise o resultado e use seu `plan_id`
+com a mesma revisão em `apply_plan`. Com aprovação desativada, as tools diretas
+e `apply_commands` podem publicar o lote; `preview_plan` continua sem editar.
+
+Medição atual, por `dart tool/mcp_catalog_metrics.dart`: **39 tools,
+29.102 bytes UTF-8** no envelope JSON-RPC compacto; maior schema **1.807 bytes**.
+O script e o CI rejeitam catálogo **≥30.000** ou schema **≥4.000 bytes**.
 
 ## Cortes: presets e proteção
 
@@ -509,10 +621,11 @@ valores completos estão em [MCP_COMPACT_CATALOG_SIZE_RESULT.json](validation/MC
 | `export_cut_check` | 770 | 585 | 399 | 279 |
 | `export` | 669 | 479 | 329 | 209 |
 
-`test/mcp_catalog_budget_test.dart` falha acima de **30.000 bytes** na resposta
-JSON-RPC, **4.000 por schema** e em descrições com **300 bytes ou mais**.
-Um segundo teste preserva as metas desta entrega: total **<25.000** e schemas de
-`preview_plan`/`apply_commands` **<3.000**. Não há limite sobre uma versão
+`test/mcp_catalog_budget_test.dart` falha em **30.000 bytes ou mais** na resposta
+JSON-RPC, **4.000 ou mais por schema** e em descrições com **300 bytes ou mais**.
+Os números desta seção são da validação anterior de 34 tools. O catálogo atual
+inclui as cinco tools de mídia descritas no início; os schemas de
+`preview_plan`/`apply_commands` continuam **<3.000**. Não há limite sobre uma versão
 pretty-printed do catálogo; a medição é da resposta HTTP compacta real.
 
 ### Clientes externos e arquivo restaurado

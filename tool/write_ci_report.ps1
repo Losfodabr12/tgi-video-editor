@@ -12,8 +12,9 @@ $evidence = @"
 Commit executado: ``$env:GITHUB_SHA``. [Run do GitHub Actions]($runUrl).
 Runner Windows, Flutter 3.44.4. Etapas anteriores deste mesmo job terminaram
 com exit 0: pub get, analyze --no-pub, test --no-pub, testes de integracao com
-FFmpeg e build windows --release --no-pub. O empacotamento e upload ocorrem
-depois deste registro; a conclusao completa do workflow deve ser consultada
+FFmpeg, build windows --release --no-pub e verificacao dos limites do catalogo
+MCP e dos schemas. O empacotamento e upload ocorrem depois deste registro;
+a conclusao completa do workflow deve ser consultada
 no link do run. Este texto foi gerado depois dos comandos, nao antecipadamente.
 <!-- CI_RESULT_END -->
 "@
