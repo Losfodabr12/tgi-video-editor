@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../app/theme/decorations.dart';
 import '../../../../app/theme/design_tokens.dart';
 import '../../../../domain/models/timeline_transition.dart';
+import '../../../../services/editor_library_presets.dart';
 
 class TransitionLibraryPanel extends StatelessWidget {
   const TransitionLibraryPanel({
@@ -12,80 +13,7 @@ class TransitionLibraryPanel extends StatelessWidget {
 
   final ValueChanged<TimelineTransitionAsset> onInsertTransitionPreset;
 
-  static const presetAssets = [
-    TimelineTransitionAsset(
-      id: 'preset_fade_black',
-      name: 'Fade para preto',
-      preset: TimelineTransitionPreset.fade,
-      color: 0xFF000000,
-      duration: Duration(milliseconds: 800),
-    ),
-    TimelineTransitionAsset(
-      id: 'preset_flash_white',
-      name: 'Flash branco',
-      preset: TimelineTransitionPreset.flash,
-      color: 0xFFFFFFFF,
-      intensity: 0.95,
-      duration: Duration(milliseconds: 420),
-    ),
-    TimelineTransitionAsset(
-      id: 'preset_dissolve',
-      name: 'Dissolve suave',
-      preset: TimelineTransitionPreset.dissolve,
-      duration: Duration(milliseconds: 900),
-    ),
-    TimelineTransitionAsset(
-      id: 'preset_blur',
-      name: 'Desfoque cinema',
-      preset: TimelineTransitionPreset.blur,
-      intensity: 0.86,
-      duration: Duration(milliseconds: 720),
-    ),
-    TimelineTransitionAsset(
-      id: 'preset_glitch',
-      name: 'Glitch RGB',
-      preset: TimelineTransitionPreset.glitch,
-      color: 0xFFFF2AA3,
-      intensity: 0.9,
-      duration: Duration(milliseconds: 520),
-    ),
-    TimelineTransitionAsset(
-      id: 'preset_spin',
-      name: 'Giro rápido',
-      preset: TimelineTransitionPreset.spin,
-      duration: Duration(milliseconds: 620),
-    ),
-    TimelineTransitionAsset(
-      id: 'preset_pixelate',
-      name: 'Pixelado digital',
-      preset: TimelineTransitionPreset.pixelate,
-      duration: Duration(milliseconds: 680),
-    ),
-    TimelineTransitionAsset(
-      id: 'preset_zoom',
-      name: 'Zoom impacto',
-      preset: TimelineTransitionPreset.zoom,
-      duration: Duration(milliseconds: 650),
-    ),
-    TimelineTransitionAsset(
-      id: 'preset_wipe',
-      name: 'Wipe lateral',
-      preset: TimelineTransitionPreset.wipe,
-      direction: TimelineTransitionDirection.rightToLeft,
-      color: 0xFF05070A,
-      intensity: 0.96,
-      duration: Duration(milliseconds: 760),
-    ),
-    TimelineTransitionAsset(
-      id: 'preset_light_leak',
-      name: 'Light leak quente',
-      preset: TimelineTransitionPreset.lightLeak,
-      direction: TimelineTransitionDirection.leftToRight,
-      color: 0xFFFF8A3D,
-      intensity: 0.82,
-      duration: Duration(milliseconds: 780),
-    ),
-  ];
+  static const presetAssets = editorTransitionPresets;
 
   @override
   Widget build(BuildContext context) {

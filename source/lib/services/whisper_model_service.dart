@@ -55,6 +55,14 @@ const whisperModelCatalog = <WhisperModelInfo>[
     sizeBytes: 1081140203,
     sha256: 'D75795ECFF3F83B5FAA89D1900604AD8C780ABD5739FAE406DE19F23ECD98AD1',
   ),
+  WhisperModelInfo(
+    name: 'large-v3',
+    label: 'Máxima (large-v3)',
+    quality: 'Não medida',
+    speed: 'Medir nesta máquina',
+    sizeBytes: 3095033483,
+    sha256: '64D182B440B98D5203C4F9BD541544D84C605196C4F7B845DFA11FB23594D1E2',
+  ),
 ];
 
 class WhisperModelInfo {

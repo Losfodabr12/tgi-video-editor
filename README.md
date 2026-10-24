@@ -12,7 +12,19 @@ Para revisar esta implementação, comece pelo
 ## Executar
 
 Na cópia de trabalho, abra **INICIAR EDITOR.cmd** ou **aplicativo/VideoEditor.exe**.
+
+Em **Legendas → Gerar automática**, clique em **Usar Máxima (large-v3)** para
+selecionar o modelo completo FP16. O diálogo mostra se está instalado; se faltar,
+use **Gerenciar modelos**. A seleção é explícita e preserva o modelo anterior do
+projeto até você escolher outro. Após compilar uma atualização, atualize também
+`aplicativo/`, que é a cópia aberta pelo iniciador desta pasta.
 Os arquivos de runtime devem acompanhar o executável.
+
+Pelo MCP, a IA pode navegar nas pastas autorizadas (`browse_media_files`),
+importar (`import_media`) e inserir arquivos em pistas existentes ou novas
+(`add_clip`/`add_clips_sequence`, `track: "new"`). A biblioteca interna está
+disponível em `list_library` e `add_library_asset`, com importação/inserção e
+um undo. Veja [permissões, downloads e exemplos](docs/MCP.md).
 
 O workflow por tag publica o [pacote Windows 0.4.0](https://github.com/Losfodabr12/tgi-video-editor/releases/tag/v0.4.0)
 com FFmpeg, ffprobe, Whisper Base, fontes e bibliotecas nativas. Extraia a

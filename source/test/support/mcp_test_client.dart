@@ -19,6 +19,7 @@ class McpTestClient {
     bool notification = false,
     String verb = 'POST',
     bool useSession = true,
+    String accept = 'application/json, text/event-stream',
   }) async {
     final request = await http.openUrl(
       verb,
@@ -26,7 +27,7 @@ class McpTestClient {
     );
     request.persistentConnection = false;
     request.headers.set('Authorization', 'Bearer ${bearer ?? token}');
-    request.headers.set('Accept', 'application/json, text/event-stream');
+    request.headers.set('Accept', accept);
     request.headers.contentType = ContentType.json;
     if (origin != null) {
       request.headers.set('Origin', origin);
@@ -87,4 +88,21 @@ class McpTestClient {
   }
 
   void close() => http.close(force: true);
+
+  Future<HttpClientResponse> events({
+    String? bearer,
+    String? protocolVersion,
+    bool useSession = true,
+    String? origin,
+  }) async {
+    final request = await http.getUrl(Uri.parse('http://127.0.0.1:$port/mcp'));
+    request.headers.set('Authorization', 'Bearer ${bearer ?? token}');
+    request.headers.set('Accept', 'text/event-stream');
+    if (origin != null) request.headers.set('Origin', origin);
+    if (useSession && session != null) {
+      request.headers.set('Mcp-Session-Id', session!);
+    }
+    request.headers.set('MCP-Protocol-Version', protocolVersion ?? version);
+    return request.close();
+  }
 }

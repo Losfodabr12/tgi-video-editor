@@ -312,7 +312,10 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
       _modelName,
       _modelOptions,
     );
-    final modelHelpText = selectedModelName == 'medium'
+    final modelHelpText = selectedModelName == 'large-v3'
+        ? 'Modelo completo (FP16), 3,1 GB. '
+              '${_installedModelNames.contains('large-v3') ? 'Instalado.' : 'Baixe em Gerenciar modelos.'}'
+        : selectedModelName == 'medium'
         ? 'Modelo pesado: use quando puder esperar.'
         : _modelHelpText;
     final modelOptionsKey = _modelOptions
@@ -374,6 +377,22 @@ class _AutoCaptionsDialogState extends State<_AutoCaptionsDialog> {
                 },
               ),
               const SizedBox(height: TgiSpacing.md),
+              OutlinedButton.icon(
+                key: const ValueKey('caption_use_maximum_model'),
+                onPressed: selectedModelName == 'large-v3'
+                    ? null
+                    : () => setState(() {
+                        _modelName = 'large-v3';
+                        _manualModel = true;
+                      }),
+                icon: const Icon(Icons.auto_awesome_outlined),
+                label: Text(
+                  selectedModelName == 'large-v3'
+                      ? 'Máxima (large-v3) selecionada'
+                      : 'Usar Máxima (large-v3)',
+                ),
+              ),
+              const SizedBox(height: TgiSpacing.sm),
               TextButton.icon(
                 onPressed: () async {
                   await showDialog<void>(

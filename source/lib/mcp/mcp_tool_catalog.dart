@@ -177,6 +177,25 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
     objectSchema(pageFields),
     readOnly: true,
   ),
+  'browse_media_files': McpToolDefinition(
+    'browse_media_files',
+    'Lista arquivos importáveis e subpastas autorizadas; sem directory lista as raízes. Não segue links.',
+    objectSchema({
+      'directory': {...stringSchema(), 'maxLength': 4096},
+      ...pageFields,
+    }),
+    readOnly: true,
+  ),
+  'list_library': McpToolDefinition(
+    'list_library',
+    'Busca itens da biblioteca do editor, com asset_id, tipo, licença e cache. Não baixa nem edita.',
+    objectSchema({
+      'query': {...stringSchema(), 'maxLength': 200},
+      'kind': stringSchema(['audio', 'image', 'video', 'title', 'transition']),
+      ...pageFields,
+    }),
+    readOnly: true,
+  ),
   'get_loudness': McpToolDefinition(
     'get_loudness',
     'Mede LUFS, LRA e true peak da fonte, sem efeitos/mixagem da timeline.',
@@ -269,7 +288,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'preview_plan': McpToolDefinition(
     'preview_plan',
-    'Planeja commands (tool/arguments) ou macro="remove_silences" sem editar. Retorna plan_id; expira em 15 min/revisão alterada. Macro sem job_id inicia análise.',
+    'Prévia de commands ou macro remove_silences; retorna plan_id sem editar. Expira em 15 min/mudança de revisão.',
     {
       'type': 'object',
       'additionalProperties': false,
@@ -294,7 +313,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'apply_plan': McpToolDefinition(
     'apply_plan',
-    'Aplica snapshot exato em uma transação/undo; respeita aprovação humana no app. IA não concede aprovação.',
+    'Aplica snapshot exato com um undo; exige aprovação no app quando ativa.',
     objectSchema(
       {'plan_id': stringSchema(), 'base_revision': revisionSchema},
       ['plan_id', 'base_revision'],
@@ -303,7 +322,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'remove_silences': McpToolDefinition(
     'remove_silences',
-    'Planeja cortes de silêncio, protegendo fala/fades. Sem job_id inicia análise; com job pronto retorna plano. Remapeia camadas; bloqueios falham. Aplicar: apply_plan.',
+    'Corta silêncio com proteção de fala e camadas. Sem job_id analisa; com job pronto planeja. Aplicar: apply_plan.',
     objectSchema(
       {
         ...removeSilencesArguments['properties'] as Map<String, dynamic>,
@@ -315,7 +334,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'cut_by_transcript': McpToolDefinition(
     'cut_by_transcript',
-    'Planeja manter cues escolhidos, protegendo palavras/fades e remapeando camadas. Falha em bloqueios. Aplicar: apply_plan.',
+    'Mantém cues escolhidos com proteção de palavras e camadas. Prévia; aplicar: apply_plan.',
     objectSchema(
       {
         'clip_id': clipIdSchema,
@@ -343,7 +362,7 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
   ),
   'reframe_9x16': McpToolDefinition(
     'reframe_9x16',
-    'Planeja crop central e saída 1080x1920 para vídeo/imagem. Crop/resolução compartilham undo. Aplicar: apply_plan.',
+    'Prévia de crop central 1080x1920. apply_plan aplica; um undo.',
     objectSchema(
       {'clip_id': clipIdSchema, 'base_revision': revisionSchema},
       ['clip_id', 'base_revision'],
@@ -382,6 +401,14 @@ const mcpToolOrder = [
   'get_clip',
   'get_transcript',
   'list_media',
+  'browse_media_files',
+  'list_library',
+  'add_library_asset',
+  'import_media',
+  'add_clip',
+  'add_clips_sequence',
+  'add_image_overlay',
+  'add_video_overlay',
   'get_loudness',
   'get_frames',
   'detect_silence',
@@ -401,7 +428,7 @@ final mcpToolCatalog = <String, McpToolDefinition>{
 /// The server advertises this full registry, including file-output readers.
 final _cutCheckDefinition = McpToolDefinition(
   'export_cut_check',
-  'Job de amostra .mp4/.wav dos 10 primeiros cortes do plano. Grava arquivo novo na pasta escolhida; não edita/aprova o projeto nem sobrescreve.',
+  'Job .mp4/.wav dos 10 primeiros cortes do plano na pasta escolhida; não sobrescreve nem edita.',
   objectSchema(
     {
       'plan_id': stringSchema(),

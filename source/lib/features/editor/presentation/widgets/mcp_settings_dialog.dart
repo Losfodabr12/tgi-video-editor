@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -7,15 +8,20 @@ import '../../../../core/commands/editor_command.dart';
 import '../../../../mcp/editor_automation.dart';
 import '../../../../mcp/editor_plans.dart';
 import '../../../../mcp/mcp_settings.dart';
+import '../../../../mcp/mcp_import_paths.dart';
 
 class McpSettingsDialog extends StatefulWidget {
   const McpSettingsDialog({
     super.key,
     required this.automation,
     this.pickExportDirectory,
+    this.pickImportDirectory,
+    this.assetsDirectory,
   });
   final EditorAutomation automation;
   final Future<String?> Function()? pickExportDirectory;
+  final Future<String?> Function()? pickImportDirectory;
+  final String? assetsDirectory;
   @override
   State<McpSettingsDialog> createState() => _McpSettingsDialogState();
 }
@@ -55,7 +61,11 @@ class _McpSettingsDialogState extends State<McpSettingsDialog> {
     }
   }
 
-  Future<void> _save({bool? approval, String? directory}) async {
+  Future<void> _save({
+    bool? approval,
+    String? directory,
+    List<String>? importDirectories,
+  }) async {
     final port = int.tryParse(_port.text);
     if (port == null || port < 1024 || port > 65535) {
       throw const CommandError(
@@ -68,8 +78,14 @@ class _McpSettingsDialogState extends State<McpSettingsDialog> {
         port: port,
         requireApproval: approval ?? a.settings.requireApproval,
         exportDirectory: directory ?? a.settings.exportDirectory,
+        importDirectories: importDirectories ?? a.settings.importDirectories,
       ),
     );
+  }
+
+  Future<void> _addImportDirectory(String path) async {
+    if (a.settings.importDirectories.contains(path)) return;
+    await _save(importDirectories: [...a.settings.importDirectories, path]);
   }
 
   void _copied(String text) {
@@ -214,6 +230,72 @@ class _McpSettingsDialogState extends State<McpSettingsDialog> {
         child: Text(
           'Exportações usam nomes .mp4/.wav dentro desta pasta e não sobrescrevem arquivos.',
         ),
+      ),
+      const Divider(),
+      const ListTile(
+        title: Text('Pastas autorizadas para importar pela IA'),
+        subtitle: Text('Somente arquivos destas pastas podem ser importados.'),
+      ),
+      if (a.settings.importDirectories.isEmpty)
+        const ListTile(title: Text('Nenhuma pasta autorizada')),
+      for (final path in a.settings.importDirectories)
+        ListTile(
+          title: Text(path),
+          trailing: IconButton(
+            tooltip: 'Remover autorização',
+            icon: const Icon(Icons.remove_circle_outline),
+            onPressed: _working
+                ? null
+                : () => _perform(
+                    () => _save(
+                      importDirectories: a.settings.importDirectories
+                          .where((p) => p != path)
+                          .toList(),
+                    ),
+                  ),
+          ),
+        ),
+      Wrap(
+        spacing: 8,
+        children: [
+          TextButton(
+            key: const ValueKey('mcp_add_import_directory'),
+            onPressed: _working
+                ? null
+                : () => _perform(() async {
+                    final path =
+                        await (widget.pickImportDirectory?.call() ??
+                            FilePicker.getDirectoryPath(
+                              dialogTitle:
+                                  'Autorizar pasta de importação da IA',
+                            ));
+                    if (path != null) await _addImportDirectory(path);
+                  }),
+            child: const Text('Adicionar pasta'),
+          ),
+          TextButton(
+            key: const ValueKey('mcp_add_assets_directory'),
+            onPressed: _working
+                ? null
+                : () => _perform(() async {
+                    final profile =
+                        Platform.environment['USERPROFILE'] ??
+                        Platform.environment['HOME'];
+                    final path =
+                        widget.assetsDirectory ??
+                        (profile == null
+                            ? throw const CommandError(
+                                'path_not_allowed',
+                                'Desktop indisponível.',
+                              )
+                            : '$profile${Platform.pathSeparator}Desktop${Platform.pathSeparator}FrameStudio_Assets');
+                    await McpImportPaths.directory(Directory(path).parent.path);
+                    await Directory(path).create();
+                    await _addImportDirectory(path);
+                  }),
+            child: const Text('Adicionar Desktop\\FrameStudio_Assets'),
+          ),
+        ],
       ),
       const Divider(),
       Wrap(
@@ -405,11 +487,12 @@ class _McpSettingsDialogState extends State<McpSettingsDialog> {
               onPressed:
                   plan.applied || plan.revision != a.controller.projectRevision
                   ? null
-                  : () {
+                  : () async {
                       try {
-                        a.approveAndApply(plan.id);
-                        Navigator.pop(context);
+                        await a.approveAndApply(plan.id);
+                        if (context.mounted) Navigator.pop(context);
                       } catch (e) {
+                        if (!context.mounted) return;
                         ScaffoldMessenger.of(
                           context,
                         ).showSnackBar(SnackBar(content: Text(e.toString())));

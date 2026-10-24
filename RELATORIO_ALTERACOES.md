@@ -1185,3 +1185,102 @@ habilitado, 300 testes aprovados. Build Windows Release concluído. ZIP local
 gerado e inspecionado: sete binários Vulkan com SHA-256 conferido e cinco avisos
 upstream presentes; nenhum arquivo de .work/, referência privada ou runtime
 CUDA no pacote. A sonda Vulkan também detectou a RTX 3050 no runtime final.
+
+## Importação autorizada e overlays MCP — 23/10/2026
+
+Implementação em seis etapas, com um commit por etapa:
+
+1. Configurações com pastas autorizadas inicialmente vazias, seletor, remoção e
+   botão explícito para criar/autorizar `Desktop/FrameStudio_Assets`. Permissões
+   persistidas fora do projeto. Bloqueio de caminhos externos, relativos, `..`,
+   symlinks, junctions, rede e streams alternativos do Windows.
+2. `import_media`: oito extensões, ffprobe com demuxer/protocolo restritos e
+   limites de tempo/saída; 512 MiB por arquivo, 2 GiB e 32 caminhos por lote.
+   Metadados retornam ID/duração/tipo. Hashes e permissões revalidados na aplicação.
+   Conteúdo de mídia não é executado nem alterado.
+3. `add_clip` e `add_clips_sequence`: intervalos da fonte, pista existente,
+   vínculos A/V e validação atômica de colisões/bloqueios.
+4. `add_image_overlay` e `add_video_overlay`: nova camada acima do vídeo,
+   posição/escala, alpha original, fades e volume do áudio vinculado.
+5. Contratos, segurança e exportação real por HTTP MCP/FFmpeg; medidor de catálogo
+   integrado ao CI. Novas operações usam `base_revision`, `preview_plan` e
+   `apply_plan`, rótulos `IA: ...` e uma entrada de undo por lote.
+6. Documentação de limites, argumentos, coordenadas, aprovações e exemplos em
+   [docs/MCP.md](docs/MCP.md). Relatório remoto registra também a checagem do catálogo.
+
+Validações executadas após as correções: `flutter analyze --no-pub` sem problemas;
+suíte principal com **302 testes aprovados** e **16 integrações desativadas** nessa
+rodada; **13 testes direcionados** de pastas, importação, UI e exportação aprovados.
+Segunda rodada completa, com `TGI_RUN_FFMPEG_INTEGRATION_TESTS=true`: **318 testes
+aprovados**. Comando completo: `tool/test_editor.ps1 -Integration -Build`;
+log local em `.work/mcp-media-verified-validation.log` (não versionado).
+Build Windows Release concluído com exit 0 (148,3 s).
+`dart analyze tool/mcp_catalog_metrics.dart` também terminou sem problemas.
+
+O teste de exportação mede pixels de PNG transparente/semitransparente/opaco,
+fades de imagem e vídeo e ganho de áudio no arquivo realmente renderizado.
+Compara o SHA-256 do PNG original e faz roundtrip v14 byte a byte e undo do lote.
+Testes de segurança cobrem também script disfarçado de imagem (sem executar),
+substituição por symlink após a prévia, revogação de pasta e revisão obsoleta.
+
+Medição executada: **39 tools**, **29.102 bytes UTF-8** no envelope JSON-RPC
+compacto; maior schema, `remove_silences`, com **1.807 bytes**. Limites automáticos:
+catálogo <30.000 e cada schema <4.000 bytes. Formato **v14 preservado**.
+
+A validação encontrou expectativas antigas da quantidade de tools e esperas
+assíncronas curtas em testes; foram corrigidas. O primeiro CI rejeitou nomes 8.3
+do diretório temporário do Windows como redirecionamentos. A checagem agora
+inspeciona links em todos os ancestrais e compara contenção canônica, mantendo
+a rejeição de symlinks e junctions, verificada por testes com links reais.
+
+## Seleção visível do large-v3 nas legendas — 24/10/2026
+
+O processo aberto foi identificado em `aplicativo/VideoEditor.exe`, uma cópia
+compilada em 20/10, anterior às alterações do catálogo. O modelo completo já está
+presente nos componentes locais (3.095.033.483 bytes).
+
+O diálogo de legendas automáticas recebeu o botão **Usar Máxima (large-v3)**,
+com indicação de seleção e do estado instalado/download. Seleciona explicitamente
+`large-v3` completo FP16, sem modificar automaticamente a escolha de um projeto
+existente. Os outros modelos e a política automática continuam disponíveis.
+
+Validação executada: analyze sem problemas e dois testes de UI aprovados. O fluxo
+do editor confirma a preservação de Base ao abrir o diálogo e o envio de
+`large-v3`/`pt` ao transcritor após clicar no botão. A primeira execução do novo
+teste aguardava o preview sintético estabilizar indefinidamente; o harness foi
+corrigido para aguardar os eventos da interface sem depender dessa animação.
+
+## Acesso MCP ao PC, mídias e biblioteca — 24/10/2026
+
+Etapa 1: `browse_media_files` lista somente pastas autorizadas, com paginação,
+filtro de extensões e tamanho. `add_clip` e `add_clips_sequence` aceitam
+`track: "new"`, criando pista compatível e preservando áudio vinculado.
+Validação executada: analyze sem problemas e 17 testes direcionados aprovados,
+incluindo pasta externa, travessia, symlink, revogação e undo da sequência.
+
+Etapa 2: `list_library` consulta o mesmo catálogo de áudios, imagens, vídeos,
+títulos e transições da interface. `add_library_asset` importa e insere em uma
+transação, com prévia, revisão e undo. Downloads são explícitos, limitados a
+20 MiB e às URLs fixas do catálogo; a resposta preserva a licença declarada e
+origem. O cache é gerenciado pelo editor, sem liberar outros caminhos do PC.
+Validação executada: seis contratos HTTP com FFmpeg real aprovados, conjunto
+direcionado de 18 testes aprovado, um teste de interação dos títulos aprovado e
+analyze sem problemas. Cobertura inclui áudio M4A interno, áudio em pista nova,
+PNG com transparência, presets nativos, arquivo alterado, symlink, URL arbitrária,
+roundtrip v14 e undo. Os downloads dos testes usaram arquivos sintéticos locais;
+não foi feito download de assets externos nesta validação.
+
+Etapa 3: descoberta expõe ferramentas, pastas autorizadas e comandos públicos
+em `get_project.mcp`. SSE autenticado anuncia mudanças no catálogo a clientes
+compatíveis. Planos indicam se seus comandos podem ser reenviados como lote.
+Validação executada: analyze sem problemas e 18 testes direcionados aprovados.
+Um timeout inicial de SSE revelou escritas concorrentes no mesmo stream;
+serializadas as escritas, os seis testes de transporte passaram, incluindo
+20 notificações consecutivas, autenticação, limite de streams e encerramento.
+
+Medição atual executada: **42 tools**, **29.712 bytes UTF-8** no catálogo compacto;
+maior schema **1.763 bytes**, abaixo dos limites de 30.000 e 4.000 bytes.
+Formato de projeto **v14 preservado**. A suíte completa local passou com
+**315 testes** na rodada padrão (16 integrações desativadas) e **331 testes**
+com FFmpeg habilitado; analyze sem problemas. O relatório remoto do pacote
+registra separadamente as etapas executadas pelo CI.

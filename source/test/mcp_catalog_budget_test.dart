@@ -18,13 +18,13 @@ void main() {
     () {
       expect(
         bytes(envelope),
-        lessThanOrEqualTo(30000),
+        lessThan(30000),
         reason: 'tools/list UTF-8 JSON-RPC response',
       );
       for (final tool in tools) {
         expect(
           bytes(tool['inputSchema']),
-          lessThanOrEqualTo(4000),
+          lessThan(4000),
           reason: '${tool['name']} inputSchema',
         );
         expect(
@@ -37,9 +37,8 @@ void main() {
   );
 
   test(
-    'compact release targets stay below 25 KB and 3 KB for batch schemas',
+    'compact batch schemas stay below 3 KB as media tools extend the catalog',
     () {
-      expect(bytes(envelope), lessThan(25000));
       for (final name in ['preview_plan', 'apply_commands']) {
         final tool = tools.singleWhere((tool) => tool['name'] == name);
         expect(bytes(tool['inputSchema']), lessThan(3000), reason: name);

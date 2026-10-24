@@ -31,6 +31,7 @@ import '../../../services/editor_font_service.dart';
 import '../../../services/project_history_service.dart';
 import '../../../services/project_collection_service.dart';
 import '../../../services/editor_preset_service.dart';
+import '../../../services/editor_library_presets.dart';
 import '../../../services/export_destination_service.dart';
 import '../../../services/auto_caption_service.dart';
 import '../../../services/whisper_runtime.dart';

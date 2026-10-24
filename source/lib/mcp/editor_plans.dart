@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:math' as math;
 import '../core/commands/command_engine.dart';
 import '../core/commands/command_transaction.dart';
+import '../core/commands/prepared_media_import.dart';
+import '../core/commands/prepared_library_insert.dart';
 import '../core/commands/timeline_time_map.dart';
 import '../core/commands/cut_range_policy.dart';
 import '../core/commands/silence_options.dart';
@@ -69,6 +71,23 @@ class EditorPlan {
       'command_count': commands.length,
       'commands': commands.take(100).map((c) => c.toJson()).toList(),
       'commands_truncated': commands.length > 100,
+      'commands_batch_compatible': !commands.any(
+        (c) => ['undo', 'redo', 'remap_timeline'].contains(c.name),
+      ),
+      if (commands.any(
+        (c) => ['undo', 'redo', 'remap_timeline'].contains(c.name),
+      ))
+        'apply_hint':
+            'Use apply_plan. Este plano contém operações internas/histórico que não podem ser reenviadas em commands.',
+      if (commands.any((c) => c is PreparedMediaImport))
+        'imported_media': [
+          for (final c in commands.whereType<PreparedMediaImport>())
+            ...c.summary,
+        ],
+      if (commands.any((c) => c is PreparedLibraryInsert))
+        'library_assets': [
+          for (final c in commands.whereType<PreparedLibraryInsert>()) c.credit,
+        ],
       if (exportSettings != null)
         'export_resolution': exportSettings!.resolution.id,
     };
@@ -116,9 +135,42 @@ class EditorPlans {
   }
 
   Map<String, Object?> apply(String id, {required int baseRevision}) {
+    return _apply(id, baseRevision: baseRevision);
+  }
+
+  Future<Map<String, Object?>> applyChecked(
+    String id, {
+    required int baseRevision,
+  }) async {
+    final plan = inspect(id);
+    checkRevision(baseRevision, controller.projectRevision);
+    if (requireApproval && !plan.approved) {
+      throw const CommandError(
+        'approval_required',
+        'Aprove o plano dentro do app.',
+      );
+    }
+    for (final command in plan.commands.whereType<PreparedMediaImport>()) {
+      await command.verify();
+    }
+    return _apply(id, baseRevision: baseRevision, importsVerified: true);
+  }
+
+  Map<String, Object?> _apply(
+    String id, {
+    required int baseRevision,
+    bool importsVerified = false,
+  }) {
     final plan = get(id);
     checkRevision(baseRevision, controller.projectRevision);
     _check(plan);
+    if (!importsVerified &&
+        plan.commands.any((c) => c is PreparedMediaImport)) {
+      throw const CommandError(
+        'import_validation_required',
+        'Importações exigem applyChecked para revalidar arquivos e autorizações.',
+      );
+    }
     if (requireApproval && !plan.approved) {
       throw CommandError(
         'approval_required',
@@ -144,7 +196,20 @@ class EditorPlans {
           );
     plan.applied = true;
     onChanged?.call();
-    return {...result, 'plan_id': id};
+    return {
+      ...result,
+      'plan_id': id,
+      if (plan.commands.any((c) => c is PreparedMediaImport))
+        'imported_media': [
+          for (final c in plan.commands.whereType<PreparedMediaImport>())
+            ...c.summary,
+        ],
+      if (plan.commands.any((c) => c is PreparedLibraryInsert))
+        'library_assets': [
+          for (final c in plan.commands.whereType<PreparedLibraryInsert>())
+            c.credit,
+        ],
+    };
   }
 
   EditorPlan inspect(String id) {

@@ -26,15 +26,10 @@ Map<String, dynamic> stringSchema([List<String>? values]) => {
   'maxLength': 10000,
   'enum': ?values,
 };
-final secondsSchema = numberSchema(
-  0,
-  86400 * 30,
-  'Segundos da timeline/fonte.',
-);
-final clipIdSchema = {
-  ...stringSchema(),
-  'description': 'ID de get_project/get_clip.',
-};
+// Units and ID discovery are shared server instructions; avoid repeating them
+// in every tool schema while retaining all validation constraints.
+final secondsSchema = numberSchema(0, 86400 * 30);
+final clipIdSchema = stringSchema();
 final styleFields = <String, dynamic>{
   'font_family': stringSchema(),
   'font_size': numberSchema(12, 160),
@@ -72,7 +67,99 @@ final remapScopeFields = <String, dynamic>{
   },
 };
 
+final mediaOverlaySchema = objectSchema(
+  {
+    'media_id': stringSchema(),
+    'at': secondsSchema,
+    'duration': numberSchema(0.1, 2592000),
+    'position': objectSchema(
+      {'x': numberSchema(0, 1), 'y': numberSchema(0, 1)},
+      ['x', 'y'],
+    ),
+    'scale': numberSchema(0.1, 1),
+    'fade_in_ms': {'type': 'integer', 'minimum': 0, 'maximum': 60000},
+    'fade_out_ms': {'type': 'integer', 'minimum': 0, 'maximum': 60000},
+    'volume': numberSchema(0, 2),
+  },
+  ['media_id', 'at', 'duration', 'position', 'scale'],
+);
+
 final commandCatalog = <String, CommandDefinition>{
+  'add_library_asset': CommandDefinition(
+    'Importa e insere asset_id de list_library; track=new padrão. download=true baixa faltantes; overlay=true sobrepõe visual.',
+    objectSchema(
+      {
+        'asset_id': stringSchema(),
+        'at': secondsSchema,
+        'duration': numberSchema(.1, 2592000),
+        'in': secondsSchema,
+        'track': stringSchema(),
+        'download': {'type': 'boolean', 'default': false},
+        'text': stringSchema(),
+        'overlay': {'type': 'boolean'},
+        for (final key in [
+          'position',
+          'scale',
+          'fade_in_ms',
+          'fade_out_ms',
+          'volume',
+        ])
+          key: (mediaOverlaySchema['properties'] as Map<String, dynamic>)[key],
+      },
+      ['asset_id', 'at'],
+    ),
+  ),
+  'add_image_overlay': CommandDefinition(
+    'Imagem acima do vídeo, com alpha. position em 0–1; scale é fração do quadro. Fades em ms; volume padrão 0.',
+    mediaOverlaySchema,
+  ),
+  'add_video_overlay': CommandDefinition(
+    'Vídeo acima da principal com áudio vinculado. position em 0–1; scale é fração do quadro. Fades em ms; volume padrão 0.',
+    mediaOverlaySchema,
+  ),
+  'add_clip': CommandDefinition(
+    'Insere mídia [in,out) em at (segundos). track: ID ou new para nova pista. Preserva A/V e rejeita colisões.',
+    objectSchema(
+      {
+        'media_id': stringSchema(),
+        'track': stringSchema(),
+        'at': secondsSchema,
+        'in': secondsSchema,
+        'out': secondsSchema,
+      },
+      ['media_id', 'track', 'at', 'in', 'out'],
+    ),
+  ),
+  'add_clips_sequence': CommandDefinition(
+    'Insere mídias inteiras em sequência desde at. track: ID ou new; um undo desfaz o lote.',
+    objectSchema(
+      {
+        'media_ids': {
+          'type': 'array',
+          'minItems': 1,
+          'maxItems': 100,
+          'items': stringSchema(),
+        },
+        'track': stringSchema(),
+        'at': secondsSchema,
+      },
+      ['media_ids', 'track', 'at'],
+    ),
+  ),
+  'import_media': CommandDefinition(
+    'Importa após ffprobe: pastas autorizadas, 512 MiB/arquivo, 2 GiB/lote. Retorna ID, duração e tipo.',
+    objectSchema(
+      {
+        'paths': {
+          'type': 'array',
+          'minItems': 1,
+          'maxItems': 32,
+          'items': {'type': 'string', 'minLength': 1, 'maxLength': 4096},
+        },
+      },
+      ['paths'],
+    ),
+  ),
   'remap_timeline': CommandDefinition(
     'Remove intervalos absolutos da timeline em uma única transformação. Remapeia camadas, vínculos A/V, keyframes, marcadores e transições; all_tracks por padrão. Bloqueios falham antes de editar, salvo skip/unlock explícito.',
     objectSchema(
@@ -147,7 +234,7 @@ final commandCatalog = <String, CommandDefinition>{
     ),
   ),
   'set_clip_speed': CommandDefinition(
-    'Define velocidade 0.25–4 de áudio/vídeo, mantendo vínculos. Vídeo desloca conteúdo posterior (ripple).',
+    'Velocidade 0.25–4 com vínculos A/V; vídeo desloca conteúdo posterior.',
     objectSchema(
       {'clip_id': clipIdSchema, 'speed': numberSchema(0.25, 4)},
       ['clip_id', 'speed'],
@@ -167,14 +254,14 @@ final commandCatalog = <String, CommandDefinition>{
     ),
   ),
   'set_caption_style': CommandDefinition(
-    'Atualiza estilo de um clipe de texto/legenda sem alterar seu conteúdo.',
+    'Ajusta estilo ou texto de uma legenda/clipe de texto.',
     objectSchema(
       {'clip_id': clipIdSchema, 'text': stringSchema(), ...styleFields},
       ['clip_id'],
     ),
   ),
   'apply_effect': CommandDefinition(
-    'Ajusta cor, filtro ou reenquadramento/crop de um clipe visual. Todos os valores são absolutos.',
+    'Cor, filtro e crop absolutos do clipe visual.',
     objectSchema(
       {
         'clip_id': clipIdSchema,
@@ -215,7 +302,7 @@ final commandCatalog = <String, CommandDefinition>{
     ),
   ),
   'set_keyframe': CommandDefinition(
-    'Insere/substitui keyframe: time é normalizado de 0 a 1 na duração do clipe; property usa o nome do modelo v14.',
+    'Keyframe: time em 0–1 da duração; property usa o modelo v14.',
     objectSchema(
       {
         'clip_id': clipIdSchema,
@@ -229,7 +316,7 @@ final commandCatalog = <String, CommandDefinition>{
     ),
   ),
   'add_transition': CommandDefinition(
-    'Adiciona transição nativa v14 na posição absoluta da timeline (preset sem caminho de arquivo).',
+    'Insere preset nativo de transição em at, sem arquivo externo.',
     objectSchema(
       {
         'at': secondsSchema,
