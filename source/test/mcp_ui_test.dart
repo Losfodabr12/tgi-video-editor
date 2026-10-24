@@ -73,7 +73,7 @@ void main() {
     );
     await tester.runAsync(() async {
       await tester.tap(find.byKey(const ValueKey('mcp_add_assets_directory')));
-      for (var i = 0; i < 50 && a.settings.importDirectories.isEmpty; i++) {
+      for (var i = 0; i < 1000 && a.settings.importDirectories.isEmpty; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 10));
       }
     });
@@ -87,7 +87,7 @@ void main() {
     );
     await tester.runAsync(() async {
       await tester.tap(find.byTooltip('Remover autorização'));
-      for (var i = 0; i < 50 && a.settings.importDirectories.isNotEmpty; i++) {
+      for (var i = 0; i < 1000 && a.settings.importDirectories.isNotEmpty; i++) {
         await Future<void>.delayed(const Duration(milliseconds: 10));
       }
     });

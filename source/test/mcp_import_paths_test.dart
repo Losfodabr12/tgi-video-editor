@@ -69,6 +69,52 @@ void main() {
   );
 
   test(
+    'canonical import paths can be revalidated with the original grant',
+    () async {
+      // Windows CI uses RUNNER~1 in its temporary directory. The second call
+      // deliberately uses the long canonical path with the original grant.
+      final policy = McpImportPaths(directories: [assets.path]);
+      final canonical = await policy.file(inside.path);
+      expect(await policy.file(canonical), canonical);
+    },
+  );
+
+  test(
+    'Windows junctions are rejected as ancestors and authorized roots',
+    () async {
+      final junction = Link('${temp.path}/junction');
+      String psQuote(String value) => "'${value.replaceAll("'", "''")}'";
+      final result = await Process.run('powershell.exe', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        'New-Item -ItemType Junction -Path ${psQuote(junction.path)} '
+            '-Target ${psQuote(assets.path)} -ErrorAction Stop | Out-Null',
+      ]);
+      expect(result.exitCode, 0, reason: '${result.stdout}\n${result.stderr}');
+      try {
+        expect(
+          await FileSystemEntity.type(junction.path, followLinks: false),
+          FileSystemEntityType.link,
+        );
+        await expectLater(
+          McpImportPaths.directory(junction.path),
+          throwsA(isA<CommandError>()),
+        );
+        await expectLater(
+          McpImportPaths(
+            directories: [temp.path],
+          ).file('${junction.path}/image.png'),
+          throwsA(isA<CommandError>()),
+        );
+      } finally {
+        await junction.delete();
+      }
+    },
+    skip: !Platform.isWindows,
+  );
+
+  test(
     'symlink files, ancestor directories and granted roots are rejected',
     () async {
       final fileLink = Link('${assets.path}/linked.png');

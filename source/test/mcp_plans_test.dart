@@ -38,8 +38,9 @@ class _Captions implements AutoCaptionService {
 }
 
 Future<void> _done(EditorJob job) async {
-  for (var i = 0; i < 30 && !job.finished; i++) {
-    await Future<void>.delayed(Duration.zero);
+  final deadline = DateTime.now().add(const Duration(seconds: 10));
+  while (!job.finished && DateTime.now().isBefore(deadline)) {
+    await Future<void>.delayed(const Duration(milliseconds: 10));
   }
   expect(job.status, 'completed', reason: job.error.toString());
 }

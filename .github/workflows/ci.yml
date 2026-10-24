@@ -31,6 +31,8 @@ jobs:
         run: ./tool/setup_tools.ps1
       - name: Pub get, analyze, tests and release build
         run: ./tool/test_editor.ps1 -Integration -Build
+      - name: Verify compact MCP catalog
+        run: dart tool/mcp_catalog_metrics.dart
       - name: Inspect working tree after build
         if: always()
         run: |

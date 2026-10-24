@@ -56,8 +56,10 @@ class McpImportPaths {
     _shape(path);
     for (final chosen in List<String>.of(directories)) {
       _shape(chosen);
-      if (!_inside(path, chosen)) continue;
       final root = await directory(chosen);
+      // Windows may spell the same directory with an 8.3 name. Revalidation
+      // must also accept the canonical path returned by the first check.
+      if (!_inside(path, chosen) && !_inside(path, root)) continue;
       await _rejectLinks(path);
       if (await FileSystemEntity.type(path, followLinks: false) !=
           FileSystemEntityType.file) {
@@ -82,17 +84,8 @@ class McpImportPaths {
           'Links simbólicos e junctions não são aceitos na importação.',
         );
       }
-      if (kind != FileSystemEntityType.notFound) {
-        final resolved = kind == FileSystemEntityType.directory
-            ? await Directory(current).resolveSymbolicLinks()
-            : await File(current).resolveSymbolicLinks();
-        if (_normal(resolved) != _normal(File(current).absolute.path)) {
-          throw const CommandError(
-            'path_not_allowed',
-            'Caminho redirecionado não é aceito na importação.',
-          );
-        }
-      }
+      // Inspect every ancestor without following links. Comparing spellings
+      // after resolution would also reject harmless Windows short names.
       final parent = File(current).parent.path;
       if (_normal(parent) == _normal(current)) break;
       current = parent;

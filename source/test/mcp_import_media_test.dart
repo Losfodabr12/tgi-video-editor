@@ -182,6 +182,31 @@ void main() {
     },
   );
 
+  test(
+    'replaced symlinks cannot apply and disguised scripts are never executed',
+    () async {
+      final result = await preview([png.path]);
+      final id = result['plan_id'] as String;
+      plans.approve(id);
+      final other = await File(
+        '${fixture.directory.path}/other.png',
+      ).writeAsBytes(await png.readAsBytes());
+      await png.delete();
+      await Link(png.path).create(other.path);
+      final failed = data(
+        await router.call('apply_plan', {'plan_id': id, 'base_revision': 0}),
+      );
+      expect((failed['error'] as Map)['code'], 'path_not_allowed');
+      expect(c.project.mediaPool, isEmpty);
+      final marker = '${fixture.directory.path}/should-not-exist.txt';
+      final script = await File(
+        '${fixture.directory.path}/script.png',
+      ).writeAsString('@echo off\r\necho executed > "$marker"\r\n');
+      expect((await preview([script.path]))['error'], isNotNull);
+      expect(File(marker).existsSync(), isFalse);
+    },
+  );
+
   test('all eight supported formats are checked by real ffprobe', () async {
     final jpg = await File(
       '${fixture.directory.path}/photo.jpg',
