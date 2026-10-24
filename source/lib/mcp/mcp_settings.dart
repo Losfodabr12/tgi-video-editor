@@ -9,14 +9,17 @@ class McpSettings {
     this.port = 47321,
     this.requireApproval = true,
     this.exportDirectory,
+    this.importDirectories = const [],
   });
   final int port;
   final bool requireApproval;
   final String? exportDirectory;
+  final List<String> importDirectories;
   Map<String, Object?> toJson() => {
     'port': port,
     'require_approval': requireApproval,
     'export_directory': exportDirectory,
+    'import_directories': importDirectories,
   };
   factory McpSettings.fromJson(Map<String, dynamic> value) {
     final port = value['port'];
@@ -25,7 +28,13 @@ class McpSettings {
         port > 65535 ||
         value['require_approval'] is! bool ||
         (value['export_directory'] != null &&
-            value['export_directory'] is! String)) {
+            value['export_directory'] is! String) ||
+        (value['import_directories'] != null &&
+            (value['import_directories'] is! List ||
+                (value['import_directories'] as List).length > 32 ||
+                (value['import_directories'] as List).any(
+                  (p) => p is! String || p.isEmpty || p.length > 4096,
+                )))) {
       throw const CommandError(
         'invalid_settings',
         'Porta deve ser 1024–65535 e aprovação deve ser booleano.',
@@ -35,6 +44,9 @@ class McpSettings {
       port: port,
       requireApproval: value['require_approval'] as bool,
       exportDirectory: value['export_directory'] as String?,
+      importDirectories: List.unmodifiable(
+        (value['import_directories'] as List? ?? const []).cast<String>(),
+      ),
     );
   }
 }

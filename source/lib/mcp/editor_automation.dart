@@ -8,6 +8,7 @@ import 'editor_plans.dart';
 import 'editor_read_service.dart';
 import 'mcp_audit.dart';
 import 'mcp_path_policy.dart';
+import 'mcp_import_paths.dart';
 import 'mcp_settings.dart';
 import 'mcp_tool_router.dart';
 
@@ -62,6 +63,7 @@ class EditorAutomation extends ChangeNotifier {
   final McpTokenStore tokenStore;
   final McpAudit audit;
   final policy = McpPathPolicy();
+  final importPaths = McpImportPaths();
   late final EditorReadService reads;
   late final EditorPlans plans;
   late final McpToolRouter router;
@@ -105,10 +107,14 @@ class EditorAutomation extends ChangeNotifier {
   void _applySettings() {
     plans.requireApproval = settings.requireApproval;
     policy.exportDirectory = settings.exportDirectory;
+    importPaths.directories = List.unmodifiable(settings.importDirectories);
   }
 
   Future<void> configure(McpSettings value) async {
     McpSettings.fromJson(Map<String, dynamic>.from(value.toJson()));
+    for (final path in value.importDirectories) {
+      await McpImportPaths.directory(path);
+    }
     if (running && value.port != settings.port) {
       throw const CommandError(
         'server_running',
@@ -125,6 +131,7 @@ class EditorAutomation extends ChangeNotifier {
         'port': value.port,
         'require_approval': value.requireApproval,
         'export_directory_selected': value.exportDirectory != null,
+        'import_directory_count': value.importDirectories.length,
       }),
     );
   }
