@@ -1232,3 +1232,20 @@ assíncronas curtas em testes; foram corrigidas. O primeiro CI rejeitou nomes 8.
 do diretório temporário do Windows como redirecionamentos. A checagem agora
 inspeciona links em todos os ancestrais e compara contenção canônica, mantendo
 a rejeição de symlinks e junctions, verificada por testes com links reais.
+
+## Seleção visível do large-v3 nas legendas — 24/10/2026
+
+O processo aberto foi identificado em `aplicativo/VideoEditor.exe`, uma cópia
+compilada em 20/10, anterior às alterações do catálogo. O modelo completo já está
+presente nos componentes locais (3.095.033.483 bytes).
+
+O diálogo de legendas automáticas recebeu o botão **Usar Máxima (large-v3)**,
+com indicação de seleção e do estado instalado/download. Seleciona explicitamente
+`large-v3` completo FP16, sem modificar automaticamente a escolha de um projeto
+existente. Os outros modelos e a política automática continuam disponíveis.
+
+Validação executada: analyze sem problemas e dois testes de UI aprovados. O fluxo
+do editor confirma a preservação de Base ao abrir o diálogo e o envio de
+`large-v3`/`pt` ao transcritor após clicar no botão. A primeira execução do novo
+teste aguardava o preview sintético estabilizar indefinidamente; o harness foi
+corrigido para aguardar os eventos da interface sem depender dessa animação.
