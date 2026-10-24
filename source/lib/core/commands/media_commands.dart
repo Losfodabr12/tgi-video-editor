@@ -108,4 +108,60 @@ abstract final class MediaCommands {
     }
     return next;
   }
+
+  static TgiProject overlay(
+    TgiProject project,
+    Map<String, Object?> args, {
+    required bool image,
+  }) {
+    final item = media(project, args['media_id'] as String);
+    if (item.type != (image ? MediaType.image : MediaType.video)) {
+      throw const CommandError(
+        'unsupported_media_type',
+        'O tipo da mídia não corresponde à tool de overlay.',
+      );
+    }
+    final duration = seconds(args['duration'] as num);
+    final fadeIn = Duration(milliseconds: args['fade_in_ms'] as int? ?? 0);
+    final fadeOut = Duration(milliseconds: args['fade_out_ms'] as int? ?? 0);
+    if ((!image && duration > item.duration) || fadeIn + fadeOut > duration) {
+      throw const CommandError(
+        'out_of_range',
+        'Duração deve caber no vídeo; a soma dos fades não pode exceder a duração.',
+      );
+    }
+    final position = args['position'] as Map;
+    final existing = project.tracks
+        .expand((t) => t.clips)
+        .map((c) => c.id)
+        .toSet();
+    final scale = (args['scale'] as num).toDouble() * 4;
+    final placed = project.addMediaItemToTimeline(
+      item.copyWith(duration: duration),
+      timelineStart: seconds(args['at'] as num),
+      forceNewVideoTrack: true,
+      clipDurationOverride: duration,
+      imageFit: ImageClipFit.overlay,
+      overlayX: (position['x'] as num).toDouble(),
+      overlayY: (position['y'] as num).toDouble(),
+      overlayScale: scale,
+    );
+    return placed.copyWith(
+      tracks: [
+        for (final track in placed.tracks)
+          track.copyWith(
+            clips: [
+              for (final clip in track.clips)
+                existing.contains(clip.id)
+                    ? clip
+                    : clip.copyWith(
+                        fadeIn: fadeIn,
+                        fadeOut: fadeOut,
+                        volume: (args['volume'] as num?)?.toDouble() ?? 0,
+                      ),
+            ],
+          ),
+      ],
+    );
+  }
 }

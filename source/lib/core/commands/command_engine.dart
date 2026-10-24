@@ -62,6 +62,10 @@ class CommandEngine {
     }
     final before = project;
     switch (command.name) {
+      case 'add_image_overlay':
+        project = MediaCommands.overlay(project, a, image: true);
+      case 'add_video_overlay':
+        project = MediaCommands.overlay(project, a, image: false);
       case 'add_clip':
         project = MediaCommands.addClip(project, a);
       case 'add_clips_sequence':

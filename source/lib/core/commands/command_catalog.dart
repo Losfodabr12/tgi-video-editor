@@ -72,7 +72,32 @@ final remapScopeFields = <String, dynamic>{
   },
 };
 
+final mediaOverlaySchema = objectSchema(
+  {
+    'media_id': stringSchema(),
+    'at': secondsSchema,
+    'duration': numberSchema(0.1, 2592000),
+    'position': objectSchema(
+      {'x': numberSchema(0, 1), 'y': numberSchema(0, 1)},
+      ['x', 'y'],
+    ),
+    'scale': numberSchema(0.1, 1),
+    'fade_in_ms': {'type': 'integer', 'minimum': 0, 'maximum': 60000},
+    'fade_out_ms': {'type': 'integer', 'minimum': 0, 'maximum': 60000},
+    'volume': numberSchema(0, 2),
+  },
+  ['media_id', 'at', 'duration', 'position', 'scale'],
+);
+
 final commandCatalog = <String, CommandDefinition>{
+  'add_image_overlay': CommandDefinition(
+    'Insere PNG/JPG/WebP acima do vídeo, preservando alpha. position={x,y} em 0–1; scale=fração do quadro (0.1–1). Fades em ms; volume padrão 0.',
+    mediaOverlaySchema,
+  ),
+  'add_video_overlay': CommandDefinition(
+    'Insere vídeo acima da trilha principal, com áudio vinculado. position={x,y} em 0–1; scale=fração do quadro. Fades em ms; volume 0–2, padrão 0.',
+    mediaOverlaySchema,
+  ),
   'add_clip': CommandDefinition(
     'Insere mídia importada em track (ID), at na timeline e intervalo fonte [in,out), em segundos. Preserva vínculos A/V; rejeita bloqueios e colisões.',
     objectSchema(

@@ -385,6 +385,8 @@ const mcpToolOrder = [
   'import_media',
   'add_clip',
   'add_clips_sequence',
+  'add_image_overlay',
+  'add_video_overlay',
   'get_loudness',
   'get_frames',
   'detect_silence',
