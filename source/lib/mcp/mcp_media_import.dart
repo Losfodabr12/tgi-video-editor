@@ -10,9 +10,10 @@ import '../services/ffmpeg_service.dart';
 import 'mcp_import_paths.dart';
 
 class McpMediaImport {
-  McpMediaImport(this.paths, this.ffmpeg);
+  McpMediaImport(this.paths, this.ffmpeg, {this.extraAudioFormats = const {}});
   final McpImportPaths paths;
   final FfmpegService ffmpeg;
+  final Map<String, String> extraAudioFormats;
   static const maxFileBytes = 512 * 1024 * 1024;
   static const maxBatchBytes = 2 * 1024 * 1024 * 1024;
   static const formats = {
@@ -112,7 +113,8 @@ class McpMediaImport {
           .split('.')
           .last
           .toLowerCase();
-      if (!formats.containsKey(extension)) {
+      if (!formats.containsKey(extension) &&
+          !extraAudioFormats.containsKey(extension)) {
         throw const CommandError(
           'unsupported_media_type',
           'Use png, jpg, webp, mp4, mov, webm, mp3 ou wav.',
@@ -139,10 +141,15 @@ class McpMediaImport {
           extension = entry.value.$1,
           before = entry.value.$2;
       await paths.file(path);
-      final metadata = await _probe(path, formats[extension]!);
+      final metadata = await _probe(
+        path,
+        formats[extension] ?? extraAudioFormats[extension]!,
+      );
       final streams = (metadata['streams'] as List? ?? const []).cast<Map>();
       final image = ['png', 'jpg', 'webp'].contains(extension);
-      final audio = ['mp3', 'wav'].contains(extension);
+      final audio =
+          ['mp3', 'wav'].contains(extension) ||
+          extraAudioFormats.containsKey(extension);
       final expected = audio ? 'audio' : 'video';
       final stream = streams
           .where((s) => s['codec_type'] == expected)

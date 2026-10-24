@@ -9,8 +9,10 @@ class PreparedMediaImport extends EditorCommand {
     List<MediaItem> media, {
     required this.verify,
     super.baseRevision,
+    String commandName = 'import_media',
+    Map<String, Object?>? commandArguments,
   }) : media = List.unmodifiable(media),
-       super('import_media', {'paths': paths});
+       super(commandName, commandArguments ?? {'paths': paths});
 
   final List<MediaItem> media;
   final Future<void> Function() verify;

@@ -24,7 +24,7 @@ void main() {
         'preview_plan',
         'apply_plan',
       ]);
-      expect(names.toSet(), hasLength(39));
+      expect(names.toSet(), hasLength(41));
       for (final macro in tools.take(6)) {
         expect(macro['annotations']['readOnlyHint'], true);
         expect(

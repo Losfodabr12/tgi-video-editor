@@ -95,7 +95,7 @@ void main() {
         final tools =
             (await client.request('tools/list', {})).$2['result']['tools']
                 as List;
-        expect(tools, hasLength(40));
+        expect(tools, hasLength(42));
         final definition =
             tools.singleWhere((t) => t['name'] == 'export_cut_check') as Map;
         expect(definition['annotations']['readOnlyHint'], true);

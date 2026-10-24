@@ -7,6 +7,7 @@ import 'command_catalog.dart';
 import 'timeline_time_map.dart';
 import 'editor_command.dart';
 import 'prepared_media_import.dart';
+import 'prepared_library_insert.dart';
 import 'media_commands.dart';
 
 export 'command_catalog.dart';
@@ -62,6 +63,15 @@ class CommandEngine {
     }
     final before = project;
     switch (command.name) {
+      case 'add_library_asset':
+        if (command is! PreparedLibraryInsert) {
+          throw const CommandError(
+            'import_preflight_required',
+            'Resolva o item pelo catálogo MCP antes de inserir.',
+          );
+        }
+        if (command.preset != null) return apply(project, command.preset!);
+        project = MediaCommands.library(project, command);
       case 'add_image_overlay':
         project = MediaCommands.overlay(project, a, image: true);
       case 'add_video_overlay':

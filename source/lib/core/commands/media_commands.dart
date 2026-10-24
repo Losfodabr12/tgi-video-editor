@@ -3,8 +3,86 @@ import '../../domain/models/media_item.dart';
 import '../../domain/models/project.dart';
 import '../../domain/models/track.dart';
 import 'editor_command.dart';
+import 'prepared_library_insert.dart';
 
 abstract final class MediaCommands {
+  static TgiProject library(TgiProject project, PreparedLibraryInsert command) {
+    final args = command.arguments;
+    final item = command.media.single;
+    for (final media in command.media) {
+      project = project.addMediaItem(media);
+    }
+    final start = (args['in'] as num?)?.toDouble() ?? 0;
+    final duration =
+        (args['duration'] as num?)?.toDouble() ??
+        item.duration.inMicroseconds / 1e6 - start;
+    final image = item.type == MediaType.image;
+    if (duration < .1 ||
+        (!image && start + duration > item.duration.inMicroseconds / 1e6) ||
+        (image && start != 0)) {
+      throw const CommandError(
+        'out_of_range',
+        'Trecho fora da fonte; imagens começam em zero.',
+      );
+    }
+    final existing = project.tracks
+        .expand((t) => t.clips)
+        .map((c) => c.id)
+        .toSet();
+    final fadeIn = Duration(milliseconds: args['fade_in_ms'] as int? ?? 0),
+        fadeOut = Duration(milliseconds: args['fade_out_ms'] as int? ?? 0);
+    if (fadeIn + fadeOut > seconds(duration)) {
+      throw const CommandError(
+        'out_of_range',
+        'A soma dos fades excede a duração.',
+      );
+    }
+    final volume = (args['volume'] as num?)?.toDouble() ?? 1;
+    TgiProject next;
+    if (args['overlay'] == true) {
+      if (item.type == MediaType.audio) {
+        throw const CommandError(
+          'unsupported_media_type',
+          'Áudio usa uma pista, sem overlay visual.',
+        );
+      }
+      next = overlay(project, {
+        ...args,
+        'media_id': item.id,
+        'duration': duration,
+        'position': args['position'] ?? {'x': 1, 'y': 1},
+        'scale': args['scale'] ?? .18,
+        'volume': volume,
+      }, image: image);
+    } else {
+      next = addClip(project, {
+        'media_id': item.id,
+        'track': args['track'] ?? 'new',
+        'at': args['at'],
+        'in': start,
+        'out': start + duration,
+      });
+    }
+    return next.copyWith(
+      tracks: [
+        for (final track in next.tracks)
+          track.copyWith(
+            clips: [
+              for (final clip in track.clips)
+                existing.contains(clip.id)
+                    ? clip
+                    : clip.copyWith(
+                        sourceStart: seconds(start),
+                        volume: volume,
+                        fadeIn: fadeIn,
+                        fadeOut: fadeOut,
+                      ),
+            ],
+          ),
+      ],
+    );
+  }
+
   static MediaItem media(TgiProject project, String id) =>
       project.mediaItemById(id) ??
       (throw const CommandError(

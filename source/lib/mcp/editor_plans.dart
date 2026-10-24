@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import '../core/commands/command_engine.dart';
 import '../core/commands/command_transaction.dart';
 import '../core/commands/prepared_media_import.dart';
+import '../core/commands/prepared_library_insert.dart';
 import '../core/commands/timeline_time_map.dart';
 import '../core/commands/cut_range_policy.dart';
 import '../core/commands/silence_options.dart';
@@ -74,6 +75,10 @@ class EditorPlan {
         'imported_media': [
           for (final c in commands.whereType<PreparedMediaImport>())
             ...c.summary,
+        ],
+      if (commands.any((c) => c is PreparedLibraryInsert))
+        'library_assets': [
+          for (final c in commands.whereType<PreparedLibraryInsert>()) c.credit,
         ],
       if (exportSettings != null)
         'export_resolution': exportSettings!.resolution.id,
@@ -190,6 +195,11 @@ class EditorPlans {
         'imported_media': [
           for (final c in plan.commands.whereType<PreparedMediaImport>())
             ...c.summary,
+        ],
+      if (plan.commands.any((c) => c is PreparedLibraryInsert))
+        'library_assets': [
+          for (final c in plan.commands.whereType<PreparedLibraryInsert>())
+            c.credit,
         ],
     };
   }

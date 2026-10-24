@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:crypto/crypto.dart';
 import '../core/commands/command_engine.dart';
 import '../core/commands/timeline_time_map.dart';
 import '../core/commands/silence_options.dart';
@@ -11,6 +12,7 @@ import 'cut_check.dart';
 import 'mcp_command_input.dart';
 import 'mcp_media_import.dart';
 import '../core/commands/prepared_media_import.dart';
+import 'mcp_library.dart';
 
 typedef McpActivityCallback =
     void Function(
@@ -29,13 +31,15 @@ class McpToolRouter {
     this.authorizeExport,
     this.onActivity,
     this.imports,
-  });
+    McpLibrary? library,
+  }) : library = library ?? McpLibrary(reads.ffmpeg);
   final EditorReadService reads;
   final EditorPlans plans;
   final Future<String> Function(String filename)? resolveExport;
   final Future<void> Function(TgiProject project, String path)? authorizeExport;
   final McpActivityCallback? onActivity;
   final McpMediaImport? imports;
+  final McpLibrary library;
 
   Future<List<EditorCommand>> _prepare(
     List<EditorCommand> commands,
@@ -47,7 +51,9 @@ class McpToolRouter {
       if (command.baseRevision != null) {
         checkRevision(command.baseRevision, revision);
       }
-      if (command.name == 'import_media') {
+      if (command.name == 'add_library_asset') {
+        prepared.add(await library.prepare(command.arguments));
+      } else if (command.name == 'import_media') {
         if (imports == null) {
           throw const CommandError(
             'path_not_allowed',
@@ -191,12 +197,12 @@ class McpToolRouter {
     if (commandCatalog.containsKey(name)) {
       final revision = a.remove('base_revision') as int;
       final cmd = EditorCommand(name, a, baseRevision: revision);
-      if (name == 'import_media') {
+      if (name == 'import_media' || name == 'add_library_asset') {
         final prepared = await _prepare([cmd], revision);
         final plan = plans.previewCommands(
           prepared,
           baseRevision: revision,
-          label: 'IA: import_media',
+          label: 'IA: $name',
         );
         return plans.requireApproval
             ? plan.toJson()
@@ -222,6 +228,19 @@ class McpToolRouter {
           ),
           'approval_required': plans.requireApproval,
           'export_resolution': c.commandExportSettings.resolution.id,
+          'mcp': {
+            'tool_count': mcpRuntimeToolCatalog.length,
+            'tools': mcpRuntimeToolCatalog.keys.toList(),
+            'catalog_sha256': sha256
+                .convert(utf8.encode(jsonEncode(listTools())))
+                .toString(),
+            'import_roots': List<String>.of(
+              imports?.paths.directories ?? const [],
+            ),
+            'library_items': library.catalog.length,
+            'new_track':
+                'Use track=new em add_clip/add_clips_sequence; add_library_asset cria pista por padrão.',
+          },
         };
       case 'get_clip':
         return reads.getClip(a['clip_id'] as String);
@@ -247,6 +266,13 @@ class McpToolRouter {
         }
         return imports!.browse(
           directory: a['directory'] as String?,
+          offset: page('offset', 0),
+          limit: page('limit', 50),
+        );
+      case 'list_library':
+        return library.list(
+          query: a['query'] as String? ?? '',
+          kind: a['kind'] as String?,
           offset: page('offset', 0),
           limit: page('limit', 50),
         );

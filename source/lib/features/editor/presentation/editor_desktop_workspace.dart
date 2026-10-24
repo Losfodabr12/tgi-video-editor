@@ -29,38 +29,16 @@ extension _DesktopWorkspace on _EditorScreenState {
             ),
           ),
           const SizedBox(height: 12),
-          for (final template in [
-            (
-              'Título simples',
-              'Seu título',
-              NewTextStyle.fontFamily,
-              48.0,
-              domain.TextClipAnimation.none,
-            ),
-            (
-              'Legenda',
-              'Sua legenda',
-              NewTextStyle.fontFamily,
-              36.0,
-              domain.TextClipAnimation.fade,
-            ),
-            (
-              'Destaque',
-              'EM DESTAQUE',
-              'Bebas Neue',
-              64.0,
-              domain.TextClipAnimation.rise,
-            ),
-          ])
+          for (final template in editorTitlePresets)
             Padding(
               padding: const EdgeInsets.only(bottom: 8),
               child: OutlinedButton(
                 onPressed: () => _controller.addTextToTimeline(
-                  template.$2,
-                  fontFamily: template.$3,
-                  fontSize: template.$4,
-                  textAnimation: template.$5,
-                  registerAsCaption: template.$1 == 'Legenda',
+                  template.text,
+                  fontFamily: template.fontFamily,
+                  fontSize: template.fontSize,
+                  textAnimation: template.animation,
+                  registerAsCaption: template.caption,
                 ),
                 child: SizedBox(
                   height: 72,
@@ -68,12 +46,15 @@ extension _DesktopWorkspace on _EditorScreenState {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        template.$2,
-                        style: TextStyle(fontFamily: template.$3, fontSize: 19),
+                        template.text,
+                        style: TextStyle(
+                          fontFamily: template.fontFamily,
+                          fontSize: 19,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        template.$1,
+                        template.name,
                         style: const TextStyle(
                           fontSize: 12,
                           color: TgiColors.textMuted,
