@@ -7,6 +7,7 @@ import 'command_catalog.dart';
 import 'timeline_time_map.dart';
 import 'editor_command.dart';
 import 'prepared_media_import.dart';
+import 'media_commands.dart';
 
 export 'command_catalog.dart';
 export 'editor_command.dart';
@@ -61,6 +62,10 @@ class CommandEngine {
     }
     final before = project;
     switch (command.name) {
+      case 'add_clip':
+        project = MediaCommands.addClip(project, a);
+      case 'add_clips_sequence':
+        project = MediaCommands.sequence(project, a);
       case 'import_media':
         if (command is! PreparedMediaImport) {
           throw const CommandError(

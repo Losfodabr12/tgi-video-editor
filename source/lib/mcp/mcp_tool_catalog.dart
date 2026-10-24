@@ -383,6 +383,8 @@ const mcpToolOrder = [
   'get_transcript',
   'list_media',
   'import_media',
+  'add_clip',
+  'add_clips_sequence',
   'get_loudness',
   'get_frames',
   'detect_silence',

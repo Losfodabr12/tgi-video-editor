@@ -73,6 +73,35 @@ final remapScopeFields = <String, dynamic>{
 };
 
 final commandCatalog = <String, CommandDefinition>{
+  'add_clip': CommandDefinition(
+    'Insere mídia importada em track (ID), at na timeline e intervalo fonte [in,out), em segundos. Preserva vínculos A/V; rejeita bloqueios e colisões.',
+    objectSchema(
+      {
+        'media_id': stringSchema(),
+        'track': stringSchema(),
+        'at': secondsSchema,
+        'in': secondsSchema,
+        'out': secondsSchema,
+      },
+      ['media_id', 'track', 'at', 'in', 'out'],
+    ),
+  ),
+  'add_clips_sequence': CommandDefinition(
+    'Insere mídias inteiras em sequência, sem espaços, na track (ID) a partir de at. Tudo em uma transação; colisão rejeita o lote.',
+    objectSchema(
+      {
+        'media_ids': {
+          'type': 'array',
+          'minItems': 1,
+          'maxItems': 100,
+          'items': stringSchema(),
+        },
+        'track': stringSchema(),
+        'at': secondsSchema,
+      },
+      ['media_ids', 'track', 'at'],
+    ),
+  ),
   'import_media': CommandDefinition(
     'Importa arquivos de pastas autorizadas após ffprobe. Limite 512 MiB/arquivo e 2 GiB/lote. Retorna IDs, duração e tipo; um undo desfaz o lote.',
     objectSchema(
