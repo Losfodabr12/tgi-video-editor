@@ -71,6 +71,14 @@ class EditorPlan {
       'command_count': commands.length,
       'commands': commands.take(100).map((c) => c.toJson()).toList(),
       'commands_truncated': commands.length > 100,
+      'commands_batch_compatible': !commands.any(
+        (c) => ['undo', 'redo', 'remap_timeline'].contains(c.name),
+      ),
+      if (commands.any(
+        (c) => ['undo', 'redo', 'remap_timeline'].contains(c.name),
+      ))
+        'apply_hint':
+            'Use apply_plan. Este plano contém operações internas/histórico que não podem ser reenviadas em commands.',
       if (commands.any((c) => c is PreparedMediaImport))
         'imported_media': [
           for (final c in commands.whereType<PreparedMediaImport>())

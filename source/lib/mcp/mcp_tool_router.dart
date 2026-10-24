@@ -238,6 +238,12 @@ class McpToolRouter {
               imports?.paths.directories ?? const [],
             ),
             'library_items': library.catalog.length,
+            'max_commands': 500,
+            'public_commands': commandCatalog.keys
+                .where(
+                  (name) => !['undo', 'redo', 'remap_timeline'].contains(name),
+                )
+                .toList(),
             'new_track':
                 'Use track=new em add_clip/add_clips_sequence; add_library_asset cria pista por padrão.',
           },

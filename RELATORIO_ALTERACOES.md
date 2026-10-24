@@ -1249,3 +1249,38 @@ do editor confirma a preservação de Base ao abrir o diálogo e o envio de
 `large-v3`/`pt` ao transcritor após clicar no botão. A primeira execução do novo
 teste aguardava o preview sintético estabilizar indefinidamente; o harness foi
 corrigido para aguardar os eventos da interface sem depender dessa animação.
+
+## Acesso MCP ao PC, mídias e biblioteca — 24/10/2026
+
+Etapa 1: `browse_media_files` lista somente pastas autorizadas, com paginação,
+filtro de extensões e tamanho. `add_clip` e `add_clips_sequence` aceitam
+`track: "new"`, criando pista compatível e preservando áudio vinculado.
+Validação executada: analyze sem problemas e 17 testes direcionados aprovados,
+incluindo pasta externa, travessia, symlink, revogação e undo da sequência.
+
+Etapa 2: `list_library` consulta o mesmo catálogo de áudios, imagens, vídeos,
+títulos e transições da interface. `add_library_asset` importa e insere em uma
+transação, com prévia, revisão e undo. Downloads são explícitos, limitados a
+20 MiB e às URLs fixas do catálogo; a resposta preserva a licença declarada e
+origem. O cache é gerenciado pelo editor, sem liberar outros caminhos do PC.
+Validação executada: seis contratos HTTP com FFmpeg real aprovados, conjunto
+direcionado de 18 testes aprovado, um teste de interação dos títulos aprovado e
+analyze sem problemas. Cobertura inclui áudio M4A interno, áudio em pista nova,
+PNG com transparência, presets nativos, arquivo alterado, symlink, URL arbitrária,
+roundtrip v14 e undo. Os downloads dos testes usaram arquivos sintéticos locais;
+não foi feito download de assets externos nesta validação.
+
+Etapa 3: descoberta expõe ferramentas, pastas autorizadas e comandos públicos
+em `get_project.mcp`. SSE autenticado anuncia mudanças no catálogo a clientes
+compatíveis. Planos indicam se seus comandos podem ser reenviados como lote.
+Validação executada: analyze sem problemas e 18 testes direcionados aprovados.
+Um timeout inicial de SSE revelou escritas concorrentes no mesmo stream;
+serializadas as escritas, os seis testes de transporte passaram, incluindo
+20 notificações consecutivas, autenticação, limite de streams e encerramento.
+
+Medição atual executada: **42 tools**, **29.712 bytes UTF-8** no catálogo compacto;
+maior schema **1.763 bytes**, abaixo dos limites de 30.000 e 4.000 bytes.
+Formato de projeto **v14 preservado**. A suíte completa local passou com
+**315 testes** na rodada padrão (16 integrações desativadas) e **331 testes**
+com FFmpeg habilitado; analyze sem problemas. O relatório remoto do pacote
+registra separadamente as etapas executadas pelo CI.

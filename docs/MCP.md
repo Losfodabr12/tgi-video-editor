@@ -1,6 +1,6 @@
 # MCP do editor
 
-O app expõe **39 tools** e o resource `editor://project/summary` para editar o
+O app expõe **42 tools** e o resource `editor://project/summary` para editar o
 projeto aberto. Funciona inteiramente local, com FFmpeg e Whisper já usados pelo
 editor. Não precisa de chave de API de IA no aplicativo.
 
@@ -12,6 +12,14 @@ pode adicionar/remover pastas nessa tela. **Adicionar pasta** abre o seletor;
 **Adicionar Desktop\\FrameStudio_Assets** cria essa pasta após o clique, se
 necessário, e a autoriza. Nenhuma pasta é criada ou autorizada ao abrir o app.
 As permissões ficam em `mcp_settings.json`, fora do projeto v14.
+
+`browse_media_files` sem argumentos retorna as raízes autorizadas. Com
+`directory`, lista uma página de subpastas e arquivos candidatos, sem recursão
+e sem seguir links. Aceita `offset`/`limit` (até 100), ordena pastas primeiro e
+retorna `next_offset`. O campo `importable` é um pré-filtro de extensão/tamanho;
+o ffprobe continua obrigatório ao importar. Arquivos fora das oito extensões
+permitidas não aparecem; uma pasta com mais de 10.000 entradas exige escolher
+uma subpasta. A IA não pode autorizar uma raiz pelo MCP.
 
 `import_media` aceita apenas caminhos locais absolutos dentro das pastas
 autorizadas. Rejeita caminhos relativos, componentes `.`/`..`, rede/URL/UNC,
@@ -59,7 +67,7 @@ as **novas importações pela IA**.
 
 ## Inserção e sobreposições transacionais
 
-As cinco tools novas aceitam `base_revision`, entram em `preview_plan` e
+As operações de edição abaixo aceitam `base_revision`, entram em `preview_plan` e
 `apply_commands`, respeitam a aprovação no app e usam rótulos `IA: ...`.
 `apply_plan` aplica o snapshot exato em uma transação. **Um Ctrl+Z** restaura
 a biblioteca e todos os clipes do lote, sem excluir os arquivos de origem.
@@ -73,8 +81,10 @@ O formato de projeto continua **v14**, com os campos de clipe já existentes.
 | `add_image_overlay` | `media_id`, `at`, `duration`, `position`, `scale`; fades/volume opcionais |
 | `add_video_overlay` | Mesmos argumentos de overlay; cria o áudio vinculado quando existe |
 
-`track` é um ID de pista **existente**, retornado por `get_project`, não seu
-rótulo visual. `at` é a posição absoluta na timeline; `in` e `out` são os limites
+`track` é um ID de pista retornado por `get_project`, não seu rótulo visual,
+ou **`"new"`** para criar uma pista compatível. Em `add_clips_sequence`, `new`
+cria uma única pista para a sequência, incluindo o áudio vinculado dos vídeos.
+`at` é a posição absoluta na timeline; `in` e `out` são os limites
 da fonte, intervalo `[in,out)`, todos em segundos. O trecho precisa ter pelo
 menos 0,1 s e caber na fonte. `add_clips_sequence` insere as mídias completas,
 na ordem recebida, sem espaços. Bloqueios, pista incompatível ou colisões
@@ -112,9 +122,82 @@ Esse objeto é passado a `preview_plan`; revise o resultado e use seu `plan_id`
 com a mesma revisão em `apply_plan`. Com aprovação desativada, as tools diretas
 e `apply_commands` podem publicar o lote; `preview_plan` continua sem editar.
 
-Medição atual, por `dart tool/mcp_catalog_metrics.dart`: **39 tools,
-29.102 bytes UTF-8** no envelope JSON-RPC compacto; maior schema **1.807 bytes**.
+Medição atual, por `dart tool/mcp_catalog_metrics.dart`: **42 tools,
+29.712 bytes UTF-8** no envelope JSON-RPC compacto; maior schema **1.763 bytes**.
 O script e o CI rejeitam catálogo **≥30.000** ou schema **≥4.000 bytes**.
+
+## Biblioteca do próprio editor
+
+`list_library` consulta os mesmos catálogos usados pela interface: efeitos
+sonoros, trilhas, imagens/ícones, memes, três títulos e dez transições nativas.
+Não baixa arquivos nem muda o projeto. Filtre por `query` e `kind`
+(`audio`, `image`, `video`, `title`, `transition`); use `offset`/`limit` e
+`next_offset` para percorrer os itens. A resposta traz `asset_id`, nome,
+categoria, biblioteca, licença declarada, URL de origem/download e estado do cache.
+Duração desconhecida é omitida; mídia de arquivo é medida pelo ffprobe na inserção.
+`Repositorio GitHub` é a informação do catálogo, sem presumir uma licença livre.
+
+`add_library_asset` importa **e** coloca o item na timeline em uma transação:
+
+- Obrigatórios: `asset_id`, `at`, `base_revision`.
+- Mídia: `track` (padrão `new`), `in` (padrão 0), `duration` (padrão restante da
+  fonte), `volume` (0–2, padrão 1), `fade_in_ms`/`fade_out_ms` (padrão 0).
+- `overlay=true` para imagem/vídeo usa camada acima das existentes, com
+  `position` (padrão `{"x":1,"y":1}`) e `scale` (padrão 0,18). A posição/escala
+  seguem as mesmas regras de `add_image_overlay`/`add_video_overlay`.
+- Títulos: `at`, `duration` e `text` opcional, mantendo fonte/animação do preset.
+  Transições: `at` e `duration` opcional. Esses presets funcionam sem download.
+- `download` começa **false**. Se o arquivo não estiver no cache, é necessário
+  pedir **`download=true`** explicitamente. Não há download em segundo plano ao
+  abrir o app ou listar o catálogo, inclusive no build standalone.
+
+Downloads aceitam somente IDs compilados no catálogo, por HTTPS dos repositórios
+fixos em `raw.githubusercontent.com`, sem redirecionamentos: **20 MiB** e
+**30 s** por item. Não existe argumento para URL/caminho arbitrário. O cache
+gerenciado é validado contra symlinks/junctions e o ffprobe roda antes de usar
+seu conteúdo. M4A é aceito como áudio **somente nesse fluxo da biblioteca**;
+a lista de formatos dos arquivos do PC continua igual. O cache não é concedido
+como pasta geral de importação e não permite ler outros arquivos do PC.
+
+Prévias podem baixar o item explicitamente solicitado, mas deixam biblioteca do
+projeto, timeline e histórico intactos. `apply_plan` revalida hashes/caminhos;
+um Ctrl+Z desfaz importação e clipes, preservando os arquivos do cache. A resposta
+traz `library_assets` e, para arquivos, `imported_media` com créditos da origem.
+
+```json
+{"query":"Kenney","kind":"audio","limit":10}
+```
+
+Passe o objeto acima a `list_library`. Para inserir um resultado:
+
+```json
+{"asset_id":"click1","at":2,"download":true,"volume":0.3,"base_revision":0}
+```
+
+O objeto é passado a `add_library_asset`; com aprovação ativa, aplique o `plan_id`
+retornado. Também é válido incluí-lo em `preview_plan.commands` junto a outros
+comandos públicos. `track=new` permite adicionar música sem ocupar a pista da voz.
+
+## Descoberta de tools e reconexão
+
+`get_project.mcp` informa o número/nomes das tools, SHA-256 do catálogo, raízes
+autorizadas, total de itens da biblioteca, comandos públicos e limite de **500
+comandos** por plano. É uma leitura e não concede permissões.
+
+O servidor anuncia `tools.listChanged=true` e oferece GET SSE autenticado no
+mesmo endpoint. Ao inicializar/reconectar o canal, envia
+`notifications/tools/list_changed`, permitindo que clientes compatíveis
+atualizem catálogos antigos. DELETE da sessão e desligamento do servidor fecham
+os canais; a conexão de notificações não ocupa o orçamento de comandos POST.
+Bearer, Host, Origin e versão do protocolo continuam validados. Clientes sem
+SSE podem reler `tools/list` após reconectar. Segue o
+[transporte Streamable HTTP](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports)
+e a [notificação de tools](https://modelcontextprotocol.io/specification/2025-11-25/server/tools).
+
+Planos retornam `commands_batch_compatible`. Quando false, use `apply_plan`:
+operações internas como `remap_timeline` e histórico não são comandos públicos
+que possam ser copiados de volta para `commands`. As macros continuam aplicáveis
+normalmente pelo `plan_id`.
 
 ## Cortes: presets e proteção
 
@@ -416,8 +499,8 @@ bloqueio individual de clipe. Esses detalhes existem apenas nas respostas.
 
 - Streamable HTTP com respostas JSON, sessões e versões `2025-03-26`,
   `2025-06-18`, `2025-11-25`. Inicialização/notification MCP obrigatórias antes
-  das tools. `GET /mcp` retorna 405, pois o stream SSE independente é opcional;
-  `DELETE /mcp` encerra a sessão. Progresso é consultado por jobs.
+  das tools. `GET /mcp` oferece SSE autenticado para mudanças no catálogo;
+  `DELETE /mcp` encerra a sessão e seus streams. Progresso é consultado por jobs.
 - Implementação direta do protocolo: `dart_mcp 0.5.2` consultado não oferece
   [Streamable HTTP nem autorização](https://pub.dev/packages/dart_mcp).
   Base: [especificação de transporte](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
@@ -425,10 +508,11 @@ bloqueio individual de clipe. Esses detalhes existem apenas nas respostas.
   loopback/porta escolhida. Sem CORS aberto ou autenticação por query string.
 - 120 requisições/minuto por instância, até 8 requisições simultâneas,
   16 sessões, corpo máximo de 1 MiB e expiração de sessão após 30 minutos inativa.
-- Tools não importam arquivos nem aceitam caminhos de leitura. Mídias são IDs
-  do projeto; referências importadas pela UI recebem autorização para o alvo
-  canônico. Retarget de links e arquivos fora da autorização são rejeitados.
-  UNC, URLs, caminhos relativos e streams NTFS não são aceitos por essa API.
+- `browse_media_files` e `import_media` aceitam caminhos locais absolutos apenas
+  nas pastas autorizadas pela UI. As demais operações usam IDs do projeto ou
+  do catálogo interno. Retarget de links e arquivos fora da autorização são
+  rejeitados. UNC, URLs arbitrárias, caminhos relativos e streams NTFS não são
+  aceitos como caminhos de importação.
 - Exportação recebe apenas basename `.mp4`/`.wav`, na pasta escolhida na UI.
   Diretórios são resolvidos canonicamente e destinos existentes são rejeitados.
   Fontes e assets do projeto são conferidos novamente antes da exportação.
@@ -458,7 +542,7 @@ bloqueio individual de clipe. Esses detalhes existem apenas nas respostas.
   a resposta identifica truncamento e a UI permite revisar todos os comandos.
 - FFmpeg e o modelo Whisper local precisam estar instalados pelos mecanismos
   existentes do editor. Não há download de modelos pelo MCP.
-- Sem stdio, SSE independente, assinaturas de resources, OAuth ou transporte
+- Sem stdio, assinaturas de resources, OAuth ou transporte
   stateless 2026. Clientes precisam suportar uma das versões de sessão acima.
 
 ## Validação executada e como reproduzir
@@ -624,7 +708,7 @@ valores completos estão em [MCP_COMPACT_CATALOG_SIZE_RESULT.json](validation/MC
 `test/mcp_catalog_budget_test.dart` falha em **30.000 bytes ou mais** na resposta
 JSON-RPC, **4.000 ou mais por schema** e em descrições com **300 bytes ou mais**.
 Os números desta seção são da validação anterior de 34 tools. O catálogo atual
-inclui as cinco tools de mídia descritas no início; os schemas de
+inclui as tools de mídia, navegação e biblioteca descritas no início; os schemas de
 `preview_plan`/`apply_commands` continuam **<3.000**. Não há limite sobre uma versão
 pretty-printed do catálogo; a medição é da resposta HTTP compacta real.
 

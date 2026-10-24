@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tgi_video_editor/features/editor/application/editor_controller.dart';
@@ -59,8 +60,100 @@ void main() {
     });
     final contents = (resource.$2['result'] as Map)['contents'] as List;
     expect(jsonDecode(contents.first['text'] as String)['format_version'], 14);
-    expect((await client.request('', {}, verb: 'GET')).$1, 405);
+    expect(
+      (await client.request(
+        '',
+        {},
+        verb: 'GET',
+        accept: 'application/json',
+      )).$1,
+      406,
+    );
     expect((await client.request('', {}, verb: 'DELETE')).$1, 200);
+    expect(server.connectedClients, 0);
+  });
+  test(
+    'authenticated SSE refreshes tools and closes on session deletion',
+    () async {
+      await client.initialize();
+      final response = await client.events();
+      expect(response.statusCode, 200);
+      expect(response.headers.contentType?.mimeType, 'text/event-stream');
+      final lines = StreamIterator(
+        utf8.decoder.bind(response).transform(const LineSplitter()),
+      );
+      Future<Map> next() async {
+        while (await lines.moveNext()) {
+          if (lines.current.startsWith('data: ')) {
+            return jsonDecode(lines.current.substring(6)) as Map;
+          }
+        }
+        throw StateError('SSE closed before notification.');
+      }
+
+      expect(
+        (await next().timeout(const Duration(seconds: 5)))['method'],
+        'notifications/tools/list_changed',
+      );
+      for (var i = 0; i < 20; i++) {
+        server.notifyToolsChanged();
+      }
+      for (var i = 0; i < 20; i++) {
+        expect(
+          (await next().timeout(const Duration(seconds: 5)))['method'],
+          'notifications/tools/list_changed',
+          reason: 'Notification $i must survive queued writes.',
+        );
+      }
+      final catalog =
+          (await client.request('tools/list', {})).$2['result']['tools']
+              as List;
+      expect(
+        catalog.map((t) => t['name']),
+        containsAll([
+          'browse_media_files',
+          'import_media',
+          'add_clip',
+          'list_library',
+          'add_library_asset',
+        ]),
+      );
+      expect((await client.request('', {}, verb: 'DELETE')).$1, 200);
+      while (await lines.moveNext().timeout(const Duration(seconds: 5))) {}
+      await lines.cancel();
+    },
+  );
+
+  test('SSE enforces authentication, session, protocol and origin', () async {
+    await client.initialize();
+    for (final (future, status) in [
+      (client.events(bearer: 'bad'), 401),
+      (client.events(useSession: false), 400),
+      (client.events(protocolVersion: 'bad'), 400),
+      (client.events(origin: 'https://attacker.example'), 403),
+    ]) {
+      final response = await future;
+      expect(response.statusCode, status);
+      await response.drain<void>();
+    }
+  });
+
+  test('eight notification streams leave the POST budget available', () async {
+    final observers = <McpTestClient>[];
+    addTearDown(() {
+      for (final observer in observers) {
+        observer.close();
+      }
+    });
+    for (var i = 0; i < 8; i++) {
+      final observer = McpTestClient(server.boundPort, server.token);
+      observers.add(observer);
+      await observer.initialize();
+      expect((await observer.events()).statusCode, 200);
+    }
+    await client.initialize();
+    expect((await client.call('get_project', {}))['isError'], false);
+    await server.stop().timeout(const Duration(seconds: 5));
     expect(server.connectedClients, 0);
   });
   test(

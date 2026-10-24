@@ -13,10 +13,11 @@ class _McpSession {
   final String version;
   bool initialized = false;
   DateTime lastSeen = DateTime.now();
+  final Set<HttpResponse> streams = {};
+  final Map<HttpResponse, Future<void>> writes = {};
 }
 
-/// Streamable HTTP JSON response mode (2025-03-26 / 06-18 / 11-25).
-/// GET intentionally returns 405: standalone SSE is optional in this mode.
+/// Streamable HTTP: JSON POST responses and authenticated GET notifications.
 class EditorMcpServer {
   EditorMcpServer(
     this.router, {
@@ -62,10 +63,12 @@ class EditorMcpServer {
     _server = server;
     server.idleTimeout = const Duration(seconds: 15);
     _expiry = Timer.periodic(const Duration(minutes: 1), (_) {
-      _sessions.removeWhere(
-        (_, s) =>
-            DateTime.now().difference(s.lastSeen) > const Duration(minutes: 30),
-      );
+      _sessions.removeWhere((_, s) {
+        final expired =
+            DateTime.now().difference(s.lastSeen) > const Duration(minutes: 30);
+        if (expired) _closeStreams(s);
+        return expired;
+      });
       onChanged?.call();
     });
     server.listen((r) => unawaited(_handle(r, generation)));
@@ -78,6 +81,9 @@ class EditorMcpServer {
     _server = null;
     _expiry?.cancel();
     _expiry = null;
+    for (final session in _sessions.values) {
+      _closeStreams(session);
+    }
     _sessions.clear();
     router.plans.clear();
     await server?.close(force: true);
@@ -93,6 +99,81 @@ class EditorMcpServer {
       diff |= expected[i] ^ (i < actual.length ? actual[i] : 0);
     }
     return diff == 0;
+  }
+
+  void _closeStreams(_McpSession session) {
+    for (final response in session.streams.toList()) {
+      unawaited(
+        (session.writes[response] ?? Future<void>.value())
+            .then((_) => response.close())
+            .catchError((Object _) {}),
+      );
+    }
+    session.streams.clear();
+  }
+
+  void _notifySession(_McpSession session) {
+    if (!session.initialized) return;
+    final message = jsonEncode({
+      'jsonrpc': '2.0',
+      'method': 'notifications/tools/list_changed',
+    });
+    for (final response in session.streams.toList()) {
+      unawaited(_emit(response, session, 'event: message\ndata: $message\n\n'));
+    }
+  }
+
+  Future<void> _emit(HttpResponse response, _McpSession session, String text) {
+    final next = (session.writes[response] ?? Future<void>.value()).then((
+      _,
+    ) async {
+      if (!session.streams.contains(response)) return;
+      try {
+        response.write(text);
+        await response.flush();
+      } catch (_) {
+        session.streams.remove(response);
+        try {
+          await response.close();
+        } catch (_) {}
+      }
+    });
+    session.writes[response] = next;
+    return next;
+  }
+
+  /// Clients with a tool cache can refresh their catalog without restarting the app.
+  void notifyToolsChanged() {
+    for (final session in _sessions.values) {
+      _notifySession(session);
+    }
+  }
+
+  Future<void> _events(HttpResponse response, _McpSession session) async {
+    response.headers.contentType = ContentType(
+      'text',
+      'event-stream',
+      charset: 'utf-8',
+    );
+    response.headers.set('Cache-Control', 'no-store');
+    response.bufferOutput = false;
+    session.streams.add(response);
+    Timer? heartbeat;
+    try {
+      response.write(': ready\n\n');
+      await response.flush();
+      _notifySession(session);
+      heartbeat = Timer.periodic(const Duration(seconds: 15), (_) {
+        unawaited(_emit(response, session, ': keepalive\n\n'));
+      });
+      await response.done;
+    } catch (_) {
+      // A disconnect closes notifications, never a running editor job.
+    } finally {
+      heartbeat?.cancel();
+      session.streams.remove(response);
+      session.writes.remove(response);
+    }
   }
 
   Future<void> _handle(HttpRequest request, int generation) async {
@@ -158,8 +239,30 @@ class EditorMcpServer {
       final sessionId = request.headers.value('Mcp-Session-Id'),
           session = _sessions[sessionId];
       if (request.method == 'GET') {
-        response.headers.set('Allow', 'POST, DELETE');
-        await reject(405, 'sse_not_supported');
+        if (session == null) {
+          await reject(sessionId == null ? 400 : 404, 'session_not_found');
+          return;
+        }
+        final version = request.headers.value('MCP-Protocol-Version');
+        if (version != null && version != session.version) {
+          await reject(400, 'protocol_version_mismatch');
+          return;
+        }
+        if (!(request.headers.value('accept') ?? '').contains(
+          'text/event-stream',
+        )) {
+          await reject(406, 'accept_sse_required');
+          return;
+        }
+        if (session.streams.length >= 2) {
+          await reject(429, 'stream_limit');
+          return;
+        }
+        session.lastSeen = DateTime.now();
+        // Long-lived GET streams do not consume the POST concurrency budget.
+        _inFlight--;
+        counted = false;
+        await _events(response, session);
         return;
       }
       if (request.method == 'DELETE') {
@@ -167,6 +270,7 @@ class EditorMcpServer {
           await reject(404, 'session_not_found');
           return;
         }
+        _closeStreams(session);
         _sessions.remove(sessionId);
         onChanged?.call();
         response.statusCode = 200;
@@ -174,7 +278,7 @@ class EditorMcpServer {
         return;
       }
       if (request.method != 'POST') {
-        response.headers.set('Allow', 'POST, DELETE');
+        response.headers.set('Allow', 'GET, POST, DELETE');
         await reject(405, 'method_not_allowed');
         return;
       }
@@ -263,12 +367,12 @@ class EditorMcpServer {
           result: {
             'protocolVersion': version,
             'capabilities': {
-              'tools': {'listChanged': false},
+              'tools': {'listChanged': true},
               'resources': {'subscribe': false, 'listChanged': false},
             },
             'serverInfo': {'name': 'frame-studio-editor', 'version': '1.0.0'},
             'instructions':
-                'Edite apenas o projeto aberto. Leia get_project para obter revisão e IDs. Use preview_plan e apply_plan; aprovação humana pode ser obrigatória. Tempos em segundos.',
+                'Edite o projeto aberto com base_revision. Tempos em segundos; IDs de get_project. PC: browse_media_files → import_media → add_clip(track=new). Biblioteca: list_library → add_library_asset. Use preview_plan/apply_plan; aprovação pode ser obrigatória. get_project.mcp informa tools e pastas.',
           },
         );
         return;
@@ -286,6 +390,7 @@ class EditorMcpServer {
       if (id == null) {
         if (method == 'notifications/initialized') {
           session.initialized = true;
+          _notifySession(session);
           onChanged?.call();
         }
         response.statusCode = 202;

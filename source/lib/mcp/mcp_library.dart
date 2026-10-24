@@ -41,6 +41,7 @@ class McpLibraryAsset {
     'kind': kind,
     'license': license,
     if (sourceUrl != null) 'source_url': sourceUrl,
+    if (downloadUrl != null) 'download_url': downloadUrl,
   };
 }
 
@@ -165,7 +166,7 @@ class McpLibrary {
         ...a.credit,
         'category': a.category,
         'library': a.library,
-        if (a.duration != null) 'duration': a.duration,
+        if (a.duration != null && a.duration! > 0) 'duration': a.duration,
         'cached': cached,
         'download_required': a.isMedia && !cached,
       });
