@@ -99,7 +99,7 @@ final commandCatalog = <String, CommandDefinition>{
     mediaOverlaySchema,
   ),
   'add_clip': CommandDefinition(
-    'Insere mídia importada em track (ID), at na timeline e intervalo fonte [in,out), em segundos. Preserva vínculos A/V; rejeita bloqueios e colisões.',
+    'Insere mídia [in,out) em at (segundos). track: ID ou new para nova pista. Preserva A/V e rejeita colisões.',
     objectSchema(
       {
         'media_id': stringSchema(),
@@ -112,7 +112,7 @@ final commandCatalog = <String, CommandDefinition>{
     ),
   ),
   'add_clips_sequence': CommandDefinition(
-    'Insere mídias inteiras em sequência, sem espaços, na track (ID) a partir de at. Tudo em uma transação; colisão rejeita o lote.',
+    'Insere mídias inteiras em sequência desde at. track: ID ou new; um undo desfaz o lote.',
     objectSchema(
       {
         'media_ids': {

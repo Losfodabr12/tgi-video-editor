@@ -26,6 +26,78 @@ class McpMediaImport {
     'wav': 'wav',
   };
 
+  Future<Map<String, Object?>> browse({
+    String? directory,
+    int offset = 0,
+    int limit = 50,
+  }) async {
+    if (directory == null) {
+      return {
+        'roots': List<String>.of(paths.directories),
+        'entries': <Object>[],
+        'total': 0,
+        'next_offset': null,
+      };
+    }
+    final root = await paths.folder(directory);
+    final entries = <Map<String, Object?>>[];
+    var visited = 0;
+    await for (final entry in Directory(root).list(followLinks: false)) {
+      if (++visited > 10000) {
+        throw const CommandError(
+          'browse_limit',
+          'Pasta muito grande; escolha uma subpasta.',
+        );
+      }
+      if (entry is Link) continue;
+      final name = entry.path.split(RegExp(r'[\\/]')).last;
+      if (entry is Directory) {
+        entries.add({
+          'name': name,
+          'path': await paths.folder(entry.path),
+          'type': 'directory',
+        });
+      } else if (entry is File) {
+        final extension = name.split('.').last.toLowerCase();
+        if (!formats.containsKey(extension)) continue;
+        final file = await paths.file(entry.path);
+        final size = (await File(file).stat()).size;
+        entries.add({
+          'name': name,
+          'path': file,
+          'type': ['png', 'jpg', 'webp'].contains(extension)
+              ? 'image'
+              : ['mp3', 'wav'].contains(extension)
+              ? 'audio'
+              : 'video',
+          'size_bytes': size,
+          'importable': size > 0 && size <= maxFileBytes,
+        });
+      }
+    }
+    await paths.folder(directory);
+    entries.sort((a, b) {
+      final folders = (a['type'] == 'directory' ? 0 : 1).compareTo(
+        b['type'] == 'directory' ? 0 : 1,
+      );
+      return folders != 0
+          ? folders
+          : (a['name'] as String).toLowerCase().compareTo(
+              (b['name'] as String).toLowerCase(),
+            );
+    });
+    final page = entries.skip(offset).take(limit).toList();
+    return {
+      'roots': List<String>.of(paths.directories),
+      'directory': root,
+      'entries': page,
+      'total': entries.length,
+      'next_offset': offset + page.length < entries.length
+          ? offset + page.length
+          : null,
+    };
+  }
+
   Future<PreparedMediaImport> prepare(List<String> requested) async {
     if (requested.isEmpty || requested.length > 32) {
       throw const CommandError('import_limit', 'Use de 1 a 32 arquivos.');

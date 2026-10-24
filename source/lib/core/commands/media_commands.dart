@@ -15,6 +15,17 @@ abstract final class MediaCommands {
   static Duration seconds(num value) =>
       Duration(microseconds: (value * 1e6).round());
 
+  static (TgiProject, String) newTrack(TgiProject project, MediaItem item) {
+    final kind = item.type == MediaType.audio
+        ? TrackType.audio
+        : item.type == MediaType.video
+        ? TrackType.video
+        : TrackType.image;
+    final ids = project.tracks.map((t) => t.id).toSet();
+    final next = project.addDynamicTrack(kind);
+    return (next, next.tracks.firstWhere((t) => !ids.contains(t.id)).id);
+  }
+
   static TgiProject addClip(TgiProject project, Map<String, Object?> args) {
     final item = media(project, args['media_id'] as String);
     if (item.type == MediaType.text) {
@@ -23,7 +34,9 @@ abstract final class MediaCommands {
         'Use add_text para texto.',
       );
     }
-    final lane = project.trackById(args['track'] as String);
+    var trackId = args['track'] as String;
+    if (trackId == 'new') (project, trackId) = newTrack(project, item);
+    final lane = project.trackById(trackId);
     if (lane == null) {
       throw const CommandError('track_not_found', 'Use track de get_project.');
     }
@@ -95,11 +108,18 @@ abstract final class MediaCommands {
 
   static TgiProject sequence(TgiProject project, Map<String, Object?> args) {
     var at = seconds(args['at'] as num), next = project;
+    var track = args['track'] as String;
+    if (track == 'new') {
+      (next, track) = newTrack(
+        next,
+        media(next, (args['media_ids'] as List).first as String),
+      );
+    }
     for (final id in (args['media_ids'] as List).cast<String>()) {
       final item = media(next, id);
       next = addClip(next, {
         'media_id': id,
-        'track': args['track'],
+        'track': track,
         'at': at.inMicroseconds / 1e6,
         'in': 0,
         'out': item.duration.inMicroseconds / 1e6,

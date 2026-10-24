@@ -22,7 +22,10 @@ class McpImportPaths {
 
   static bool _inside(String path, String root) {
     final p = _normal(path), r = _normal(root);
-    return p == r || p.startsWith('$r${Platform.pathSeparator}');
+    final prefix = r.endsWith(Platform.pathSeparator)
+        ? r
+        : '$r${Platform.pathSeparator}';
+    return p == r || p.startsWith(prefix);
   }
 
   static void _shape(String path) {
@@ -71,6 +74,22 @@ class McpImportPaths {
     throw const CommandError(
       'path_not_allowed',
       'Autorize a pasta de importação nas configurações de IA do app.',
+    );
+  }
+
+  Future<String> folder(String path) async {
+    _shape(path);
+    for (final chosen in List<String>.of(directories)) {
+      final root = await directory(chosen);
+      if (!_inside(path, chosen) && !_inside(path, root)) continue;
+      final resolved = await directory(path);
+      if (_inside(resolved, root) && directories.contains(chosen)) {
+        return resolved;
+      }
+    }
+    throw const CommandError(
+      'path_not_allowed',
+      'Escolha uma pasta dentro das raízes autorizadas nas configurações de IA.',
     );
   }
 

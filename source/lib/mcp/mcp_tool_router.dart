@@ -236,6 +236,20 @@ class McpToolRouter {
           offset: page('offset', 0),
           limit: page('limit', 50),
         );
+      case 'browse_media_files':
+        if (imports == null) {
+          return {
+            'roots': <String>[],
+            'entries': <Object>[],
+            'total': 0,
+            'next_offset': null,
+          };
+        }
+        return imports!.browse(
+          directory: a['directory'] as String?,
+          offset: page('offset', 0),
+          limit: page('limit', 50),
+        );
       case 'get_loudness':
         return reads.getLoudness(a['media_id'] as String);
       case 'get_frames':

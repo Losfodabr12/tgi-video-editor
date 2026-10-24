@@ -177,6 +177,15 @@ final _mcpToolDefinitions = <String, McpToolDefinition>{
     objectSchema(pageFields),
     readOnly: true,
   ),
+  'browse_media_files': McpToolDefinition(
+    'browse_media_files',
+    'Lista arquivos importáveis e subpastas autorizadas; sem directory lista as raízes. Não segue links.',
+    objectSchema({
+      'directory': {...stringSchema(), 'maxLength': 4096},
+      ...pageFields,
+    }),
+    readOnly: true,
+  ),
   'get_loudness': McpToolDefinition(
     'get_loudness',
     'Mede LUFS, LRA e true peak da fonte, sem efeitos/mixagem da timeline.',
@@ -382,6 +391,7 @@ const mcpToolOrder = [
   'get_clip',
   'get_transcript',
   'list_media',
+  'browse_media_files',
   'import_media',
   'add_clip',
   'add_clips_sequence',

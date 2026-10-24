@@ -18,9 +18,9 @@ void main() {
   late EditorPlans plans;
   late McpToolRouter router;
   setUp(() {
-    var project = TgiProject.empty(name: 'Insert')
-        .addDynamicTrack(TrackType.video)
-        .addDynamicTrack(TrackType.audio);
+    var project = TgiProject.empty(
+      name: 'Insert',
+    ).addDynamicTrack(TrackType.video).addDynamicTrack(TrackType.audio);
     for (final id in ['a', 'b']) {
       project = project.addMediaItem(
         MediaItem(
@@ -49,6 +49,38 @@ void main() {
   Map data(Map result) => result['structuredContent'] as Map;
   String snapshot() =>
       jsonEncode(ProjectIOService().serializeProject(c.project));
+
+  test(
+    'new creates one visual lane for a sequence and keeps one undo',
+    () async {
+      final before = snapshot();
+      final oldTracks = c.project.tracks.map((t) => t.id).toSet();
+      final result = await router.call('add_clips_sequence', {
+        'media_ids': ['a', 'b'],
+        'track': 'new',
+        'at': 0,
+        'base_revision': 0,
+      });
+      expect(result['isError'], false, reason: result.toString());
+      final added = c.project.tracks
+          .where((t) => !oldTracks.contains(t.id))
+          .toList();
+      expect(added, hasLength(1));
+      expect(added.single.clips, hasLength(2));
+      expect(added.single.clips.map((c) => c.timelineStart), [
+        Duration.zero,
+        const Duration(seconds: 4),
+      ]);
+      expect(
+        c.project.tracks
+            .expand((t) => t.clips)
+            .where((c) => c.trackType == TrackType.audio),
+        hasLength(2),
+      );
+      c.undo();
+      expect(snapshot(), before);
+    },
+  );
 
   test(
     'add_clip keeps video/audio trims linked and one undo restores the project',

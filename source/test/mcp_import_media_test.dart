@@ -58,6 +58,52 @@ void main() {
   );
 
   test(
+    'authorized file browsing paginates and never traverses links or outside paths',
+    () async {
+      final root = fixture.directory.path;
+      final nested = await Directory('$root/nested').create();
+      final link = Link('$root/link');
+      await link.create(nested.path);
+      final roots = data(await router.call('browse_media_files', {}));
+      expect(roots['roots'], [root]);
+      final page = data(
+        await router.call('browse_media_files', {
+          'directory': root,
+          'limit': 1,
+        }),
+      );
+      final entries = page['entries'] as List;
+      expect(entries.single['name'], 'nested');
+      expect(page['next_offset'], 1);
+      final all = data(
+        await router.call('browse_media_files', {'directory': root}),
+      );
+      expect((all['entries'] as List).any((e) => e['name'] == 'link'), isFalse);
+      expect(
+        (all['entries'] as List).any((e) => e['name'] == 'alpha.png'),
+        isTrue,
+      );
+      for (final bad in [Directory(root).parent.path, '$root/../', link.path]) {
+        final rejected = data(
+          await router.call('browse_media_files', {'directory': bad}),
+        );
+        expect((rejected['error'] as Map)['code'], 'path_not_allowed');
+      }
+      paths.directories = [];
+      expect(
+        data(await router.call('browse_media_files', {}))['roots'],
+        isEmpty,
+      );
+      expect(
+        data(
+          await router.call('browse_media_files', {'directory': root}),
+        )['error'],
+        isNotNull,
+      );
+    },
+  );
+
+  test(
     'ffprobe-backed imports preview, require approval, apply once and undo media pool in v14',
     () async {
       final before = snapshot();
